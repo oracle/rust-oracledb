@@ -74,6 +74,38 @@ fn main() -> Result<(), oracledb::Error> {
 }
 ```
 
+Execute a query and return an Arrow RecordBatch.
+
+```rust,no_run
+use arrow_array::{Array, StringArray};
+use oracledb;
+
+fn main() -> Result<(), oracledb::Error> {
+    // create configuration and connect to the database
+    let config = oracledb::Config::default()
+        .set_credentials("user", "password")
+        .set_connect_string("server:1521/service_name")?;
+    let conn = oracledb::connect(config)?;
+
+    // perform simple query that returns an Arrow RecordBatch
+    let rb = conn.query_arrow(
+        "select user from dual",
+        oracledb::BindParameters::default(),
+    )?;
+
+    // access a single Arrow column
+    let users = rb
+        .column(0)
+        .as_any()
+        .downcast_ref::<StringArray>()
+        .expect("Failed to downcast to StringArray");
+    for user in users.iter() {
+        println!("User = {}", user.unwrap_or("NULL"));
+    }
+    Ok(())
+}
+```
+
 ## Help
 
 Questions can be asked in [GitHub Discussions][ghdiscussions].
