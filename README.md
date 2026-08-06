@@ -132,5 +132,5 @@ This replaces the original Rust thin driver produced by Muhammed Durakovic. The
 new name for that driver is [oraclemcp-driver-cx][oraclemcp-driver-cx].
 
 [ghdiscussions]: https://github.com/oracle/rust-oracledb/discussions
-[ghissues]: https://github.com/oracle-samples/rust-oracledb/issues
+[ghissues]: https://github.com/oracle/rust-oracledb/issues
 [oraclemcp-driver-cx]: https://crates.io/crates/oraclemcp-driver-cx
