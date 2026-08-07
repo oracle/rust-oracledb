@@ -24,7 +24,7 @@
 
 [package]
 name = "oracledb"
-version = "26.0.0-beta.1"
+version = "26.0.0-beta.2"
 authors = ["Oracle and/or its affiliates"]
 keywords = ["oracle", "database"]
 description = "Lightweight driver for Oracle Database"
