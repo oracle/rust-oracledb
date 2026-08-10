@@ -49,7 +49,7 @@ pub enum ErrorKind {
     IntegerTooLarge(usize, usize),
     InvalidBindName(String),
     InvalidColumnIndex(usize),
-    InvalidConnectString(String),
+    InvalidConnectString(String, String),
     InvalidDescriptorNode(String, String),
     InvalidEncodedVector,
     InvalidEndUserSecurityContext(String),
@@ -200,8 +200,8 @@ impl fmt::Display for Error {
             ErrorKind::InvalidColumnIndex(index) => {
                 write!(fmt, "invalid column index {} (zero-based)", index)?
             }
-            ErrorKind::InvalidConnectString(connect_string) => {
-                write!(fmt, "invalid connect string: {connect_string}")?
+            ErrorKind::InvalidConnectString(connect_string, reason) => {
+                write!(fmt, "invalid connect string: {connect_string}: {reason}")?
             }
             ErrorKind::InvalidDescriptorNode(key, expected_type) => write!(
                 fmt,
@@ -482,8 +482,17 @@ impl Error {
         Error::new(ErrorKind::InvalidColumnIndex(index), None)
     }
 
-    pub(crate) fn invalid_connect_string(connect_string: String) -> Error {
-        Error::new(ErrorKind::InvalidConnectString(connect_string), None)
+    pub(crate) fn invalid_connect_string(
+        connect_string: &str,
+        reason: &str,
+    ) -> Error {
+        Error::new(
+            ErrorKind::InvalidConnectString(
+                connect_string.to_string(),
+                reason.to_string(),
+            ),
+            None,
+        )
     }
 
     pub(crate) fn invalid_descriptor_node(

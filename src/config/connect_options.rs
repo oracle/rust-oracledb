@@ -232,6 +232,17 @@ impl AddressList {
             addresses: Vec::<Address>::new(),
         }
     }
+
+    /// Validates the address list.
+    pub(crate) fn validate(&self, connect_string: &str) -> Result<(), Error> {
+        if self.addresses.is_empty() {
+            return Err(Error::invalid_connect_string(
+                connect_string,
+                "address_list has no child address",
+            ));
+        }
+        Ok(())
+    }
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -430,6 +441,11 @@ impl Description {
     /// Processes nodes in the DESCRIPTION section of a full descriptor.
     fn process_nodes(&mut self, node: &Node) -> Result<(), Error> {
         match node.key() {
+            "address" => {
+                let mut address_list = AddressList::new();
+                address_list.addresses.push(Address::new_from_node(node)?);
+                self.address_lists.push(address_list);
+            }
             "address_list" => {
                 self.address_lists.push(AddressList::new_from_node(node)?);
             }
@@ -602,6 +618,20 @@ impl Description {
     pub(crate) fn sid(&self) -> &str {
         self.sid.as_deref().unwrap_or("")
     }
+
+    /// Validates the description.
+    pub(crate) fn validate(&self, connect_string: &str) -> Result<(), Error> {
+        if self.address_lists.is_empty() {
+            return Err(Error::invalid_connect_string(
+                connect_string,
+                "description has no child address or address_list",
+            ));
+        }
+        for address_list in &self.address_lists {
+            address_list.validate(connect_string)?;
+        }
+        Ok(())
+    }
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -721,6 +751,20 @@ impl DescriptionList {
             sdu = sdu.max(description.sdu() as usize);
         }
         sdu
+    }
+
+    /// Validates the description list.
+    pub(crate) fn validate(&self, connect_string: &str) -> Result<(), Error> {
+        if self.descriptions.is_empty() {
+            return Err(Error::invalid_connect_string(
+                connect_string,
+                "description_list has no child description",
+            ));
+        }
+        for description in &self.descriptions {
+            description.validate(connect_string)?;
+        }
+        Ok(())
     }
 }
 

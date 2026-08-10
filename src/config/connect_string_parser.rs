@@ -115,6 +115,7 @@ fn parse_descriptor_value(parser: &mut Parser) -> Result<NodeValue, Error> {
 /// optionally enclosed by brackets (indicating IPv6 name resolution is
 /// desired).
 fn parse_easy_connect_host(parser: &mut Parser) -> Option<String> {
+    parser.save_pos();
     let mut result = parser.parse_delimited_text('[', ']');
     if result.is_none() {
         result = parser.parse_token(is_host_name_char);
@@ -155,10 +156,13 @@ fn parse_easy_connect_hosts(
         }
         if let Some(ch) = parser.peek_char() {
             if ch == ';' {
+                parser.next_char();
                 description.address_lists.push(address_list);
                 address_list = AddressList::new();
                 port_index = 0;
-            } else if ch != ',' {
+            } else if ch == ',' {
+                parser.next_char();
+            } else {
                 description.address_lists.push(address_list);
                 return Some(description);
             }
@@ -282,7 +286,10 @@ fn parse_full_descriptor(
         description_list.descriptions.push(description);
         Ok(description_list)
     } else {
-        Err(Error::invalid_connect_string(parser.source().to_string()))
+        Err(Error::invalid_connect_string(
+            parser.source(),
+            "missing description_list or description as top node",
+        ))
     }
 }
 
@@ -295,13 +302,23 @@ pub(crate) fn is_network_name_char(ch: char) -> bool {
 /// string is a full descriptor or a valid easy connect string.
 pub(crate) fn parse_connect_string(
     connect_string: &str,
+    allow_none_return: bool,
 ) -> Result<Option<DescriptionList>, Error> {
     let mut parser = Parser::new(connect_string.trim());
     if parser.peek_char_matches('(') {
         let description_list = parse_full_descriptor(&mut parser)?;
+        description_list.validate(parser.source())?;
         Ok(Some(description_list))
     } else {
-        Ok(parse_easy_connect_string(&mut parser))
+        let result = parse_easy_connect_string(&mut parser);
+        if result.is_none() && !allow_none_return {
+            Err(Error::invalid_connect_string(
+                connect_string,
+                "invalid easy connect string or full descriptor",
+            ))
+        } else {
+            Ok(result)
+        }
     }
 }
 
@@ -312,7 +329,7 @@ pub(crate) fn parse_connect_string_or_lookup_alias(
     connect_string: &str,
     config_dir_opt: &Option<String>,
 ) -> Result<DescriptionList, Error> {
-    match parse_connect_string(connect_string)? {
+    match parse_connect_string(connect_string, true)? {
         Some(description_list) => Ok(description_list),
         None => match config_dir_opt {
             Some(config_dir) => lookup_tns_alias(config_dir, connect_string),

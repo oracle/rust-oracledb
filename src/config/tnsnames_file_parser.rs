@@ -256,12 +256,7 @@ impl TnsnamesFile {
         let lookup_value = alias.to_lowercase();
         match self.entries.get(&lookup_value) {
             Some(connect_string) => {
-                match parse_connect_string(connect_string)? {
-                    Some(description_list) => Ok(description_list),
-                    None => Err(Error::invalid_connect_string(
-                        connect_string.clone(),
-                    )),
-                }
+                Ok(parse_connect_string(connect_string, false)?.unwrap())
             }
             None => Err(Error::tns_alias_not_found(
                 self.file_name.clone(),
