@@ -110,6 +110,11 @@ impl CachedStatement {
         &self.binds
     }
 
+    /// Returns a copy of the names of the binds defined for the statement.
+    pub(crate) fn bind_names(&self) -> Vec<String> {
+        self.bind_names.clone()
+    }
+
     /// Returns a boolean indicating if binds have changed since the last
     /// time the statement was executed.
     pub(crate) fn binds_changed(&self) -> bool {

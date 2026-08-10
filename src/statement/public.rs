@@ -69,6 +69,19 @@ impl<'sql> Statement<'sql> {
         }
     }
 
+    /// Returns a vector of the bind names used by the statement.
+    pub fn bind_names(&self) -> Result<Vec<String>, Error> {
+        let mut client = self.client_ref.lock().unwrap();
+        let statement = client.get_statement(
+            self.sql,
+            self.cache_statement,
+            &self.options,
+        )?;
+        let names = statement.bind_names();
+        client.return_statement(&statement);
+        Ok(names)
+    }
+
     /// Executes the statement with the given parameters and returns an
     /// ExecResult structure. The statement that is executed may not be a
     /// query.
