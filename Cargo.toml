@@ -29,7 +29,7 @@ authors = ["Oracle and/or its affiliates"]
 keywords = ["oracle", "database"]
 description = "Lightweight driver for Oracle Database"
 repository = "https://github.com/oracle/rust-oracledb"
-license-file = "LICENSE.txt"
+license = "UPL-1.0 OR Apache-2.0"
 edition = "2024"
 rust-version = "1.89"
 
