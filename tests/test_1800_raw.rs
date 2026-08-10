@@ -98,3 +98,31 @@ fn test_1804(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     assert!(values[2].is_none());
     Ok(())
 }
+
+#[rstest]
+/// Tests LONG RAW batch binding with NULL, short, and large values.
+fn test_1805(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let _guard =
+        common::create_table(&conn, "test_1805", "id number, c long raw")?;
+    let null_value: Option<Vec<u8>> = None;
+    let short_value = b"short batch value".to_vec();
+    let long_value = vec![0xEF_u8; 40_000];
+    let first: &[&dyn oracledb::ToDbValue] = &[&1, &null_value];
+    let second: &[&dyn oracledb::ToDbValue] = &[&2, &short_value];
+    let third: &[&dyn oracledb::ToDbValue] = &[&3, &long_value];
+    let params = oracledb::BindParameters::Slice(&[first, second, third]);
+    let result = conn.execute_batch(
+        "insert into test_1805 (id, c) values (:1, :2)",
+        params,
+    )?;
+    assert_eq!(result.rows_affected(), 3);
+
+    let cursor = conn.query("select c from test_1805 order by id", &[])?;
+    let values: Vec<Option<Vec<u8>>> = cursor
+        .map(|row| row?.get(0))
+        .collect::<Result<Vec<_>, _>>()?;
+    assert!(values[0].is_none());
+    assert_eq!(values[1].as_deref(), Some(short_value.as_slice()));
+    assert_eq!(values[2].as_deref(), Some(long_value.as_slice()));
+    Ok(())
+}

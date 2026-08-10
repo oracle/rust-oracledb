@@ -180,3 +180,20 @@ fn test_2508(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     assert_eq!(second, payload);
     Ok(())
 }
+
+#[rstest]
+/// Validates that invalid UTF-8 is rejected before a CLOB write is sent.
+fn test_2509(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let _guard = common::create_table(&conn, "test_2510", "data clob")?;
+    conn.execute("insert into test_2510 values (empty_clob())", &[])?;
+    let row = conn
+        .statement("select data from test_2510")?
+        .fetch_lobs()
+        .query_row(&[])?;
+    let mut lob: oracledb::Lob = row.get(0)?;
+    let error = lob
+        .write(&[0xff])
+        .expect_err("invalid UTF-8 must be rejected");
+    assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
+    Ok(())
+}

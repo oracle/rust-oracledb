@@ -569,3 +569,82 @@ fn test_2108(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     ));
     Ok(())
 }
+
+#[rstest]
+/// test JSON round-trip with a field name that requires the long-name OSON
+/// field-name segment format
+fn test_2109(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    if common::skip_unless_native_json_supported(&conn) {
+        return Ok(());
+    }
+
+    let long_name = "A".repeat(256);
+    let mut input_map = HashMap::new();
+    input_map.insert(
+        long_name.clone(),
+        oracledb::JsonValue::Number(oracledb::OracleNumber::from(2109)),
+    );
+    let input = oracledb::JsonValue::JsonObject(input_map);
+
+    let row = conn.query_row("select :1 from dual", &[&input])?;
+    let output: oracledb::JsonValue = row.get(0)?;
+    let oracledb::JsonValue::JsonObject(output_map) = output else {
+        panic!("expected JSON object");
+    };
+    let Some(oracledb::JsonValue::Number(value)) = output_map.get(&long_name)
+    else {
+        panic!("expected long JSON field name");
+    };
+    assert_eq!(value.to_string(), "2109");
+    Ok(())
+}
+
+#[rstest]
+/// Tests OSON field-name segments with both short and long names, repeated
+/// values, nested objects, arrays, and explicit JSON nulls.
+fn test_2110(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    if common::skip_unless_native_json_supported(&conn) {
+        return Ok(());
+    }
+
+    let long_name = "L".repeat(256);
+    let repeated = oracledb::JsonValue::String("shared value".to_string());
+    let mut nested = HashMap::new();
+    nested.insert("long_name_copy".to_string(), repeated.clone());
+    let mut input_map = HashMap::new();
+    input_map.insert("short".to_string(), repeated.clone());
+    input_map.insert(long_name.clone(), repeated.clone());
+    input_map.insert(
+        "nested".to_string(),
+        oracledb::JsonValue::JsonObject(nested),
+    );
+    input_map.insert(
+        "array".to_string(),
+        oracledb::JsonValue::JsonArray(vec![
+            repeated.clone(),
+            oracledb::JsonValue::Null,
+            oracledb::JsonValue::Boolean(true),
+        ]),
+    );
+    let input = oracledb::JsonValue::JsonObject(input_map);
+    let row = conn.query_row("select :1 from dual", &[&input])?;
+    let output: oracledb::JsonValue = row.get(0)?;
+    let oracledb::JsonValue::JsonObject(output_map) = output else {
+        panic!("expected JSON object");
+    };
+    assert!(
+        matches!(output_map.get("short"), Some(oracledb::JsonValue::String(value)) if value == "shared value")
+    );
+    assert!(output_map.contains_key(&long_name));
+    assert!(matches!(
+        output_map.get("nested"),
+        Some(oracledb::JsonValue::JsonObject(_))
+    ));
+    let Some(oracledb::JsonValue::JsonArray(values)) = output_map.get("array")
+    else {
+        panic!("expected JSON array");
+    };
+    assert_eq!(values.len(), 3);
+    assert!(matches!(values[1], oracledb::JsonValue::Null));
+    Ok(())
+}

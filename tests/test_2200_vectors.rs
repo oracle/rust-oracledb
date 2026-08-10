@@ -515,3 +515,31 @@ fn test_2218(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     assert_eq!(columns[0].db_type(), &oracledb::DB_TYPE_VECTOR);
     Ok(())
 }
+
+#[rstest]
+/// Tests NULL VECTOR fetches through Option<Vector>.
+fn test_2219(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    if common::skip_unless_vectors_supported(&conn) {
+        return Ok(());
+    }
+    let row = conn.query_row("select to_vector(null) from dual", &[])?;
+    let value: Option<oracledb::Vector> = row.get(0)?;
+    assert!(value.is_none());
+    Ok(())
+}
+
+#[rstest]
+/// Tests that a VECTOR dimension mismatch is reported as a database error.
+fn test_2220(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    if common::skip_unless_vectors_supported(&conn) {
+        return Ok(());
+    }
+    let error = match conn
+        .query("select vector('[1, 2, 3]', 2, float32) from dual", &[])
+    {
+        Ok(_) => panic!("VECTOR dimension mismatch must fail"),
+        Err(error) => error,
+    };
+    assert!(matches!(error.kind(), oracledb::ErrorKind::DbError(_)));
+    Ok(())
+}

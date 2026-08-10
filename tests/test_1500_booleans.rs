@@ -79,3 +79,20 @@ fn test_1502(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     }
     Ok(())
 }
+
+#[rstest]
+/// test native BOOLEAN IN/OUT binds in PL/SQL
+fn test_1503(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    if common::skip_unless_native_boolean_supported(&conn) {
+        return Ok(());
+    }
+    let mut result = conn.execute_named(
+        "begin :out_value := not :in_value; end;",
+        &[("in_value", &true), ("out_value", &false)],
+    )?;
+    let returned_data = result.returned_data();
+    assert_eq!(returned_data.len(), 1);
+    let out_value: bool = returned_data[0].get(0)?;
+    assert!(!out_value);
+    Ok(())
+}

@@ -223,3 +223,45 @@ fn test_2605(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     assert!(cursor.next().is_none());
     Ok(())
 }
+
+#[rstest]
+/// Tests metadata for JSON and VECTOR expressions on supported server
+/// versions.
+fn test_2606(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    if common::skip_unless_native_json_supported(&conn) {
+        return Ok(());
+    }
+    let cursor = conn.query(
+        "select json_object('metadata' value true returning json)",
+        &[],
+    )?;
+    assert_eq!(cursor.columns()[0].db_type(), &oracledb::DB_TYPE_JSON);
+    Ok(())
+}
+
+#[rstest]
+/// Tests metadata for JSON and VECTOR expressions on supported server
+/// versions.
+fn test_2607(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    if common::skip_unless_vectors_supported(&conn) {
+        return Ok(());
+    }
+    let cursor = conn.query("select to_vector('[1, 2]', 2, float32)", &[])?;
+    assert_eq!(cursor.columns()[0].db_type(), &oracledb::DB_TYPE_VECTOR);
+    Ok(())
+}
+
+#[rstest]
+/// Tests fetching a nested REF CURSOR through Row::get_cursor().
+fn test_2608(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let mut row = conn.query_row(
+        "select cursor(select level from dual connect by level <= 3) from dual",
+        &[],
+    )?;
+    let cursor = row.get_cursor(0)?;
+    let values: Vec<i32> = cursor
+        .map(|row| row?.get(0))
+        .collect::<Result<Vec<_>, _>>()?;
+    assert_eq!(values, vec![1, 2, 3]);
+    Ok(())
+}

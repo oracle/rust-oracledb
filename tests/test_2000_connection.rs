@@ -182,3 +182,22 @@ fn test_2004() -> Result<(), oracledb::Error> {
     }
     Ok(())
 }
+
+#[rstest]
+/// Tests missing credentials and missing connect strings before the network
+/// layer is used.
+fn test_2005() {
+    let err = match oracledb::connect(oracledb::Config::default()) {
+        Ok(_) => panic!("missing credentials must fail"),
+        Err(err) => err,
+    };
+    assert!(matches!(err.kind(), oracledb::ErrorKind::NoCredentials));
+
+    let err = match oracledb::connect(
+        oracledb::Config::default().set_credentials("user", "password"),
+    ) {
+        Ok(_) => panic!("missing connect string must fail"),
+        Err(err) => err,
+    };
+    assert!(matches!(err.kind(), oracledb::ErrorKind::NoConnectString));
+}

@@ -97,3 +97,29 @@ fn test_1902(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     assert_eq!(name, "after");
     Ok(())
 }
+
+#[rstest]
+/// Tests NULL ROWID conversion and ROWID returned by DML.
+fn test_1903(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let row = conn.query_row("select cast(null as rowid) from dual", &[])?;
+    let null_rowid: Option<String> = row.get(0)?;
+    assert!(null_rowid.is_none());
+
+    let _guard = common::create_table(
+        &conn,
+        "test_1903_returning",
+        "value varchar2(30)",
+    )?;
+    let mut result = conn.execute_named(
+        "insert into test_1903_returning (value) values (:value) \
+         returning rowid into :out_rowid",
+        &[("value", &"rowid value"), ("out_rowid", &" ".repeat(18))],
+    )?;
+    assert_eq!(result.rows_affected(), 1);
+    let returned = result.returned_data();
+    assert_eq!(returned.len(), 1);
+    let rowids: Vec<String> = returned[0].get(0)?;
+    assert_eq!(rowids.len(), 1);
+    assert!(!rowids[0].is_empty());
+    Ok(())
+}

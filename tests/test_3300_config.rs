@@ -131,6 +131,14 @@ fn test_3301(
          (ADDRESS=(PROTOCOL=tcp)(HOST=host_3302d)(PORT=1521))\
          (CONNECT_DATA=(SERVICE_NAME=service_name_3302)))"
 )]
+// easy connect string with IPv6 addresses, server type and instance name
+#[case(
+    "tcps://[::1]:1522/service_name_3302:pooled/instance_3302",
+    "(DESCRIPTION=(ADDRESS=(PROTOCOL=tcps)(HOST=[::1])(PORT=1522))\
+         (CONNECT_DATA=(SERVICE_NAME=service_name_3302)\
+         (INSTANCE_NAME=instance_3302)(SERVER=pooled))\
+         (SECURITY=(SSL_SERVER_DN_MATCH=ON)))"
+)]
 // full descriptor with address immediately under description
 #[case(
     "(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=host_3302)(PORT=3302))\
@@ -145,7 +153,18 @@ fn test_3301(
     "(DESCRIPTION=(ADDRESS=(PROTOCOL=tcp)(HOST=host_3302)\
         (PORT=1521))(CONNECT_DATA=(SERVICE_NAME=service_name_3302)))"
 )]
-/// Tests parsing connect strings.
+// full descriptor with more options specified and SDU clamping
+#[case(
+    "(DESCRIPTION=(FAILOVER=OFF)(LOAD_BALANCE=ON)(SDU=1)\
+        (RETRY_COUNT=2)(RETRY_DELAY=3)\
+        (ADDRESS=(PROTOCOL=TCPS)(HOST=host_3302)(PORT=3302))\
+        (CONNECT_DATA=(SERVICE_NAME=service_name_3302)))",
+    "(DESCRIPTION=(FAILOVER=OFF)(LOAD_BALANCE=ON)\
+        (RETRY_COUNT=2)(RETRY_DELAY=3)(SDU=512)\
+        (ADDRESS=(PROTOCOL=tcps)(HOST=host_3302)(PORT=3302))\
+        (CONNECT_DATA=(SERVICE_NAME=service_name_3302))\
+        (SECURITY=(SSL_SERVER_DN_MATCH=ON)))"
+)]
 fn test_3302(
     #[case] in_value: &str,
     #[case] expected_value: &str,

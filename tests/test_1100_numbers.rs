@@ -373,3 +373,37 @@ fn test_1116() {
         ));
     }
 }
+
+#[rstest]
+/// test i64 and u64 boundary values mapped via NUMBER
+fn test_1117(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let signed_values = [i64::MIN, i64::MAX];
+    for value in signed_values {
+        let row = conn.query_row("select :1 from dual", &[&value])?;
+        let fetched: i64 = row.get(0)?;
+        assert_eq!(fetched, value);
+    }
+
+    let unsigned_values = [0u64, u64::MAX];
+    for value in unsigned_values {
+        let row = conn.query_row("select :1 from dual", &[&value])?;
+        let fetched: u64 = row.get(0)?;
+        assert_eq!(fetched, value);
+    }
+    Ok(())
+}
+
+#[rstest]
+/// test integer conversion errors at both sides of the i32 range
+fn test_1118(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    for expression in ["2147483648", "-2147483649"] {
+        let row =
+            conn.query_row(&format!("select {expression} from dual"), &[])?;
+        let error = row.get::<i32>(0).unwrap_err();
+        assert!(matches!(
+            error.kind(),
+            oracledb::ErrorKind::UnsupportedConversion(_, _)
+        ));
+    }
+    Ok(())
+}

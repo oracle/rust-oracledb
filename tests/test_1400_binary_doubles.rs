@@ -92,3 +92,16 @@ fn test_1403(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     assert_eq!(values[2], f64::NEG_INFINITY);
     Ok(())
 }
+
+#[rstest]
+/// Tests preservation of the IEEE-754 negative-zero sign bit for BINARY_DOUBLE.
+fn test_1404_negative_zero(
+    conn: oracledb::Connection,
+) -> Result<(), oracledb::Error> {
+    let value = -0.0_f64;
+    let row = conn.query_row("select :1 from dual", &[&value])?;
+    let fetched: f64 = row.get(0)?;
+    assert_eq!(fetched, 0.0);
+    assert_eq!(fetched.to_bits(), value.to_bits());
+    Ok(())
+}

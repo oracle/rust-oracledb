@@ -245,3 +245,21 @@ fn test_3203(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     assert_eq!(fetched_values, data);
     Ok(())
 }
+
+#[rstest]
+/// Tests that Arrow fetch rejects a database type without a supported Arrow
+/// mapping instead of silently changing its representation.
+fn test_3204(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let error = conn
+        .query_arrow(
+            "select xmltype('<root/>') from dual",
+            oracledb::BindParameters::default(),
+        )
+        .expect_err("XMLTYPE must not be mapped to an arbitrary Arrow type");
+    assert!(matches!(
+        error.kind(),
+        oracledb::ErrorKind::UnsupportedDbType(_)
+            | oracledb::ErrorKind::ArrowOperation
+    ));
+    Ok(())
+}

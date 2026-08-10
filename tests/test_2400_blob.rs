@@ -324,3 +324,21 @@ fn test_2415(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     assert_eq!(second, payload);
     Ok(())
 }
+
+#[rstest]
+/// Validates that a LOB operation fails after its owning connection is closed.
+fn test_2416(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let mut conn = conn;
+    let payload = vec![1, 2, 3, 4];
+    let mut lob: oracledb::Lob = {
+        let row = conn
+            .statement("select to_blob(:1) from dual")?
+            .fetch_lobs()
+            .query_row(&[&payload])?;
+        row.get(0)?
+    };
+    conn.close()?;
+    let mut buffer = [0_u8; 4];
+    assert!(lob.read(&mut buffer).is_err());
+    Ok(())
+}
