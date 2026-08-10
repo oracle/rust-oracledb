@@ -743,10 +743,10 @@ impl OsonEncoderFieldNamesSeg {
     fn process_field_names(&mut self, field_id_offset: usize) {
         self.field_names
             .sort_by_key(|n| (n.hash_id, n.name.len(), n.name.clone()));
-        let mut field_id = field_id_offset + 1;
-        for field_name in &mut self.field_names {
+        for (field_id, field_name) in
+            (field_id_offset + 1..).zip(self.field_names.iter_mut())
+        {
             field_name.field_id = field_id;
-            field_id += 1;
         }
     }
 
