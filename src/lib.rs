@@ -294,6 +294,7 @@ pub fn create_pool(config: PoolConfig) -> Result<Pool, Error> {
 
 // User documentation
 pub mod guide {
+    #![doc = include_str!("../doc/table_of_contents.md")]
     #![doc = include_str!("../doc/introduction.md")]
     #![doc = include_str!("../doc/connection_handling.md")]
     #![doc = include_str!("../doc/sql_execution.md")]

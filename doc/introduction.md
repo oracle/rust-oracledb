@@ -1,5 +1,3 @@
-Rust-oracledb Driver User Guide.
-
 # <a name="introduction"></a> 1. Rust-oracledb Driver for Oracle Database
 
 The rust-oracledb driver is an open source Rust module that enables quick and
@@ -10,10 +8,6 @@ maintained by Oracle.
 This is a pre-release of rust-oracledb, intended to provide early access to
 the driver and gather user feedback. The APIs and functionalities are subject
 to change as development continues.
-
-You can use assistive technology products, such as screen readers, while you
-work with the rust-oracledb documentation. You can also use the keyboard
-instead of the mouse.
 
 Rust-oracledb has a rich feature set which is easy to use. It gives you control
 over SQL and PL/SQL statement execution, and also has security features.
@@ -52,7 +46,7 @@ The behavior of Oracle Net can optionally be configured with application
 settings, or by using a `tnsnames.ora` file, see
 [Optional Oracle Net Configuration file](#optnetfile).
 
-## <a name="installation"></a> 1.2 Installing rust-oracledb
+## <a name="installing"></a> 1.2 Installing rust-oracledb
 
 Rust-oracledb is typically installed from the package repository [crates.io].
 
