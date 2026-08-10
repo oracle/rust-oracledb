@@ -39,6 +39,7 @@ use base64ct::Encoding;
 use rand::RngExt;
 use rand::prelude::IndexedRandom;
 use rand::prelude::SliceRandom;
+use std::net::IpAddr;
 use std::net::SocketAddr;
 use std::net::ToSocketAddrs;
 use std::thread;
@@ -58,7 +59,14 @@ impl Address {
     fn build_connect_string(&self) -> String {
         let mut parts = Vec::<String>::new();
         parts.push(format!("(PROTOCOL={})", self.protocol()));
-        parts.push(format!("(HOST={})", self.host()));
+        let host = self.host();
+        if let Ok(ip) = host.parse::<IpAddr>()
+            && ip.is_ipv6()
+        {
+            parts.push(format!("(HOST=[{}])", host));
+        } else {
+            parts.push(format!("(HOST={})", host));
+        }
         parts.push(format!("(PORT={})", self.port()));
         if let Some(https_proxy) = self.https_proxy.as_ref() {
             parts.push(format!("(HTTPS_PROXY={}", https_proxy));
