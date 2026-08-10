@@ -3,7 +3,7 @@
 ## rust-oracledb 26.0.0-beta.2 (TBD)
 
 1.  Fixed bugs and enhanced parsing of connect strings
-    (`issue 2 <https://github.com/oracle/rust-oracledb/issues/2>`__).
+    ([issue 2](https://github.com/oracle/rust-oracledb/issues/2)).
 1.  Added runnable examples.
 
 
