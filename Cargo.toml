@@ -58,3 +58,7 @@ rstest = "0.26.1"
 
 [lib]
 doctest = false
+
+[[example]]
+name = "simple_arrow_query"
+required-features = ["arrow"]
