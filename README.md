@@ -1,5 +1,9 @@
 # rust-oracledb
 
+[![crates.io](https://img.shields.io/crates/v/oracledb.svg)](https://crates.io/crates/oracledb)
+[![Documentation](https://docs.rs/oracledb/badge.svg)](https://docs.rs/oracledb)
+[![Rust](https://img.shields.io/badge/rust-1.89.0%2B-blue.svg?maxAge=3600)](https://github.com/rust-lang/oracledb)
+
 A pure Rust driver for Oracle Database without any Oracle Client libraries
 required, maintained by Oracle.
 
