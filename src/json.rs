@@ -233,9 +233,8 @@ impl OsonDecoderFieldNamesSeg {
             } else {
                 buf.read_u16be()? as usize
             };
-            let name_data = buf.read_bytes(len)?.to_vec();
-            let name = String::from_utf8(name_data).unwrap();
-            names.push(name);
+            let name = buf.read_utf8(len)?;
+            names.push(name.to_string());
         }
 
         buf.set_pos(base_data_pos + self.seg_size);
@@ -488,21 +487,18 @@ impl OsonDecoder {
             }
             OSON_TYPE_STRING_LENGTH_UINT8 => {
                 let len = buf.read_u8()? as usize;
-                let bytes = buf.read_bytes(len)?;
-                let value = String::from_utf8(bytes.to_vec()).unwrap();
-                Ok(JsonValue::String(value))
+                let value = buf.read_utf8(len)?;
+                Ok(JsonValue::String(value.to_string()))
             }
             OSON_TYPE_STRING_LENGTH_UINT16 => {
                 let len = buf.read_u16be()? as usize;
-                let bytes = buf.read_bytes(len)?;
-                let value = String::from_utf8(bytes.to_vec()).unwrap();
-                Ok(JsonValue::String(value))
+                let value = buf.read_utf8(len)?;
+                Ok(JsonValue::String(value.to_string()))
             }
             OSON_TYPE_STRING_LENGTH_UINT32 => {
                 let len = buf.read_u32be()? as usize;
-                let bytes = buf.read_bytes(len)?;
-                let value = String::from_utf8(bytes.to_vec()).unwrap();
-                Ok(JsonValue::String(value))
+                let value = buf.read_utf8(len)?;
+                Ok(JsonValue::String(value.to_string()))
             }
             OSON_TYPE_EXTENDED => {
                 let subtype = buf.read_u8()?;
@@ -519,9 +515,8 @@ impl OsonDecoder {
             }
             0x00 => Ok(JsonValue::String(String::new())),
             0x01..=0x1f => {
-                let bytes = buf.read_bytes(node_type.into())?;
-                let value = String::from_utf8(bytes.to_vec()).unwrap();
-                Ok(JsonValue::String(value))
+                let value = buf.read_utf8(node_type.into())?;
+                Ok(JsonValue::String(value.to_string()))
             }
             0x20..=0x2f | 0x60..=0x6f => {
                 let num_bytes = ((node_type & 0x0f) + 1) as usize;

@@ -132,11 +132,11 @@ impl DbValue {
                 if bytes.is_empty() {
                     Ok(None)
                 } else if db_type.csfrm == constants::CS_FORM_NCHAR {
-                    let value = utils::utf16be_bytes_to_string(&bytes);
+                    let value = utils::utf16be_bytes_to_string(&bytes)?;
                     Ok(Some(DbValue::String(value)))
                 } else {
-                    let value = String::from_utf8(bytes.into()).unwrap();
-                    Ok(Some(DbValue::String(value)))
+                    let value = std::str::from_utf8(&bytes)?;
+                    Ok(Some(DbValue::String(value.to_string())))
                 }
             }
             constants::ORA_TYPE_NUM_RAW | constants::ORA_TYPE_NUM_LONG_RAW => {

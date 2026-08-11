@@ -50,7 +50,7 @@ pub(crate) fn string_to_utf16le_bytes(value: &str) -> Vec<u8> {
 }
 
 /// Decodes big-endian UTF-16 bytes into a Rust string.
-pub(crate) fn utf16be_bytes_to_string(bytes: &[u8]) -> String {
+pub(crate) fn utf16be_bytes_to_string(bytes: &[u8]) -> Result<String, Error> {
     let num_code_units = bytes.len() / 2;
     let mut code_units = Vec::<u16>::with_capacity(num_code_units);
     for i in 0..num_code_units {
@@ -59,11 +59,11 @@ pub(crate) fn utf16be_bytes_to_string(bytes: &[u8]) -> String {
             u16::from_be_bytes(bytes[offset..offset + 2].try_into().unwrap());
         code_units.push(code_unit);
     }
-    String::from_utf16(&code_units).unwrap()
+    Ok(String::from_utf16(&code_units)?)
 }
 
 /// Decodes little-endian UTF-16 bytes into a Rust string.
-pub(crate) fn utf16le_bytes_to_string(bytes: &[u8]) -> String {
+pub(crate) fn utf16le_bytes_to_string(bytes: &[u8]) -> Result<String, Error> {
     let num_code_units = bytes.len() / 2;
     let mut code_units = Vec::<u16>::with_capacity(num_code_units);
     for i in 0..num_code_units {
@@ -72,7 +72,7 @@ pub(crate) fn utf16le_bytes_to_string(bytes: &[u8]) -> String {
             u16::from_le_bytes(bytes[offset..offset + 2].try_into().unwrap());
         code_units.push(code_unit);
     }
-    String::from_utf16(&code_units).unwrap()
+    Ok(String::from_utf16(&code_units)?)
 }
 
 /// Returns the supplied string as a new string that is safe to include as a

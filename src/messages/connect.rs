@@ -112,8 +112,7 @@ impl ConnectMessage<'_> {
         let mut error_num: usize = 0;
         let message_len = resp.read_u16be()? as usize;
         if message_len > 0 {
-            let message_bytes = resp.read_bytes(message_len)?;
-            let message = String::from_utf8(message_bytes.into()).unwrap();
+            let message = resp.read_utf8(message_len)?;
             if let Some(start_pos) = message.find("(ERR=")
                 && let Some(end_pos) = message[start_pos..].find(")")
             {

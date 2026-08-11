@@ -116,15 +116,15 @@ impl Metadata {
         }
         let nulls_allowed = resp.read_u8()?;
         resp.read_u8()?; // v7 length of name
-        let name = resp.read_str_with_double_length()?;
-        let _obj_schema = resp.read_str_with_double_length()?;
-        let _obj_name = resp.read_str_with_double_length()?;
+        let name = resp.read_utf8_with_double_length()?.to_string();
+        let _obj_schema = resp.read_utf8_with_double_length()?;
+        let _obj_name = resp.read_utf8_with_double_length()?;
         resp.read_ub2()?; // column position
         let _uds_flags = resp.read_ub4()?;
         if client.supports_ttc_field_version(constants::TTC_FIELD_VERSION_23_1)
         {
-            let _domain_schema = resp.read_str_with_double_length()?;
-            let _domain_name = resp.read_str_with_double_length()?;
+            let _domain_schema = resp.read_utf8_with_double_length()?;
+            let _domain_name = resp.read_utf8_with_double_length()?;
         }
         if client.supports_ttc_field_version(
             constants::TTC_FIELD_VERSION_23_1_EXT_3,

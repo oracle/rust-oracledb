@@ -76,20 +76,14 @@ impl Lob {
     fn decode_string(
         bytes: &[u8],
         encoding: LobStringEncoding,
-    ) -> io::Result<String> {
+    ) -> Result<String, Error> {
         match encoding {
-            LobStringEncoding::Utf8 => String::from_utf8(bytes.to_vec())
-                .map_err(|error| {
-                    io::Error::new(
-                        io::ErrorKind::InvalidData,
-                        error.to_string(),
-                    )
-                }),
+            LobStringEncoding::Utf8 => Ok(String::from_utf8(bytes.to_vec())?),
             LobStringEncoding::Utf16Be => {
-                Ok(utils::utf16be_bytes_to_string(bytes))
+                Ok(utils::utf16be_bytes_to_string(bytes)?)
             }
             LobStringEncoding::Utf16Le => {
-                Ok(utils::utf16le_bytes_to_string(bytes))
+                Ok(utils::utf16le_bytes_to_string(bytes)?)
             }
         }
     }
@@ -296,7 +290,13 @@ impl io::Read for Lob {
             // Character LOBs are returned to callers as UTF-8, regardless of
             // the stored representation used by the locator.
             let encoding = self.string_encoding();
-            let value = Self::decode_string(&bytes, encoding)?;
+            let value =
+                Self::decode_string(&bytes, encoding).map_err(|error| {
+                    io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        error.to_string(),
+                    )
+                })?;
             value.into_bytes()
         } else {
             bytes

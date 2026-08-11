@@ -210,7 +210,7 @@ impl Response {
         let num_bytes = self.read_ub2()?;
         let _flags = self.read_ub2()?;
         if error_num != 0 && num_bytes > 0 {
-            let message = self.read_str_with_length()?;
+            let message = self.read_utf8_with_length()?;
             self.warning = Some(message.trim_end().to_string());
         }
         Ok(())
@@ -295,16 +295,15 @@ impl Response {
         num_pairs: u16,
     ) -> Result<(), Error> {
         for _ in 0..num_pairs {
-            let text_value: Vec<u8> =
-                self.read_bytes_with_double_length()?.into();
+            let text_value = self.read_utf8_with_double_length()?.to_string();
             let _binary_value = self.read_bytes_with_double_length()?;
             let keyword_num = self.read_ub2()?;
             match keyword_num {
                 constants::TTC_KEYWORD_NUM_CURRENT_SCHEMA => {
-                    self.set_current_schema(text_value);
+                    self.current_schema = Some(text_value);
                 }
                 constants::TTC_KEYWORD_NUM_EDITION => {
-                    self.set_edition(text_value);
+                    self.edition = Some(text_value);
                 }
                 _ => {}
             }
@@ -391,16 +390,6 @@ impl Response {
         self.buf.read_sb8()
     }
 
-    pub(crate) fn read_str_with_length(&mut self) -> Result<String, Error> {
-        self.buf.read_str_with_length()
-    }
-
-    pub(crate) fn read_str_with_double_length(
-        &mut self,
-    ) -> Result<String, Error> {
-        self.buf.read_str_with_double_length()
-    }
-
     pub(crate) fn read_ub2(&mut self) -> Result<u16, Error> {
         self.buf.read_ub2()
     }
@@ -429,12 +418,32 @@ impl Response {
         self.buf.read_u32be()
     }
 
-    pub(crate) fn set_current_schema(&mut self, value: Vec<u8>) {
-        self.current_schema = Some(String::from_utf8(value).unwrap())
+    /// Reads the specified number of bytes from the buffer which are assumed
+    /// to be valid UTF-8 encoded bytes, and returns a string reference.
+    pub(crate) fn read_utf8(
+        &mut self,
+        num_bytes: usize,
+    ) -> Result<&str, Error> {
+        self.buf.read_utf8(num_bytes)
     }
 
-    pub(crate) fn set_edition(&mut self, value: Vec<u8>) {
-        self.edition = Some(String::from_utf8(value).unwrap())
+    /// Reads an encoded unsigned integer from the buffer followed by
+    /// length-encoded bytes which are assumed to be valid UTF-8 encoded bytes.
+    /// An error is returned if either the integer or the bytes cannot be read
+    /// from the buffer.
+    pub(crate) fn read_utf8_with_double_length(
+        &mut self,
+    ) -> Result<Cow<'_, str>, Error> {
+        self.buf.read_utf8_with_double_length()
+    }
+
+    /// Reads length encoded bytes which are assumed to be valid UTF-8 encoded
+    /// bytes. An error is returned if such a string cannot be read from the
+    /// buffer.
+    pub(crate) fn read_utf8_with_length(
+        &mut self,
+    ) -> Result<Cow<'_, str>, Error> {
+        self.buf.read_utf8_with_length()
     }
 
     pub(crate) fn set_prev_fetch_last_row(

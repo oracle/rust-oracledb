@@ -31,6 +31,7 @@
 use std::error;
 use std::fmt;
 use std::io;
+use std::str;
 
 use crate::db_type::DbType;
 
@@ -51,6 +52,7 @@ pub enum ErrorKind {
     InvalidColumnIndex(usize),
     InvalidConnectString(String, String),
     InvalidDescriptorNode(String, String),
+    InvalidEncodedString,
     InvalidEncodedVector,
     InvalidEndUserSecurityContext(String),
     InvalidEndUserSecurityContextLength(usize),
@@ -124,29 +126,47 @@ impl From<std::io::Error> for Error {
         if e.kind() == std::io::ErrorKind::WouldBlock
             || e.kind() == std::io::ErrorKind::TimedOut
         {
-            Error::call_timeout_exceeded()
+            Error::new(ErrorKind::CallTimeoutExceeded, None)
         } else {
-            Error::stream_operation(e)
+            Error::new(ErrorKind::StreamOperation, Some(Box::new(e)))
         }
+    }
+}
+
+impl From<std::str::Utf8Error> for Error {
+    fn from(e: std::str::Utf8Error) -> Error {
+        Self::new(ErrorKind::InvalidEncodedString, Some(Box::new(e)))
+    }
+}
+
+impl From<std::string::FromUtf8Error> for Error {
+    fn from(e: std::string::FromUtf8Error) -> Error {
+        Self::new(ErrorKind::InvalidEncodedString, Some(Box::new(e)))
+    }
+}
+
+impl From<std::string::FromUtf16Error> for Error {
+    fn from(e: std::string::FromUtf16Error) -> Error {
+        Self::new(ErrorKind::InvalidEncodedString, Some(Box::new(e)))
     }
 }
 
 impl From<rustls::Error> for Error {
     fn from(e: rustls::Error) -> Error {
-        Error::tls_operation(e)
+        Self::tls_operation(e)
     }
 }
 
 impl From<rustls::pki_types::pem::Error> for Error {
     fn from(e: rustls::pki_types::pem::Error) -> Error {
-        Error::pem_file_operation(e)
+        Self::new(ErrorKind::PemFileOperation, Some(Box::new(e)))
     }
 }
 
 #[cfg(feature = "arrow")]
 impl From<arrow_schema::ArrowError> for Error {
     fn from(e: arrow_schema::ArrowError) -> Self {
-        Self::arrow_operation(e)
+        Self::new(ErrorKind::ArrowOperation, Some(Box::new(e)))
     }
 }
 
@@ -207,6 +227,9 @@ impl fmt::Display for Error {
                 fmt,
                 "full descriptor node {key} is not a valid {expected_type}"
             )?,
+            ErrorKind::InvalidEncodedString => {
+                fmt.write_str("invalid encoded string")?
+            }
             ErrorKind::InvalidEncodedVector => {
                 write!(fmt, "invalid encoded vector")?
             }
@@ -396,28 +419,11 @@ impl fmt::Display for Error {
 }
 
 impl Error {
-    #[cfg(feature = "arrow")]
-    fn arrow_operation(e: arrow_schema::ArrowError) -> Self {
-        Self::new(ErrorKind::ArrowOperation, Some(Box::new(e)))
-    }
-
-    fn call_timeout_exceeded() -> Error {
-        Error::new(ErrorKind::CallTimeoutExceeded, None)
-    }
-
     fn new(
         kind: ErrorKind,
         cause: Option<Box<dyn error::Error + Sync + Send>>,
     ) -> Error {
         Error(Box::new(ErrorInner { kind, cause }))
-    }
-
-    fn pem_file_operation(e: rustls::pki_types::pem::Error) -> Error {
-        Error::new(ErrorKind::PemFileOperation, Some(Box::new(e)))
-    }
-
-    fn stream_operation(e: io::Error) -> Error {
-        Error::new(ErrorKind::StreamOperation, Some(Box::new(e)))
     }
 
     pub(crate) fn column_truncated(

@@ -91,10 +91,10 @@ impl ErrorInfo {
             resp.read_ub4()?; // sql type
             resp.read_ub4()?; // server checksum
         }
-        let message: String = if error_num == 0 {
-            String::new()
+        let message: &str = if error_num == 0 {
+            ""
         } else {
-            resp.read_str_with_length()?
+            &resp.read_utf8_with_length()?
         };
         Ok(ErrorInfo {
             num: error_num as usize,

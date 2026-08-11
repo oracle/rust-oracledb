@@ -8,6 +8,8 @@
     ([issue 1](https://github.com/oracle/rust-oracledb/issues/1)).
 1.  Fixed bugs and enhanced parsing of connect strings
     ([issue 2](https://github.com/oracle/rust-oracledb/issues/2)).
+1.  String decoding now returns an error instead of panicing when invalid
+    encoded string data is detected.
 1.  Added runnable examples.
 
 

@@ -193,25 +193,6 @@ impl ReadBuffer {
         Ok(short_len)
     }
 
-    /// Reads length encoded bytes which are assumed to be valid UTF-8 encoded
-    /// bytes. An error is returned if such a string cannot be read from the
-    /// buffer.
-    pub(crate) fn read_str_with_length(&mut self) -> Result<String, Error> {
-        let bytes = self.read_bytes_with_length()?.into_owned();
-        Ok(String::from_utf8(bytes).unwrap())
-    }
-
-    /// Reads an encoded unsigned integer from the buffer followed by
-    /// length-encoded bytes which are assumed to be valid UTF-8 encoded bytes.
-    /// An error is returned if either the integer or the bytes cannot be read
-    /// from the buffer.
-    pub(crate) fn read_str_with_double_length(
-        &mut self,
-    ) -> Result<String, Error> {
-        let bytes = self.read_bytes_with_double_length()?.into_owned();
-        Ok(String::from_utf8(bytes).unwrap())
-    }
-
     /// Reads an encoded unsigned 16-bit integer from the buffer.
     pub(crate) fn read_ub2(&mut self) -> Result<u16, Error> {
         let buf = self.get_unsigned_integer_buf(2)?;
@@ -253,6 +234,44 @@ impl ReadBuffer {
     pub(crate) fn read_u32be(&mut self) -> Result<u32, Error> {
         let buf = self.read_bytes(4)?;
         Ok(u32::from_be_bytes(buf.try_into().unwrap()))
+    }
+
+    /// Reads the specified number of bytes from the buffer which are assumed
+    /// to be valid UTF-8 encoded bytes, and returns a string reference.
+    pub(crate) fn read_utf8(
+        &mut self,
+        num_bytes: usize,
+    ) -> Result<&str, Error> {
+        Ok(std::str::from_utf8(self.read_bytes(num_bytes)?)?)
+    }
+
+    /// Reads an encoded unsigned integer from the buffer followed by
+    /// length-encoded bytes which are assumed to be valid UTF-8 encoded bytes.
+    /// An error is returned if either the integer or the bytes cannot be read
+    /// from the buffer.
+    pub(crate) fn read_utf8_with_double_length(
+        &mut self,
+    ) -> Result<Cow<'_, str>, Error> {
+        match self.read_bytes_with_double_length()? {
+            Cow::Borrowed(bytes) => {
+                Ok(Cow::Borrowed(std::str::from_utf8(bytes)?))
+            }
+            Cow::Owned(vec) => Ok(Cow::Owned(String::from_utf8(vec)?)),
+        }
+    }
+
+    /// Reads length encoded bytes which are assumed to be valid UTF-8 encoded
+    /// bytes. An error is returned if such a string cannot be read from the
+    /// buffer.
+    pub(crate) fn read_utf8_with_length(
+        &mut self,
+    ) -> Result<Cow<'_, str>, Error> {
+        match self.read_bytes_with_length()? {
+            Cow::Borrowed(bytes) => {
+                Ok(Cow::Borrowed(std::str::from_utf8(bytes)?))
+            }
+            Cow::Owned(vec) => Ok(Cow::Owned(String::from_utf8(vec)?)),
+        }
     }
 
     /// Called when a value is being read from the buffer. The value is assumed

@@ -450,8 +450,8 @@ impl Message for AuthMessage {
     ) -> Result<(), Error> {
         let num_params = resp.read_ub2()?;
         for _ in 0..num_params {
-            let key = resp.read_str_with_double_length()?;
-            let value = resp.read_str_with_double_length()?;
+            let key = resp.read_utf8_with_double_length()?.to_string();
+            let value = resp.read_utf8_with_double_length()?.to_string();
             resp.read_ub4()?; // flags
             self.session_data.insert(key, value);
         }
