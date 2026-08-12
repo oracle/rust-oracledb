@@ -59,6 +59,7 @@ pub enum ErrorKind {
     InvalidNetworkName(String),
     InvalidOracleNumber(String),
     InvalidOsonEncodedBytes,
+    InvalidRedirect(String),
     InvalidServiceName(String, String, String, u16),
     InvalidSid(String, String, String, u16),
     ListenerRefusedConnection(String, String, u16, usize),
@@ -251,6 +252,9 @@ impl fmt::Display for Error {
             }
             ErrorKind::InvalidOsonEncodedBytes => {
                 fmt.write_str("invalid OSON encoded bytes")?
+            }
+            ErrorKind::InvalidRedirect(s) => {
+                write!(fmt, "invalid redirect: {}", s)?
             }
             ErrorKind::InvalidServiceName(
                 connection_id,
@@ -541,6 +545,10 @@ impl Error {
 
     pub(crate) fn invalid_oson_encoded_bytes() -> Error {
         Error::new(ErrorKind::InvalidOsonEncodedBytes, None)
+    }
+
+    pub(crate) fn invalid_redirect(data: &str) -> Error {
+        Error::new(ErrorKind::InvalidRedirect(data.to_string()), None)
     }
 
     pub(crate) fn invalid_service_name(

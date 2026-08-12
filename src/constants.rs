@@ -130,10 +130,11 @@ pub const PACKET_TYPE_CONTROL: u8 = 14;
 pub const PACKET_TYPE_DATA: u8 = 6;
 pub const PACKET_TYPE_MARKER: u8 = 12;
 pub const PACKET_TYPE_REFUSE: u8 = 4;
-pub const _PACKET_TYPE_REDIRECT: u8 = 5;
+pub const PACKET_TYPE_REDIRECT: u8 = 5;
 pub const PACKET_TYPE_RESEND: u8 = 11;
 
 // packet flags
+pub const PACKET_FLAGS_REDIRECT: u8 = 0x04;
 pub const PACKET_FLAGS_TLS_RENEG: u8 = 0x08;
 
 // marker types

@@ -338,6 +338,22 @@ pub(crate) fn parse_connect_string_or_lookup_alias(
     }
 }
 
+/// Parses redirect data which is assumed to contain a partial descriptor
+/// containing the address to which the client is to be redirected.
+pub(crate) fn parse_redirect_data(
+    redirect_data: &str,
+) -> Result<Address, Error> {
+    let mut parser = Parser::new(redirect_data);
+    if !parser.next_char_matches('(') {
+        return Err(Error::invalid_redirect(redirect_data));
+    }
+    let top_node = parse_descriptor_key_value_pair(&mut parser)?;
+    if top_node.key != "address" {
+        return Err(Error::invalid_redirect(redirect_data));
+    }
+    Address::new_from_node(&top_node)
+}
+
 /// Returns a string that has sanitized the input so that it fits the
 /// requirements for network names.
 pub(crate) fn sanitize_network_name(value: &str) -> String {

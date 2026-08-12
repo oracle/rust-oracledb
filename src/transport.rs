@@ -49,11 +49,11 @@ use std::env;
 use std::fs;
 use std::io::{Read, Write};
 use std::net::Shutdown;
-use std::net::SocketAddr;
 use std::net::TcpStream;
 use std::path::Path;
 use std::sync::Arc;
 
+use crate::config::Address;
 use crate::config::Config;
 use crate::constants;
 use crate::error::Error;
@@ -236,12 +236,19 @@ impl Transport {
     }
 
     /// Establishes a TCP connection to the database.
-    pub(crate) fn connect(&mut self, addr: SocketAddr) -> Result<(), Error> {
-        let stream = TcpStream::connect(addr)?;
+    pub(crate) fn connect(
+        &mut self,
+        stream: TcpStream,
+        address: &Address,
+        config: &Config,
+    ) -> Result<(), Error> {
         stream.set_nodelay(true)?;
         stream.set_read_timeout(None)?;
         self.socket_num = get_socket_num(&stream);
         self.stream = Some(stream);
+        if address.protocol() == "tcps" {
+            self.negotiate_tls(address.host(), config)?;
+        }
         Ok(())
     }
 

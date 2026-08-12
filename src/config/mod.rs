@@ -38,4 +38,5 @@ mod tnsnames_file_parser;
 pub use base::Config;
 pub(crate) use connect_options::Address;
 pub(crate) use connect_options::Description;
+pub(crate) use connect_string_parser::parse_redirect_data;
 pub use pool_config::PoolConfig;

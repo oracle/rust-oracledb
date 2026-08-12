@@ -6,7 +6,8 @@
     order to determine the list of bind variable names used by a statement.
 1.  Fixed bugs and enhanced parsing of SQL statements
     ([issue 1](https://github.com/oracle/rust-oracledb/issues/1)).
-1.  Fixed bugs and enhanced parsing of connect strings
+1.  Fixed bugs and enhanced parsing of connect strings, including the handling
+    of listener redirects
     ([issue 2](https://github.com/oracle/rust-oracledb/issues/2)).
 1.  String decoding now returns an error instead of panicing when invalid
     encoded string data is detected.

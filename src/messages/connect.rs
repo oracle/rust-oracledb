@@ -55,11 +55,14 @@ pub struct ConnectMessage<'a> {
     pub connect_data: &'a str,
     description: &'a Description,
     address: &'a Address,
+    pub packet_flags: u8,
     pub sdu: u32,
     pub protocol_version: u16,
     pub protocol_flags: u32,
     pub accepted: bool,
     pub tls_renegotiation_needed: bool,
+    pub redirect_data: Option<String>,
+    pub redirect_data_len: u16,
 }
 
 impl ConnectMessage<'_> {
@@ -72,11 +75,14 @@ impl ConnectMessage<'_> {
             connect_data,
             address,
             description,
+            packet_flags: 0,
             sdu: description.sdu(),
             protocol_version: 0,
             protocol_flags: 0,
             accepted: false,
             tls_renegotiation_needed: false,
+            redirect_data: None,
+            redirect_data_len: 0,
         }
     }
 
@@ -169,6 +175,15 @@ impl Message for ConnectMessage<'_> {
                     & constants::PACKET_FLAGS_TLS_RENEG
                     != 0;
             }
+            constants::PACKET_TYPE_REDIRECT => {
+                self.redirect_data_len = resp.read_u16be()?;
+            }
+            constants::PACKET_TYPE_DATA => {
+                self.redirect_data = Some(
+                    resp.read_utf8(self.redirect_data_len as usize)?
+                        .to_string(),
+                );
+            }
             _ => {
                 todo!()
             }
@@ -179,6 +194,11 @@ impl Message for ConnectMessage<'_> {
     /// Returns whether extended data (in a separate packet) needs to be sent.
     fn extended_data_needed(&self) -> bool {
         self.connect_data.len() > MAX_CONNECT_DATA
+    }
+
+    /// Returns the packet flags to use in the packet header.
+    fn get_packet_flags(&self) -> u8 {
+        self.packet_flags
     }
 
     /// Returns the packet type to use in the packet header.

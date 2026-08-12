@@ -33,10 +33,12 @@ mod capabilities;
 
 use std::mem;
 use std::net::SocketAddr;
+use std::net::TcpStream;
 
 use crate::config::Address;
 use crate::config::Config;
 use crate::config::Description;
+use crate::config::parse_redirect_data;
 use crate::constants;
 use crate::db_info::DbInfo;
 use crate::end_user_security_context::EndUserSecurityContext;
@@ -457,14 +459,41 @@ impl Client {
         address: &Address,
         description: &Description,
     ) -> Result<(), Error> {
-        self.transport.connect(sock_addr)?;
-        if address.protocol() == "tcps" {
-            self.transport.negotiate_tls(address.host(), &self.config)?;
-        }
+        let stream = TcpStream::connect(sock_addr)?;
+        self.transport.connect(stream, address, &self.config)?;
+        let mut address = address.clone();
+        let mut connect_data = connect_data.to_string();
         let mut connect_message =
-            ConnectMessage::new(connect_data, address, description);
+            ConnectMessage::new(&connect_data, &address, description);
         while !connect_message.accepted {
             self.process_message(&mut connect_message)?;
+            if connect_message.redirect_data_len > 0 {
+                self.receive_response(&mut connect_message, None)?;
+                let redirect_data =
+                    connect_message.redirect_data.take().unwrap();
+                if let Some((before, after)) =
+                    redirect_data.split_once('\u{0}')
+                {
+                    address = parse_redirect_data(before)?;
+                    connect_data = after.to_string();
+                    let new_stream =
+                        TcpStream::connect((address.host(), address.port()))?;
+                    self.transport.connect(
+                        new_stream,
+                        &address,
+                        &self.config,
+                    )?;
+                    connect_message = ConnectMessage::new(
+                        &connect_data,
+                        &address,
+                        description,
+                    );
+                    connect_message.packet_flags =
+                        constants::PACKET_FLAGS_REDIRECT;
+                } else {
+                    return Err(Error::invalid_redirect(&redirect_data));
+                }
+            }
             if connect_message.tls_renegotiation_needed {
                 self.transport.negotiate_tls(address.host(), &self.config)?;
             }

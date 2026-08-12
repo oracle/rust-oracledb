@@ -77,13 +77,6 @@ impl Address {
         format!("(ADDRESS={})", parts.join(""))
     }
 
-    /// Creates a new address from a full descriptor node and returns it.
-    fn new_from_node(node: &Node) -> Result<Address, Error> {
-        let mut address = Address::new(None, None);
-        node.process_child_nodes(|n| address.process_nodes(n))?;
-        Ok(address)
-    }
-
     /// Processes nodes in the ADDRESS section of a full descriptor.
     fn process_nodes(&mut self, node: &Node) -> Result<(), Error> {
         match node.key() {
@@ -125,6 +118,13 @@ impl Address {
             https_proxy: None,
             https_proxy_port: None,
         }
+    }
+
+    /// Creates a new address from a full descriptor node and returns it.
+    pub(crate) fn new_from_node(node: &Node) -> Result<Address, Error> {
+        let mut address = Address::new(None, None);
+        node.process_child_nodes(|n| address.process_nodes(n))?;
+        Ok(address)
     }
 
     /// Returns the port to sue. If a port was not specified, it defaults to
