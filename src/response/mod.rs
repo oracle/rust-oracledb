@@ -446,6 +446,25 @@ impl Response {
         self.buf.read_utf8_with_length()
     }
 
+    /// Resets the buffer in preparation for another attempt at deserializing
+    /// the database response. Prior to Oracle Database 26ai, the database does
+    /// not give any indication of when the end of a response has been reached.
+    /// The only way to know is by attempting to parse the response, and if
+    /// during that attempt, the end of data is reached, more packets are
+    /// clearly required for that response. Since the response contains state,
+    /// that state must be reset so that it doesn't interfere with another
+    /// attempt at deserializing the response.
+    pub(crate) fn reset(&mut self, packets: &[Packet]) {
+        self.buf = ReadBuffer::from_packets(packets);
+        self.error_info = None;
+        self.edition = None;
+        self.current_schema = None;
+        self.warning = None;
+        self.rows = None;
+        self.bit_vector = None;
+        self.end_of_fetch = false;
+    }
+
     pub(crate) fn set_prev_fetch_last_row(
         &mut self,
         last_row: Option<RowData>,

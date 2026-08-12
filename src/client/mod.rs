@@ -670,9 +670,10 @@ impl Client {
                 response.set_client_ref(client_ref.clone());
             }
             message.pre_deserialize(self, &mut response);
-            if let Err(e) = message.deserialize(self, &mut response) {
+            while let Err(e) = message.deserialize(self, &mut response) {
                 if e.is_out_of_data() {
                     packets.extend(self.receive_packets()?);
+                    response.reset(&packets);
                     continue;
                 }
                 return Err(e);

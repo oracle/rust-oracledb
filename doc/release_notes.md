@@ -9,6 +9,9 @@
 1.  Fixed bugs and enhanced parsing of connect strings, including the handling
     of listener redirects
     ([issue 2](https://github.com/oracle/rust-oracledb/issues/2)).
+1.  Fixed bug handling multiple packet responses with databases older than
+    Oracle Database 26ai
+    ([issue 5](https://github.com/oracle/rust-oracledb/issues/5)).
 1.  String decoding now returns an error instead of panicing when invalid
     encoded string data is detected.
 1.  Added runnable examples.
