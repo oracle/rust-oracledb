@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html itemscope="itemscope" itemtype="http://schema.org/WebPage" lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>rust-oracledb: The Rust Thin Driver for Oracle Database</title>
+  <link rel="stylesheet" href="base.css" type="text/css" />
+  <link rel="shortcut icon" type="image/ico" href="favicon.ico" />
+</head>
+
+<body>
+  <div class="oracleHeader">
+    <div class="container">
+      <a class="oracleLogo" href="https://www.oracle.com/">Oracle</a>
+    </div>
+  </div>
+
+  <header class="header" role="banner">
+    <div class="container">
+      <div class="headerLogoContainer">
+        <img class="headerLogo" alt="rust-oracledb logo" src="logo.png" />
+      </div>
+      <div class="headerContent">
+        <h1 class="headerTitle">Rust rust-oracledb version 26.0.0.beta-1</h1>
+        <nav class="headerNav" role="navigation">
+          <ul>
+            <li><a href="https://docs.rs/oracledb/latest/oracledb/guide/index.html#installation" >Installation</a></li>
+            <li><a href="https://docs.rs/oracledb/latest/oracledb/">Documentation</a></li>
+            <li><a href="https://docs.rs/oracledb/latest/oracledb/guide/index.html#releasenotes">Release Notes</a></li>
+            <li><a href="https://github.com/oracle/rust-oracledb/discussions">Help</a></li>
+            <li><a href="https://github.com/oracle/rust-oracledb">Source code</a></li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <main class="mainContent" role="main">
+    <div class="container">
+
+      <div id="about">
+      <h2>About rust-oracledb</h2>
+
+      <p>The <strong>rust-oracledb</strong> driver is an open-source Rust
+          module that enables Rust applications to connect to
+          <a href="https://www.oracle.com/database/" >Oracle Database</a>
+          directly with no additional libraries required. It is lightweight
+          and high-performance. The module is maintained by Oracle. </p>
+
+      <p>This is a pre-release of rust-oracledb, intended to provide early
+          access to the driver and gather user feedback. The APIs and
+          functionalities are subject to change as development continues.</p>
+
+      <p>Rust-oracledb supports <a href="#features">basic and advanced
+          features</a> of Oracle AI Database.</p>
+      </div>
+
+      <div id="installation">
+      <h2>Installation</h2>
+
+      <p>See <a href="https://docs.rs/oracledb/latest/oracledb/guide/index.html#installation">Rust-oracledb Installation</a>.</p>
+
+      </div>
+
+      <div id="examples">
+      <h2>Examples</h2>
+
+      <p>See the <a href="https://github.com/oracle/rust-oracledb/tree/main/examples">examples</a> directory. Start with
+      <a href="https://github.com/oracle/rust-oracledb/blob/main/examples/simple_query.rs">examples/simple_query.rs</a>.</p>
+
+      </div>
+
+      <div id="doc">
+      <h2>Documentation</h2>
+
+      <p>See <a href="https://docs.rs/oracledb/latest/oracledb/"
+      >rust-oracledb Documentation</a> and <a
+      href="https://docs.rs/oracledb/latest/oracledb/guide/index.html#releasenotes"
+      >Release Notes</a>.</p>
+
+      <p>You can use assistive technology products, such as screen readers, while you work with the documentation. You can also use the keyboard instead of the mouse.</p>
+
+      </div>
+
+      <div id="help">
+      <h2>Help</h2>
+
+      <p>Questions can be asked on <a
+      href="https://github.com/oracle/rust-oracledb/discussions" >GitHub
+      Discussions</a>. Identified issues can be raised as <a
+      href="https://github.com/oracle/rust-oracledb/issues" >GitHub
+      Issues</a>.</p>
+
+      </div>
+
+      <div id="testing">
+      <h2>Tests</h2>
+
+      <p>To run the test suite see <a href="https://github.com/oracle/rust-oracledb/blob/main/tests/README.md" >tests/README</a>.</p>
+
+      </div>
+
+      <div id="code">
+      <h2>Source code</h2>
+
+      <p>Source code is on <a href="https://github.com/oracle/rust-oracledb" >github.com/oracle/rust-oracledb</a>.</p>
+
+      </div>
+
+      <div id="contrib">
+      <h2>Contributing</h2>
+
+      <p>Rust-oracledb is an open source project. See <a href="https://github.com/oracle/rust-oracledb/blob/main/CONTRIBUTING.md" >CONTRIBUTING</a> for
+      details.</p>
+
+      <p>Oracle gratefully acknowledges the contributions to rust-oracledb that
+      have been made by the community.</p>
+
+      </div>
+
+      <div id="features">
+      <h2>rust-oracledb Features:</h2>
+
+      <ul>
+          <li><p><a href="https://crates.io/crates/oracledb">Install from crates.io</a>. Find the <a href="https://github.com/oracle/rust-oracledb" >source code on GitHub</a></p></li>
+
+          <li><p>Pure Rust <a href="https://docs.rs/oracledb/latest/oracledb/guide/index.html#architecture">'Thin' driver</a></p></li>
+
+          <li><p><a href="https://docs.rs/oracledb/latest/oracledb/guide/index.html#sqlexecution">SQL Execution</a> and <a href="https://docs.rs/oracledb/latest/oracledb/guide/index.html#plsqlexecution">PL/SQL Execution</a></p></li>
+
+          <li><p><a href="https://docs.rs/oracledb/latest/oracledb/guide/index.html#batchstmnt">Batch Statement Execution and Bulk Loading</a></p></li>
+
+          <li><p><a href="https://docs.rs/oracledb/latest/oracledb/guide/index.html#ebr">Edition-Based Redefinition</a></p></li>
+
+          <li><p><a href="https://docs.rs/oracledb/latest/oracledb/guide/index.html#lob">Large Objects: CLOBs, BLOBs and NCLOBs</a></p></li>
+
+          <li><p><a href="https://docs.rs/oracledb/latest/oracledb/guide/index.html#jsondatatype">Oracle Database JSON data type</a></p></li>
+
+          <li><p><a href="https://docs.rs/oracledb/latest/oracledb/guide/index.html#vectors">Oracle Database VECTOR data type</a></p></li>
+
+          <li><p><a href="https://docs.rs/oracledb/latest/oracledb/guide/index.html#txnmgmnt">Transaction Management</a></p></li>
+
+          <li><p><a href="https://docs.rs/oracledb/latest/oracledb/guide/index.html#connpooling">Connection Pooling</a></p></li>
+
+          <li><p><a href="https://docs.rs/oracledb/latest/oracledb/guide/index.html#privilegedconn">Privileged Connections</a></p></li>
+
+          <li><p><a href="https://docs.rs/oracledb/latest/oracledb/guide/index.html#resetpassword">Password Changing</a></p></li>
+
+          <li><p><a href="https://docs.rs/oracledb/latest/oracledb/guide/index.html#stmtcache">Statement Caching</a></p></li>
+
+          <li><p><a href="https://docs.rs/oracledb/latest/oracledb/guide/index.html#tracingsql">End-to-end Tracing, Mid-tier Authentication, and Auditing</a></p></li>
+
+          <li><p>Use of Oracle Network Service infrastructure including encrypted network traffic and security features.</p></li>
+
+          <li><p>Oracle's standard cross-version interoperability allows easy upgrades and connectivity to different Oracle Database versions.</p>
+          </li>
+      </ul>
+
+      <p>We are actively working on supporting the best Oracle Database
+      features, and on functionality requests from <a
+      href="https://github.com/oracle/rust-oracledb/issues?q=is%3Aopen+is%3Aissue+label%3Aenhancement" >users involved
+      in the project</a>.</p>
+
+      </div>
+
+      <div id="license">
+      <h2>License</h2>
+
+      <p>Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.</p>
+
+      <p>This software is dual-licensed to you under the Universal Permissive
+      License (UPL) 1.0 as shown at <a
+      href="https://oss.oracle.com/licenses/upl"
+      >https://oss.oracle.com/licenses/upl</a> and Apache License 2.0 as shown
+      at <a href="https://www.apache.org/licenses/LICENSE-2.0"
+      >https://www.apache.org/licenses/LICENSE-2.0</a>. You may choose either
+      license.  </p> <p>
+
+
+      If you elect to accept the software under the Apache License, Version 2.0,
+      the following applies:
+      </p>
+      <p>
+
+      Licensed under the Apache License, Version 2.0 (the "License"); you may
+      not use this file except in compliance with the License.  You may obtain
+      a copy of the License at <a
+      href="http://www.apache.org/licenses/LICENSE-2.0">http://www.apache.org/licenses/LICENSE-2.0</a>
+      </p>
+      <p>
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.</p>
+      </div>
+
+    </div>
+  </main>
+</body>
+
+</html>
