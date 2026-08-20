@@ -98,16 +98,6 @@ impl Lob {
         self.db_type.ora_type_num == constants::ORA_TYPE_NUM_CLOB
     }
 
-    /// Converts length (in bytes) to the amount (in bytes or UCS-2 code
-    /// points) required by the Oracle Database.
-    fn length_to_amount(&self, length: usize) -> usize {
-        if self.is_character_lob() {
-            length / 2
-        } else {
-            length
-        }
-    }
-
     /// Returns the TTC open mode to use for this LOB type.
     fn open_mode(&self) -> u64 {
         if self.db_type == &DB_TYPE_BFILE {
@@ -169,10 +159,8 @@ impl Lob {
         data: Cow<'_, [u8]>,
         offset: usize,
     ) -> Result<(), Error> {
-        let amount = self.length_to_amount(data.len());
         self.process_lob_op(LobOp::Write(offset.try_into().unwrap(), data))?;
         self.size = None;
-        self.offset += amount;
         Ok(())
     }
 
@@ -284,9 +272,8 @@ impl io::Read for Lob {
         };
         let bytes =
             self.read_at(self.offset, amount).map_err(Self::io_error)?;
-        let offset_increment = self.length_to_amount(bytes.len());
 
-        let data = if is_character_lob {
+        let (data, offset_increment) = if is_character_lob {
             // Character LOBs are returned to callers as UTF-8, regardless of
             // the stored representation used by the locator.
             let encoding = self.string_encoding();
@@ -297,9 +284,11 @@ impl io::Read for Lob {
                         error.to_string(),
                     )
                 })?;
-            value.into_bytes()
+            let amount = value.encode_utf16().count();
+            (value.into_bytes(), amount)
         } else {
-            bytes
+            let amount = bytes.len();
+            (bytes, amount)
         };
 
         if data.len() > buf.len() {
@@ -333,24 +322,27 @@ impl io::Write for Lob {
             ));
         }
 
-        let data = if self.is_character_lob() {
+        let (data, amount) = if self.is_character_lob() {
             let value = std::str::from_utf8(buf).map_err(|error| {
                 io::Error::new(io::ErrorKind::InvalidData, error.to_string())
             })?;
-            match self.string_encoding() {
+            let amount = value.encode_utf16().count();
+            let data = match self.string_encoding() {
                 LobStringEncoding::Utf16Be => {
                     Cow::Owned(utils::string_to_utf16be_bytes(value))
                 }
                 LobStringEncoding::Utf16Le => {
                     Cow::Owned(utils::string_to_utf16le_bytes(value))
                 }
-                _ => todo!(),
-            }
+                LobStringEncoding::Utf8 => Cow::Borrowed(buf),
+            };
+            (data, amount)
         } else {
-            Cow::Borrowed(buf)
+            (Cow::Borrowed(buf), buf.len())
         };
 
         self.write_at(data, self.offset).map_err(Self::io_error)?;
+        self.offset += amount;
         Ok(buf.len())
     }
 }

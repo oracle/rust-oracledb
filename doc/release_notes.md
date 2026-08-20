@@ -12,9 +12,13 @@
 1.  Fixed bug handling multiple packet responses with databases older than
     Oracle Database 26ai
     ([issue 5](https://github.com/oracle/rust-oracledb/issues/5)).
+1.  Fixed bugs with reading and writing CLOB/NCLOB when the database character
+    set is a fixed width character set.
 1.  Fixed bug when a statement is executed twice and the second time a value
     that is bound to a placeholder is larger than the value bound to that
     placeholder the first time.
+1.  Fixed bug when a statement querying LOBs is executed twice and the second
+    time the `fetch_lobs` option is different from the first time.
 1.  String decoding now returns an error instead of panicing when invalid
     encoded string data is detected.
 1.  Added runnable examples.
