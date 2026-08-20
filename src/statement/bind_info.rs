@@ -52,6 +52,7 @@ impl BindInfo {
         replace: bool,
         desired_type: &'static DbType,
         desired_max_size: usize,
+        binds_changed: &mut bool,
     ) -> Result<(), Error> {
         let mut matches: bool = false;
         if let Some(metadata) = self.metadata.as_ref() {
@@ -67,6 +68,7 @@ impl BindInfo {
 
         // set metadata for the bind variable if no match has taken place
         if !matches {
+            *binds_changed = true;
             let mut metadata =
                 Metadata::new_scalar(desired_type, desired_max_size);
             if self.is_return_bind {

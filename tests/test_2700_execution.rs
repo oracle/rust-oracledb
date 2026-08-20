@@ -364,3 +364,16 @@ fn test_2712(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     assert_eq!(values, (1..=11).collect::<Vec<_>>());
     Ok(())
 }
+
+#[rstest]
+/// Tests that a cached named statement resizes its bind metadata when a later
+/// execution supplies a substantially longer value.
+fn test_2713(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let statement = conn.statement("select length(:value) from dual")?;
+    for value in ["x".to_string(), "y".repeat(4000)] {
+        let row = statement.query_row_named(&[("value", &value)])?;
+        let length: i32 = row.get(0)?;
+        assert_eq!(length, value.len() as i32);
+    }
+    Ok(())
+}

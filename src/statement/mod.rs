@@ -133,7 +133,7 @@ impl CachedStatement {
         &mut self,
         params: &BindParameters,
     ) -> Result<(), Error> {
-        params.validate(&mut self.binds)?;
+        params.validate(&mut self.binds, &mut self.binds_changed)?;
         if !self.is_query {
             self.out_metadata.clear();
         }

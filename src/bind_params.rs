@@ -91,6 +91,7 @@ impl BindParameters<'_> {
     pub(crate) fn validate(
         &self,
         binds: &mut [BindInfo],
+        binds_changed: &mut bool,
     ) -> Result<(), Error> {
         match self {
             Self::Slice(params) => {
@@ -108,6 +109,7 @@ impl BindParameters<'_> {
                             first_row,
                             value.db_type(),
                             value.max_size(),
+                            binds_changed,
                         )?;
                     }
                     first_row = false;
@@ -126,8 +128,12 @@ impl BindParameters<'_> {
                 {
                     let db_type = arrow::column_db_type(column)?;
                     let max_size = arrow::column_max_size(column);
-                    bind_info
-                        .check_and_set_metadata(true, db_type, max_size)?;
+                    bind_info.check_and_set_metadata(
+                        true,
+                        db_type,
+                        max_size,
+                        binds_changed,
+                    )?;
                 }
             }
         }
