@@ -197,3 +197,50 @@ fn test_2509(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
     Ok(())
 }
+
+#[rstest]
+/// Validates that a CLOB read with an undersized byte buffer fails without
+/// consuming data, so the same UTF-8 character can be read successfully.
+fn test_2510(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let row = conn
+        .statement("select to_clob(:1) from dual")?
+        .fetch_lobs()
+        .query_row(&[&"é"])?;
+    let mut lob: oracledb::Lob = row.get(0)?;
+
+    let mut small_buffer = [0_u8; 1];
+    let error = lob.read(&mut small_buffer).expect_err(
+        "a one-byte buffer cannot hold a two-byte UTF-8 character",
+    );
+    assert_eq!(error.kind(), std::io::ErrorKind::InvalidInput);
+
+    let mut buffer = [0_u8; 2];
+    let bytes_read = lob.read(&mut buffer)?;
+    assert_eq!(bytes_read, 2);
+    assert_eq!(&buffer, "é".as_bytes());
+    assert_eq!(lob.read(&mut buffer)?, 0);
+    Ok(())
+}
+
+#[rstest]
+/// Validates trimming a written CLOB updates the locator length and stored
+/// data consistently.
+fn test_2511(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let _guard = common::create_table(&conn, "test_2511", "data clob")?;
+    conn.execute("insert into test_2511 values (empty_clob())", &[])?;
+
+    let row = conn
+        .statement("select data from test_2511")?
+        .fetch_lobs()
+        .query_row(&[])?;
+    let mut lob: oracledb::Lob = row.get(0)?;
+    lob.write_all(b"abcdef")?;
+    assert_eq!(lob.get_size()?, 6);
+    lob.trim(3)?;
+    assert_eq!(lob.get_size()?, 3);
+
+    let row = conn.query_row("select data from test_2511", &[])?;
+    let fetched: String = row.get(0)?;
+    assert_eq!(fetched, "abc");
+    Ok(())
+}

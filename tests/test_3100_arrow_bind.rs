@@ -250,6 +250,9 @@ fn test_3103(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
 #[rstest]
 /// test binding Arrow scalar, text, binary, and timestamp arrays
 fn test_3104(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    if common::skip_unless_native_boolean_supported(&conn) {
+        return Ok(());
+    }
     let _guard = common::create_table(
         &conn,
         "test_3104",

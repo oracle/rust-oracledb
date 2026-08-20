@@ -97,6 +97,19 @@ pub fn create_table<'a>(
     Ok(guard)
 }
 
+#[allow(dead_code)]
+/// Returns whether the connection is to an Oracle Cloud database.
+pub fn is_on_oracle_cloud(
+    conn: &oracledb::Connection,
+) -> Result<bool, oracledb::Error> {
+    let row = conn.query_row(
+        "select sys_context('userenv', 'cloud_service') from dual",
+        &[],
+    )?;
+    let service_name: Option<String> = row.get(0)?;
+    Ok(service_name.is_some())
+}
+
 /// Prints the reason the test is being skipped and returns a boolean as a
 /// convenience to the caller. The word SKIPPED is prepended to the message
 /// before it is printed so that it can easily be read from the test output.

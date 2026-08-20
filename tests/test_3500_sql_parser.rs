@@ -105,6 +105,7 @@ fn test_3506(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
 #[case(r#"select : "q?marks" from dual"#, vec!["q?marks"])]
 #[case(r#"select :"percent%(ens)yah" from dual"#, vec!["percent%(ens)yah"])]
 #[case(r#"select :  "per % cent" from dual"#, vec!["per % cent"])]
+#[case(r#"select :"per cent" from dual"#, vec!["per cent"])]
 #[case(r#"select :"par(ens)" from dual"#, vec!["par(ens)"])]
 #[case(r#"select :"more/slashes" from dual"#, vec!["more/slashes"])]
 #[case(r#"select :"%percent" from dual"#, vec!["%percent"])]

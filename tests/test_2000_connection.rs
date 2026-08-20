@@ -31,6 +31,7 @@ mod common;
 use common::conn;
 use oracledb;
 use rstest::*;
+use std::time::Duration;
 
 /// Creates an end user security context for testing.
 fn create_end_user_security_context(
@@ -77,14 +78,17 @@ fn test_2000(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
         conn.set_client_info(value)?;
         test_end_to_end_attr(&conn, value, sql)?;
     }
-    for value in ["oracledb_dbop", "oracledb_other_dbop"] {
-        let sql = r#"
-            select dbop_name from v$sql_monitor
-            where sid = sys_context('userenv', 'sid')
-            and status = 'EXECUTING'
-            "#;
-        conn.set_db_op(value)?;
-        test_end_to_end_attr(&conn, value, sql)?;
+    if !common::is_on_oracle_cloud(&conn)? {
+        for value in ["oracledb_dbop", ""] {
+            let sql = r#"
+                select dbop_name
+                from v$sql_monitor
+                where sid = sys_context('userenv', 'sid')
+                  and status = 'EXECUTING'
+                "#;
+            conn.set_db_op(value)?;
+            test_end_to_end_attr(&conn, value, sql)?;
+        }
     }
     for value in ["oracledb_module", ""] {
         let sql = "select sys_context('userenv', 'module') from dual";
@@ -200,4 +204,54 @@ fn test_2005() {
         Err(err) => err,
     };
     assert!(matches!(err.kind(), oracledb::ErrorKind::NoConnectString));
+}
+
+#[rstest]
+/// Tests that a call timeout is retained across a round trip and can be
+/// cleared.
+fn test_2006(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let timeout = Duration::from_secs(5);
+    conn.set_call_timeout(Some(timeout))?;
+    conn.ping()?;
+    assert_eq!(conn.call_timeout()?, Some(timeout));
+
+    conn.set_call_timeout(None)?;
+    conn.ping()?;
+    assert_eq!(conn.call_timeout()?, None);
+    Ok(())
+}
+
+#[rstest]
+/// Tests that explicitly closing a standalone connection rolls back its
+/// uncommitted transaction before the session is released.
+fn test_2007(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let mut conn = conn;
+    let observer = common::conn();
+    let _guard =
+        common::create_table(&observer, "test_2007", "id number primary key")?;
+
+    conn.execute("insert into test_2007 values (1)", &[])?;
+    conn.close()?;
+
+    let row = observer.query_row("select count(*) from test_2007", &[])?;
+    let count: i32 = row.get(0)?;
+    assert_eq!(count, 0);
+    Ok(())
+}
+
+#[rstest]
+/// Tests that dropping a standalone connection rolls back its uncommitted
+/// transaction before its underlying session is closed.
+fn test_2008(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let observer = common::conn();
+    let _guard =
+        common::create_table(&observer, "test_2008", "id number primary key")?;
+
+    conn.execute("insert into test_2008 values (1)", &[])?;
+    drop(conn);
+
+    let row = observer.query_row("select count(*) from test_2008", &[])?;
+    let count: i32 = row.get(0)?;
+    assert_eq!(count, 0);
+    Ok(())
 }
