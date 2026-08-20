@@ -32,7 +32,7 @@ Rust process. The block contains two smaller blocks labeled Rust and
 rust-oracledb module. The Rust process block communicates bidirectionally to
 the Oracle Database icon on the right side. Bidirectional arrows indicate
 request and response flow between users, the Rust process, and the database
-.](../../../../doc/images/rust-oracledb-arch.png)
+.](https://raw.githubusercontent.com/oracle/rust-oracledb/main/doc/images/rust-oracledb-arch.png)
 
 *Figure 1: Architecture of the rust-oracledb driver*
 
@@ -74,7 +74,7 @@ This automatically adds an entry like this to your `Cargo.toml` file:
 oracledb = "0.1.0"
 ```
 
-Runnable examples are in the [GitHub samples directory].
+Runnable examples are in the [GitHub examples directory].
 
 ## <a name="featurehighlights"></a> 1.3 Feature Highlights of rust-oracledb
 
@@ -95,6 +95,6 @@ information.
 [Cargo]: https://doc.rust-lang.org/cargo/
 [crates.io]: https://crates.io
 [github.com/oracle/rust-oracledb]: https://github.com/oracle/rust-oracledb
-[GitHub samples directory]: https://github.com/oracle/rust-oracledb/tree/main/samples
+[GitHub examples directory]: https://github.com/oracle/rust-oracledb/tree/main/examples
 [oracledb]: https://crates.io/crates/oracledb/
 [Rust environment]: https://rust-lang.org/tools/install/
