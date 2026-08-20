@@ -4,6 +4,11 @@
 
 1.  Added method [Statement::bind_names()](crate::Statement::bind_names()) in
     order to determine the list of bind variable names used by a statement.
+1.  The struct [Row](crate::Row) has been exported publicly so that
+    documentation on it is visible.
+1.  Added method [Row::get_array()](crate::Row::get_array()) in order to get
+    values returned in a DML RETURNING statement using the same types as are
+    possible with scalar values.
 1.  Fixed bugs and enhanced parsing of SQL statements
     ([issue 1](https://github.com/oracle/rust-oracledb/issues/1)).
 1.  Fixed bugs and enhanced parsing of connect strings, including the handling

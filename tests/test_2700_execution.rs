@@ -117,7 +117,7 @@ fn test_2702(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     assert_eq!(result.rows_affected(), 1);
     let returned_data = result.returned_data();
     assert_eq!(returned_data.len(), 1);
-    let values: Vec<String> = returned_data[0].get(0)?;
+    let values: Vec<String> = returned_data[0].get_array(0)?;
     assert_eq!(values, vec!["returned value"]);
     Ok(())
 }
@@ -390,5 +390,90 @@ fn test_2714(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     row = conn.query_row(sql, &[&value])?;
     let fetched_value: String = row.get(0)?;
     assert_eq!(fetched_value, value);
+    Ok(())
+}
+
+#[rstest]
+/// Tests DML RETURNING for multiple affected rows and multiple return columns.
+fn test_2715(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let _guard = common::create_table(
+        &conn,
+        "test_2715",
+        "id number primary key, value varchar2(30)",
+    )?;
+    conn.execute("insert into test_2715 values (1, 'one')", &[])?;
+    conn.execute("insert into test_2715 values (2, 'two')", &[])?;
+
+    let mut result = conn.execute_named(
+        "update test_2715 set value = value || :suffix where id <= :max_id \
+         returning id, value into :out_id, :out_value",
+        &[
+            ("suffix", &"-updated"),
+            ("max_id", &2),
+            ("out_id", &0),
+            ("out_value", &" ".repeat(30)),
+        ],
+    )?;
+    assert_eq!(result.rows_affected(), 2);
+
+    let returned_data = result.returned_data();
+    assert_eq!(returned_data.len(), 1);
+    let ids: Vec<usize> = returned_data[0].get_array(0)?;
+    let values: Vec<String> = returned_data[0].get_array(1)?;
+    assert_eq!(ids, vec![1, 2]);
+    assert_eq!(values, vec!["one-updated", "two-updated"]);
+    Ok(())
+}
+
+#[rstest]
+/// Tests execution of DML RETURNING when Oracle keywords are adjacent to the
+/// surrounding syntax, not separated by whitespace.
+fn test_2716(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let _guard = common::create_table(
+        &conn,
+        "test_2716",
+        "id number primary key, value varchar2(30)",
+    )?;
+    let mut result = conn.execute_named(
+        "insert into test_2716 (id, value) values (:in_id, :in_value)\
+         returning(value)into :out_value",
+        &[
+            ("in_id", &1),
+            ("in_value", &"no-space-returning"),
+            ("out_value", &" ".repeat(30)),
+        ],
+    )?;
+    assert_eq!(result.rows_affected(), 1);
+
+    let returned_data = result.returned_data();
+    assert_eq!(returned_data.len(), 1);
+    let values: Vec<String> = returned_data[0].get_array(0)?;
+    assert_eq!(values, vec!["no-space-returning"]);
+    Ok(())
+}
+
+#[rstest]
+/// Tests DML RETURNING reports an empty returned array when no rows match.
+fn test_2717(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let _guard = common::create_table(
+        &conn,
+        "test_2717",
+        "id number primary key, value varchar2(30)",
+    )?;
+    let mut result = conn.execute_named(
+        "update test_2717 set value = :value where id = :id \
+         returning value into :out_value",
+        &[
+            ("value", &"not-written"),
+            ("id", &1),
+            ("out_value", &" ".repeat(30)),
+        ],
+    )?;
+    assert_eq!(result.rows_affected(), 0);
+
+    let returned_data = result.returned_data();
+    assert_eq!(returned_data.len(), 1);
+    let values: Vec<String> = returned_data[0].get_array(0)?;
+    assert!(values.is_empty());
     Ok(())
 }

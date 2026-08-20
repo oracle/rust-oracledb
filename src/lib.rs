@@ -81,6 +81,7 @@ pub use crate::lob::Lob;
 pub use crate::metadata::Metadata;
 pub use crate::ora_version::OracleVersion;
 pub use crate::pool::Pool;
+pub use crate::row::Row;
 pub use crate::statement::Statement;
 pub use crate::vector::SparseVector;
 

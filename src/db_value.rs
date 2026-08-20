@@ -257,6 +257,31 @@ pub trait FromDbValue {
     fn from_db_value(db_value: &Option<DbValue>) -> Result<Self, Error>
     where
         Self: Sized;
+
+    fn from_db_value_array(
+        db_value_opt: &Option<DbValue>,
+    ) -> Result<Vec<Self>, Error>
+    where
+        Self: Sized,
+    {
+        if let Some(db_value) = db_value_opt {
+            match db_value {
+                DbValue::Array(db_array) => {
+                    let mut array = Vec::<Self>::with_capacity(db_array.len());
+                    for element_value in db_array {
+                        array.push(<Self>::from_db_value(element_value)?);
+                    }
+                    Ok(array)
+                }
+                _ => Err(Error::unsupported_conversion(
+                    db_value.type_name(),
+                    std::any::type_name::<Self>(),
+                )),
+            }
+        } else {
+            Err(Error::value_was_null())
+        }
+    }
 }
 
 impl FromDbValue for bool {
@@ -461,43 +486,6 @@ impl FromDbValue for Vector {
                 _ => Err(Error::unsupported_conversion(
                     db_value.type_name(),
                     "Vector",
-                )),
-            }
-        } else {
-            Err(Error::value_was_null())
-        }
-    }
-}
-
-trait ArrayElementType: FromDbValue {}
-
-impl ArrayElementType for bool {}
-impl ArrayElementType for f32 {}
-impl ArrayElementType for f64 {}
-impl ArrayElementType for OracleIntervalDS {}
-impl ArrayElementType for OracleIntervalYM {}
-impl ArrayElementType for OracleNumber {}
-impl ArrayElementType for OracleTimestamp {}
-impl ArrayElementType for String {}
-impl ArrayElementType for Vec<u8> {}
-
-impl<T> FromDbValue for Vec<T>
-where
-    T: ArrayElementType,
-{
-    fn from_db_value(db_value_opt: &Option<DbValue>) -> Result<Vec<T>, Error> {
-        if let Some(db_value) = db_value_opt {
-            match db_value {
-                DbValue::Array(db_array) => {
-                    let mut array = Vec::<T>::with_capacity(db_array.len());
-                    for element_value in db_array {
-                        array.push(<T>::from_db_value(element_value)?);
-                    }
-                    Ok(array)
-                }
-                _ => Err(Error::unsupported_conversion(
-                    db_value.type_name(),
-                    std::any::type_name::<T>(),
                 )),
             }
         } else {

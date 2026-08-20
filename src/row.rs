@@ -57,6 +57,18 @@ impl Row {
         }
     }
 
+    /// Returns the array at the given column index as a vector.
+    pub fn get_array<T>(&self, index: usize) -> Result<Vec<T>, Error>
+    where
+        T: FromDbValue,
+    {
+        if index < self.column_values.len() {
+            <T>::from_db_value_array(&self.column_values[index])
+        } else {
+            Err(Error::invalid_column_index(index))
+        }
+    }
+
     /// Returns a cursor from the given column index. Ownership is transferred
     /// from the row to the caller.
     pub fn get_cursor(&mut self, index: usize) -> Result<Cursor, Error> {
