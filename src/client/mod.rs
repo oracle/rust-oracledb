@@ -664,26 +664,24 @@ impl Client {
         client_ref_opt: Option<&ClientRef>,
     ) -> Result<Response, Error> {
         let mut packets = self.receive_packets()?;
-        loop {
-            let mut response = Response::new(&packets);
-            if let Some(client_ref) = client_ref_opt {
-                response.set_client_ref(client_ref.clone());
-            }
-            message.pre_deserialize(self, &mut response);
-            while let Err(e) = message.deserialize(self, &mut response) {
-                if e.is_out_of_data() {
-                    packets.extend(self.receive_packets()?);
-                    response.reset(&packets);
-                    continue;
-                }
-                return Err(e);
-            }
-            message.post_deserialize(self, &mut response)?;
-            if let Some(warning) = response.take_warning() {
-                self.last_warning = Some(warning);
-            }
-            return Ok(response);
+        let mut response = Response::new(&packets);
+        if let Some(client_ref) = client_ref_opt {
+            response.set_client_ref(client_ref.clone());
         }
+        message.pre_deserialize(self, &mut response);
+        while let Err(e) = message.deserialize(self, &mut response) {
+            if e.is_out_of_data() {
+                packets.extend(self.receive_packets()?);
+                response.reset(&packets);
+                continue;
+            }
+            return Err(e);
+        }
+        message.post_deserialize(self, &mut response)?;
+        if let Some(warning) = response.take_warning() {
+            self.last_warning = Some(warning);
+        }
+        Ok(response)
     }
 
     /// Returns whether the client should be closed based on the pending error
