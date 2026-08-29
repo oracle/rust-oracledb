@@ -65,8 +65,8 @@ fn main() -> Result<(), oracledb::Error> {
     let row = conn.query_row("select user from dual", &[])?;
     // using positional
     let user: String = row.get(0)?;
-    //using named lookup
-    let user: String = row.get("user");
+    // using named lookup
+    let user: String = row.get("USER")?;
     // perform query that returns multiple rows with a bind parameter
     let cursor = conn.query(
         "select ename, sal, comm from emp where deptno = :1", &[&30]

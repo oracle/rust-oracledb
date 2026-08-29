@@ -75,7 +75,7 @@ impl Row {
         <T>::from_db_value(ColumnData::Borrowed(value_opt))
     }
 
-    /// Returns the array at the given column index as a vector.
+    /// Returns the array at the given column index or name as a vector.
     pub fn get_array<'a, T>(
         &'a self,
         index: impl ColumnIndex,
@@ -91,7 +91,7 @@ impl Row {
         <T>::from_db_value_array(ColumnData::Borrowed(value_opt))
     }
 
-    /// Returns the value at the given column index, converted to the requested
+    /// Returns the value at the given column index or name, converted to the requested
     /// type. Ownership of the data that was stored in the row at the given
     /// column index is transferred to the caller. If this is attempted with a
     /// reference type, an error will take place.
@@ -107,7 +107,7 @@ impl Row {
         <T>::from_db_value(ColumnData::Owned(value_opt.take()))
     }
 
-    /// Returns the array at the given column index as a vector.
+    /// Returns the array at the given column index or name as a vector.
     pub fn take_array<'a, T>(
         &'a mut self,
         index: impl ColumnIndex,

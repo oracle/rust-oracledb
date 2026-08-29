@@ -51,7 +51,7 @@ pub struct Cursor {
     rows: VecDeque<RowData>,
     last_row: Option<RowData>,
     end_of_fetch: bool,
-	metadata: Option<Arc<Vec<Metadata>>>
+    metadata: Option<Arc<Vec<Metadata>>>,
 }
 
 impl Cursor {
@@ -101,13 +101,13 @@ impl Cursor {
 
     /// Creates a new cursor.
     pub(crate) fn new(statement_holder: StatementHolder) -> Self {
-	    let metadata = Some(Arc::new(statement_holder.out_metadata().clone()));
+        let metadata = Some(Arc::new(statement_holder.out_metadata().clone()));
         Self {
             statement_holder,
             rows: VecDeque::<RowData>::new(),
             last_row: None,
             end_of_fetch: false,
-	        metadata
+            metadata,
         }
     }
 

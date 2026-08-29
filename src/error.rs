@@ -222,9 +222,9 @@ impl fmt::Display for Error {
             ErrorKind::InvalidColumnIndex(index) => {
                 write!(fmt, "invalid column index {} (zero-based)", index)?
             }
-	        ErrorKind::InvalidColumnName(name) => {
-		        write!(fmt, "invalid column name \"{}\"", name)?
-	        }
+            ErrorKind::InvalidColumnName(name) => {
+                write!(fmt, "invalid column name \"{}\"", name)?
+            }
             ErrorKind::InvalidConnectString(connect_string, reason) => {
                 write!(fmt, "invalid connect string: {connect_string}: {reason}")?
             }
@@ -496,9 +496,9 @@ impl Error {
         Error::new(ErrorKind::InvalidColumnIndex(index), None)
     }
 
-	pub(crate) fn invalid_column_name(name: &str) -> Error {
-		Error::new(ErrorKind::InvalidColumnName(name.to_string()), None)
-	}
+    pub(crate) fn invalid_column_name(name: &str) -> Error {
+        Error::new(ErrorKind::InvalidColumnName(name.to_string()), None)
+    }
 
     pub(crate) fn invalid_connect_string(
         connect_string: &str,
