@@ -48,7 +48,7 @@ pub struct Row {
 }
 
 impl Row {
-    /// Creates a new row from the set of column values.
+    /// Creates a new row from the set of column values and metadata.
     pub(crate) fn new(
         column_values: RowData,
         metadata: Option<Arc<Vec<Metadata>>>,
@@ -59,7 +59,7 @@ impl Row {
         }
     }
 
-    /// Returns the value at the given column index, converted to the requested
+    /// Returns the value at the given column index or name, converted to the requested
     /// type. If a reference type is supplied, a reference is provided to the
     /// internal data, if possible. If an owned type is supplied, a copy of
     /// the internal data is made.
