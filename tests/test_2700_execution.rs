@@ -479,35 +479,53 @@ fn test_2717(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
 }
 
 #[rstest]
-/// Tests named column lookup on Row::get().
+/// Tests named column lookup on Row::get() and Row::take().
 fn test_2718(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
-	let row = conn.query_row(
-		"select 'test_2718' as test_name, 2718 as test_number from dual",
-		&[],
-	)?;
-	// existing behavior (positional)
-	assert_eq!(row.get(0)?, "test_2718");
-	assert_eq!(row.get(1)?, 2718);
+    let row = conn.query_row(
+        "select 'test_2718' as test_name, 2718 as test_number from dual",
+        &[],
+    )?;
+    // existing behavior (positional)
+    assert_eq!(row.get::<String>(0)?, "test_2718");
+    assert_eq!(row.get::<i32>(1)?, 2718);
 
-	// named lookup
-	assert_eq!(row.get("test_name")?, "test_2718");
-	assert_eq!(row.get("test_number")?, 2718);
+    // named lookup
+    assert_eq!(row.get::<String>("test_name")?, "test_2718");
+    assert_eq!(row.get::<i32>("test_number")?, 2718);
 
-	// case-insensitive named lookup
-	assert_eq!(row.get("test_Name")?, "test_2718");
-	assert_eq!(row.get("test_Number")?, 2718);
-	assert_eq!(row.get("TEST_NAME")?, "test_2718");
-	assert_eq!(row.get("TEST_NUMBER")?, 2718);
+    // case-insensitive named lookup
+    assert_eq!(row.get::<String>("test_Name")?, "test_2718");
+    assert_eq!(row.get::<i32>("test_Number")?, 2718);
+    assert_eq!(row.get::<String>("TEST_NAME")?, "test_2718");
+    assert_eq!(row.get::<i32>("TEST_NUMBER")?, 2718);
 
-	// Non-existing
-	assert_eq!(row.get("NO-EXISTS").is_err(), true );
+    // out-of-bounds positional index
+    assert!(row.get::<String>(99).is_err());
 
-	let row = conn.query_row(
-		"select 'first' as name, 'second' as name from dual",
-		&[],
-	)?;
-	assert_eq!(row.get("name")?, "first");
-	assert_ne!(row.get("name")?, "second");
+    // non-existing column name
+    assert!(row.get::<String>("NO-EXISTS").is_err());
 
-	Ok(())
+    // duplicate column names (first match wins)
+    let row = conn.query_row(
+        "select 'first' as name, 'second' as name from dual",
+        &[],
+    )?;
+    assert_eq!(row.get::<String>("name")?, "first");
+    assert_ne!(row.get::<String>("name")?, "second");
+
+    // named lookup on nested cursor with Row::take()
+    let mut row = conn.query_row(
+        "select cursor(select level from dual connect by level <= 3) as nested_cur from dual",
+        &[],
+    )?;
+    let mut cursor: oracledb::Cursor = row.take("nested_cur")?;
+    let mut count = 0;
+    for child_row in cursor.by_ref() {
+        let child_row = child_row?;
+        count += 1;
+        assert_eq!(child_row.get::<i32>(0)?, count);
+    }
+    assert_eq!(count, 3);
+
+    Ok(())
 }
