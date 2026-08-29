@@ -477,3 +477,37 @@ fn test_2717(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     assert!(values.is_empty());
     Ok(())
 }
+
+#[rstest]
+/// Tests named column lookup on Row::get().
+fn test_2718(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+	let row = conn.query_row(
+		"select 'test_2718' as test_name, 2718 as test_number from dual",
+		&[],
+	)?;
+	// existing behavior (positional)
+	assert_eq!(row.get(0)?, "test_2718");
+	assert_eq!(row.get(1)?, 2718);
+
+	// named lookup
+	assert_eq!(row.get("test_name")?, "test_2718");
+	assert_eq!(row.get("test_number")?, 2718);
+
+	// case-insensitive named lookup
+	assert_eq!(row.get("test_Name")?, "test_2718");
+	assert_eq!(row.get("test_Number")?, 2718);
+	assert_eq!(row.get("TEST_NAME")?, "test_2718");
+	assert_eq!(row.get("TEST_NUMBER")?, 2718);
+
+	// Non-existing
+	assert_eq!(row.get("NO-EXISTS").is_err(), true );
+
+	let row = conn.query_row(
+		"select 'first' as name, 'second' as name from dual",
+		&[],
+	)?;
+	assert_eq!(row.get("name")?, "first");
+	assert_ne!(row.get("name")?, "second");
+
+	Ok(())
+}
