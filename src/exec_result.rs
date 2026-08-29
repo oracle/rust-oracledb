@@ -60,7 +60,7 @@ impl ExecResult {
         if let Some(returned_data) = self.returned_data.take() {
             let mut rows = Vec::<Row>::with_capacity(returned_data.len());
             for column_values in returned_data {
-                rows.push(Row::new(column_values));
+                rows.push(Row::new(column_values, None));
             }
             rows
         } else {

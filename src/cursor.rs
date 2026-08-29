@@ -29,7 +29,7 @@
 //-----------------------------------------------------------------------------
 
 use std::collections::VecDeque;
-
+use std::sync::Arc;
 #[cfg(feature = "arrow")]
 use crate::bind_params::BindParameters;
 use crate::client::Client;
@@ -51,6 +51,7 @@ pub struct Cursor {
     rows: VecDeque<RowData>,
     last_row: Option<RowData>,
     end_of_fetch: bool,
+	metadata: Option<Arc<Vec<Metadata>>>
 }
 
 impl Cursor {
@@ -100,11 +101,13 @@ impl Cursor {
 
     /// Creates a new cursor.
     pub(crate) fn new(statement_holder: StatementHolder) -> Self {
+	    let metadata = Some(Arc::new(statement_holder.out_metadata().clone()));
         Self {
             statement_holder,
             rows: VecDeque::<RowData>::new(),
             last_row: None,
             end_of_fetch: false,
+	        metadata
         }
     }
 
@@ -141,7 +144,7 @@ impl Iterator for Cursor {
             if self.rows.is_empty() {
                 self.last_row = Some(row.clone());
             }
-            Some(Ok(Row::new(row)))
+            Some(Ok(Row::new(row, self.metadata.clone())))
         } else {
             None
         }
