@@ -518,14 +518,11 @@ fn test_2718(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
         "select cursor(select level from dual connect by level <= 3) as nested_cur from dual",
         &[],
     )?;
-    let mut cursor: oracledb::Cursor = row.take("nested_cur")?;
-    let mut count = 0;
-    for child_row in cursor.by_ref() {
-        let child_row = child_row?;
-        count += 1;
-        assert_eq!(child_row.get::<i32>(0)?, count);
-    }
-    assert_eq!(count, 3);
+    let cursor: oracledb::Cursor = row.take("nested_cur")?;
+    let values: Vec<i32> = cursor
+        .map(|row| row?.get("level"))
+        .collect::<Result<Vec<_>, _>>()?;
+    assert_eq!(values, vec![1, 2, 3]);
 
     Ok(())
 }
