@@ -50,6 +50,7 @@ pub enum ErrorKind {
     IntegerTooLarge(usize, usize),
     InvalidBindName(String),
     InvalidColumnIndex(usize),
+    InvalidColumnName(String),
     InvalidConnectString(String, String),
     InvalidDescriptorNode(String, String),
     InvalidEncodedString,
@@ -220,6 +221,9 @@ impl fmt::Display for Error {
             )?,
             ErrorKind::InvalidColumnIndex(index) => {
                 write!(fmt, "invalid column index {} (zero-based)", index)?
+            }
+            ErrorKind::InvalidColumnName(name) => {
+                write!(fmt, "invalid column name \"{}\"", name)?
             }
             ErrorKind::InvalidConnectString(connect_string, reason) => {
                 write!(fmt, "invalid connect string: {connect_string}: {reason}")?
@@ -490,6 +494,10 @@ impl Error {
 
     pub(crate) fn invalid_column_index(index: usize) -> Error {
         Error::new(ErrorKind::InvalidColumnIndex(index), None)
+    }
+
+    pub(crate) fn invalid_column_name(name: &str) -> Error {
+        Error::new(ErrorKind::InvalidColumnName(name.to_string()), None)
     }
 
     pub(crate) fn invalid_connect_string(

@@ -51,7 +51,7 @@ fn test_2400(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     let cursor = conn.query("select data from test_2400", &[])?;
     for row in cursor {
         let row = row?;
-        let fetched: Vec<u8> = row.get(0)?;
+        let fetched: &[u8] = row.get(0)?;
         assert_eq!(fetched, data);
     }
     Ok(())
@@ -66,7 +66,7 @@ fn test_2401(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     let cursor = conn.query("select data from test_2401", &[])?;
     for row in cursor {
         let row = row?;
-        let fetched: Option<Vec<u8>> = row.get(0)?;
+        let fetched: Option<&[u8]> = row.get(0)?;
         assert!(fetched.is_none());
     }
     Ok(())
@@ -81,7 +81,7 @@ fn test_2402(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     let cursor = conn.query("select data from test_2402", &[])?;
     for row in cursor {
         let row = row?;
-        let fetched: Option<Vec<u8>> = row.get(0)?;
+        let fetched: Option<&[u8]> = row.get(0)?;
         assert!(fetched.is_none());
     }
     Ok(())
@@ -96,7 +96,7 @@ fn test_2403(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     let cursor = conn.query("select data from test_2403", &[])?;
     for row in cursor {
         let row = row?;
-        let fetched: Vec<u8> = row.get(0)?;
+        let fetched: &[u8] = row.get(0)?;
         assert_eq!(fetched, data);
     }
     Ok(())
@@ -113,8 +113,8 @@ fn test_2404(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     let cursor = conn.query("select data1, data2 from test_2404", &[])?;
     for row in cursor {
         let row = row?;
-        let fetched1: Vec<u8> = row.get(0)?;
-        let fetched2: Vec<u8> = row.get(1)?;
+        let fetched1: &[u8] = row.get(0)?;
+        let fetched2: &[u8] = row.get(1)?;
         assert_eq!(fetched1, data1);
         assert_eq!(fetched2, data2);
     }
@@ -131,8 +131,8 @@ fn test_2405(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     conn.execute("update test_2405 set data = :1", &[&data2])?;
     let cursor = conn.query("select data from test_2405", &[])?;
     for row in cursor {
-        let row = row?;
-        let fetched: Vec<u8> = row.get(0)?;
+        let mut row = row?;
+        let fetched: Vec<u8> = row.take(0)?;
         assert_eq!(fetched, data2);
     }
     Ok(())

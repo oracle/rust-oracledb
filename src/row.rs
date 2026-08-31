@@ -28,8 +28,12 @@
 // Defines the structure containing row data.
 //-----------------------------------------------------------------------------
 
+use std::sync::Arc;
+
+use crate::column_index::ColumnIndex;
 use crate::db_value::{DbValue, FromDbValue};
 use crate::error::Error;
+use crate::metadata::Metadata;
 
 pub(crate) type RowData = Vec<Option<DbValue>>;
 
@@ -39,23 +43,34 @@ pub enum ColumnData<'a> {
 }
 
 pub struct Row {
+    column_info: Arc<Vec<Metadata>>,
     column_values: RowData,
 }
 
 impl Row {
     /// Creates a new row from the set of column values.
-    pub(crate) fn new(column_values: RowData) -> Row {
-        Row { column_values }
+    pub(crate) fn new(
+        column_info: &Arc<Vec<Metadata>>,
+        column_values: RowData,
+    ) -> Self {
+        Self {
+            column_info: Arc::clone(column_info),
+            column_values,
+        }
     }
 
     /// Returns the value at the given column index, converted to the requested
     /// type. If a reference type is supplied, a reference is provided to the
     /// internal data, if possible. If an owned type is supplied, a copy of
     /// the internal data is made.
-    pub fn get<'a, T>(&'a self, index: usize) -> Result<T, Error>
+    pub fn get<'a, T>(
+        &'a self,
+        col_index: impl ColumnIndex,
+    ) -> Result<T, Error>
     where
         T: FromDbValue<'a>,
     {
+        let index = col_index.resolve(&self.column_info)?;
         let value_opt = self
             .column_values
             .get(index)
@@ -64,10 +79,14 @@ impl Row {
     }
 
     /// Returns the array at the given column index as a vector.
-    pub fn get_array<'a, T>(&'a self, index: usize) -> Result<Vec<T>, Error>
+    pub fn get_array<'a, T>(
+        &'a self,
+        col_index: impl ColumnIndex,
+    ) -> Result<Vec<T>, Error>
     where
         T: FromDbValue<'a>,
     {
+        let index = col_index.resolve(&self.column_info)?;
         let value_opt = self
             .column_values
             .get(index)
@@ -79,10 +98,14 @@ impl Row {
     /// type. Ownership of the data that was stored in the row at the given
     /// column index is transferred to the caller. If this is attempted with a
     /// reference type, an error will take place.
-    pub fn take<'a, T>(&'a mut self, index: usize) -> Result<T, Error>
+    pub fn take<'a, T>(
+        &'a mut self,
+        col_index: impl ColumnIndex,
+    ) -> Result<T, Error>
     where
         T: FromDbValue<'a>,
     {
+        let index = col_index.resolve(&self.column_info)?;
         let value_opt = self
             .column_values
             .get_mut(index)
@@ -93,11 +116,12 @@ impl Row {
     /// Returns the array at the given column index as a vector.
     pub fn take_array<'a, T>(
         &'a mut self,
-        index: usize,
+        col_index: impl ColumnIndex,
     ) -> Result<Vec<T>, Error>
     where
         T: FromDbValue<'a>,
     {
+        let index = col_index.resolve(&self.column_info)?;
         let value_opt = self
             .column_values
             .get_mut(index)

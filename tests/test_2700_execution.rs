@@ -477,3 +477,50 @@ fn test_2717(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     assert!(values.is_empty());
     Ok(())
 }
+
+#[rstest]
+/// Tests named column lookup with Row::get() and Row::take()
+fn test_2718(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    // named lookups are case insensitive
+    let row = conn.query_row(
+        "select 'test_2718' as test_name, 2718 as test_number from dual",
+        &[],
+    )?;
+    assert_eq!(row.get::<&str>("test_name")?, "test_2718");
+    assert_eq!(row.get::<i32>("test_number")?, 2718);
+    assert_eq!(row.get::<&str>("test_Name")?, "test_2718");
+    assert_eq!(row.get::<i32>("test_Number")?, 2718);
+    assert_eq!(row.get::<&str>("TEST_NAME")?, "test_2718");
+    assert_eq!(row.get::<i32>("TEST_NUMBER")?, 2718);
+
+    // invalid indexes result in an error
+    assert!(row.get::<&str>(99).is_err());
+    assert!(row.get::<&str>("NO-EXISTS").is_err());
+
+    // duplicate column names (first match wins)
+    let row = conn.query_row(
+        "select 'first' as name, 'second' as name from dual",
+        &[],
+    )?;
+    assert_eq!(row.get::<&str>("name")?, "first");
+
+    // named lookup on nested cursor with Row::take()
+    let mut row = conn.query_row(
+        r#"
+        select
+            cursor(
+                select level
+                from dual
+                connect by level <= 3
+            ) as nested_cur
+        from dual
+        "#,
+        &[],
+    )?;
+    let cursor: oracledb::Cursor = row.take("nested_cur")?;
+    let values: Vec<i32> = cursor
+        .map(|row| row?.get("level"))
+        .collect::<Result<Vec<_>, _>>()?;
+    assert_eq!(values, vec![1, 2, 3]);
+    Ok(())
+}

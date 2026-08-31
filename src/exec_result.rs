@@ -28,6 +28,9 @@
 // Defines the structure representing execution results.
 //-----------------------------------------------------------------------------
 
+use std::sync::Arc;
+
+use crate::metadata::Metadata;
 use crate::response::Response;
 use crate::row::{Row, RowData};
 
@@ -36,13 +39,18 @@ use crate::row::{Row, RowData};
 /// [Connection::execute_named()](`crate::Connection::execute_named()`), or
 /// [Connection::execute_batch()](`crate::Connection::execute_batch()`).
 pub struct ExecResult {
+    column_info: Arc<Vec<Metadata>>,
     returned_data: Option<Vec<RowData>>,
     rows_affected: u64,
 }
 
 impl ExecResult {
-    pub(crate) fn new(resp: &mut Response) -> ExecResult {
+    pub(crate) fn new(
+        column_info: &[Metadata],
+        resp: &mut Response,
+    ) -> ExecResult {
         ExecResult {
+            column_info: Arc::new(column_info.to_vec()),
             returned_data: resp.take_rows(),
             rows_affected: resp.get_rowcount(),
         }
@@ -60,7 +68,7 @@ impl ExecResult {
         if let Some(returned_data) = self.returned_data.take() {
             let mut rows = Vec::<Row>::with_capacity(returned_data.len());
             for column_values in returned_data {
-                rows.push(Row::new(column_values));
+                rows.push(Row::new(&self.column_info, column_values));
             }
             rows
         } else {

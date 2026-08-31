@@ -433,11 +433,29 @@ impl<'a> FromDbValue<'a> for String {
     }
 }
 
+impl<'a> FromDbValue<'a> for &'a str {
+    fn from_db_value(column_data: ColumnData<'a>) -> Result<Self, Error> {
+        match column_data {
+            ColumnData::Borrowed(Some(DbValue::String(v))) => Ok(v),
+            _ => Err(Self::unsupported_conversion(column_data)),
+        }
+    }
+}
+
 impl<'a> FromDbValue<'a> for Vec<u8> {
     fn from_db_value(column_data: ColumnData<'a>) -> Result<Self, Error> {
         match column_data {
             ColumnData::Borrowed(Some(DbValue::Bytes(v))) => Ok(v.to_vec()),
             ColumnData::Owned(Some(DbValue::Bytes(v))) => Ok(v),
+            _ => Err(Self::unsupported_conversion(column_data)),
+        }
+    }
+}
+
+impl<'a> FromDbValue<'a> for &'a [u8] {
+    fn from_db_value(column_data: ColumnData<'a>) -> Result<Self, Error> {
+        match column_data {
+            ColumnData::Borrowed(Some(DbValue::Bytes(v))) => Ok(v),
             _ => Err(Self::unsupported_conversion(column_data)),
         }
     }

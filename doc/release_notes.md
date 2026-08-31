@@ -10,6 +10,13 @@
     data where possible and clone the data where an owned type is desired. The
     method ``Row::get_cursor()`` has been removed in favor of the new method
     [Row::take()](crate::Row::take()).
+1.  The method [Row::get()](crate::Row::get()) can now return `&str` and
+    `&[u8]` references for string and raw data respectively. This allows
+    returning a reference to the fetched data without copying it.
+1.  Added support for using a name instead of a numeric position to identify
+    columns in [Row::get()](crate::Row::get()) and
+    [Row::take()](crate::Row::take())
+    ([issue 12](https://github.com/oracle/rust-oracledb/issues/12)).
 
 
 ## rust-oracledb 26.0.0-beta.2 (August 20, 2026)

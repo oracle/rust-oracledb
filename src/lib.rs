@@ -36,6 +36,7 @@
 mod arrow;
 mod bind_params;
 mod client;
+mod column_index;
 mod config;
 mod connection;
 mod constants;
@@ -100,6 +101,7 @@ pub use crate::utils::is_qualified_sql_name;
 pub use crate::utils::is_simple_sql_name;
 
 // public traits
+pub use crate::column_index::ColumnIndex;
 pub use crate::db_value::FromDbValue;
 pub use crate::db_value::ToDbValue;
 

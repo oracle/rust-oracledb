@@ -63,7 +63,12 @@ fn main() -> Result<(), oracledb::Error> {
 
     // perform simple query that returns a single row with no bind parameters
     let row = conn.query_row("select user from dual", &[])?;
+
+    // get value by position
     let user: String = row.get(0)?;
+
+    // get value by name
+    let user: String = row.get("user")?;
 
     // perform query that returns multiple rows with a bind parameter
     let cursor = conn.query(
