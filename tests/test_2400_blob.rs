@@ -144,11 +144,11 @@ fn test_2405(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
 #[rstest]
 fn test_2406(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     let payload: Vec<u8> = vec![1, 2, 3, 4, 5, 6, 7, 8];
-    let row = conn
+    let mut row = conn
         .statement("select to_blob(:1) from dual")?
         .fetch_lobs()
         .query_row(&[&payload])?;
-    let mut lob: oracledb::Lob = row.get(0)?;
+    let mut lob: oracledb::Lob = row.take(0)?;
     let mut read_back = Vec::new();
     lob.read_to_end(&mut read_back)?;
     assert_eq!(read_back, payload);
@@ -161,11 +161,11 @@ fn test_2407(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     let _guard = common::create_table(&conn, "test_2407", "data blob")?;
     let payload: Vec<u8> = vec![1, 2, 3, 4];
     conn.execute("insert into test_2407 values (:1)", &[&payload])?;
-    let row = conn
+    let mut row = conn
         .statement("select data from test_2407")?
         .fetch_lobs()
         .query_row(&[])?;
-    let mut lob: oracledb::Lob = row.get(0)?;
+    let mut lob: oracledb::Lob = row.take(0)?;
 
     // Basic lifecycle test
     assert!(!lob.is_open()?, "LOB should initially be closed");
@@ -188,18 +188,18 @@ fn test_2408(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     let payload = vec![8, 7, 6, 5, 4, 3, 2, 1];
     conn.execute("insert into test_2408 values (empty_blob())", &[])?;
 
-    let row = conn
+    let mut row = conn
         .statement("select data from test_2408")?
         .fetch_lobs()
         .query_row(&[])?;
-    let mut lob: oracledb::Lob = row.get(0)?;
+    let mut lob: oracledb::Lob = row.take(0)?;
     lob.write_all(&payload)?;
 
-    let row = conn
+    let mut row = conn
         .statement("select data from test_2408")?
         .fetch_lobs()
         .query_row(&[])?;
-    let mut lob: oracledb::Lob = row.get(0)?;
+    let mut lob: oracledb::Lob = row.take(0)?;
     let mut read_back = Vec::new();
     lob.read_to_end(&mut read_back)?;
     assert_eq!(read_back, payload);
@@ -213,18 +213,18 @@ fn test_2409(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     let payload = vec![1, 2, 3, 4, 5, 6];
     conn.execute("insert into test_2409 values (:1)", &[&payload])?;
 
-    let row = conn
+    let mut row = conn
         .statement("select data from test_2409")?
         .fetch_lobs()
         .query_row(&[])?;
-    let mut lob: oracledb::Lob = row.get(0)?;
+    let mut lob: oracledb::Lob = row.take(0)?;
     lob.trim(3)?;
 
-    let row = conn
+    let mut row = conn
         .statement("select data from test_2409")?
         .fetch_lobs()
         .query_row(&[])?;
-    let mut lob: oracledb::Lob = row.get(0)?;
+    let mut lob: oracledb::Lob = row.take(0)?;
     let mut read_back = Vec::new();
     lob.read_to_end(&mut read_back)?;
     assert_eq!(read_back, &payload[..3]);
@@ -235,11 +235,11 @@ fn test_2409(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
 #[rstest]
 fn test_2410(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     let payload = vec![1, 2, 3, 4, 5, 6, 7, 8];
-    let row = conn
+    let mut row = conn
         .statement("select to_blob(:1) from dual")?
         .fetch_lobs()
         .query_row(&[&payload])?;
-    let mut lob: oracledb::Lob = row.get(0)?;
+    let mut lob: oracledb::Lob = row.take(0)?;
     let mut read_back = Vec::new();
     let mut buf = [0; 1];
     loop {
@@ -259,11 +259,11 @@ fn test_2411(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     let _guard = common::create_table(&conn, "test_2411", "data blob")?;
     let payload = vec![1, 2, 3, 4, 5];
     conn.execute("insert into test_2411 values (:1)", &[&payload])?;
-    let row = conn
+    let mut row = conn
         .statement("select data from test_2411")?
         .fetch_lobs()
         .query_row(&[])?;
-    let mut lob: oracledb::Lob = row.get(0)?;
+    let mut lob: oracledb::Lob = row.take(0)?;
     assert_eq!(lob.get_size()?, payload.len());
     assert!(lob.get_chunk_size()? > 0);
     Ok(())
@@ -272,11 +272,11 @@ fn test_2411(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
 /// Validates null BLOB locator handling when fetch_lobs() is enabled.
 #[rstest]
 fn test_2412(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
-    let row = conn
+    let mut row = conn
         .statement("select to_blob(null) from dual")?
         .fetch_lobs()
         .query_row(&[])?;
-    let fetched: Option<oracledb::Lob> = row.get(0)?;
+    let fetched: Option<oracledb::Lob> = row.take(0)?;
     assert!(fetched.is_none());
     Ok(())
 }
@@ -286,11 +286,11 @@ fn test_2412(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
 fn test_2413(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     let payload = vec![9, 8, 7, 6, 5];
     for _ in 0..2 {
-        let row = conn
+        let mut row = conn
             .statement("select to_blob(:1) from dual")?
             .fetch_lobs()
             .query_row(&[&payload])?;
-        let mut lob: oracledb::Lob = row.get(0)?;
+        let mut lob: oracledb::Lob = row.take(0)?;
         let mut read_back = Vec::new();
         lob.read_to_end(&mut read_back)?;
         assert_eq!(read_back, payload);
@@ -331,11 +331,11 @@ fn test_2416(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     let mut conn = conn;
     let payload = vec![1, 2, 3, 4];
     let mut lob: oracledb::Lob = {
-        let row = conn
+        let mut row = conn
             .statement("select to_blob(:1) from dual")?
             .fetch_lobs()
             .query_row(&[&payload])?;
-        row.get(0)?
+        row.take(0)?
     };
     conn.close()?;
     let mut buffer = [0_u8; 4];

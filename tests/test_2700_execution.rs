@@ -386,7 +386,7 @@ fn test_2714(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     let sql = "select to_clob(:1) from dual";
     let value = "statement cache LOB option".to_string();
     let mut row = conn.statement(sql)?.fetch_lobs().query_row(&[&value])?;
-    let _: oracledb::Lob = row.get(0)?;
+    let _: oracledb::Lob = row.take(0)?;
     row = conn.query_row(sql, &[&value])?;
     let fetched_value: String = row.get(0)?;
     assert_eq!(fetched_value, value);

@@ -258,7 +258,7 @@ fn test_2608(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
         "select cursor(select level from dual connect by level <= 3) from dual",
         &[],
     )?;
-    let cursor = row.get_cursor(0)?;
+    let cursor: oracledb::Cursor = row.take(0)?;
     let values: Vec<i32> = cursor
         .map(|row| row?.get(0))
         .collect::<Result<Vec<_>, _>>()?;

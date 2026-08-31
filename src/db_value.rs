@@ -46,6 +46,7 @@ use crate::ora_type::OracleIntervalYM;
 use crate::ora_type::OracleNumber;
 use crate::ora_type::OracleTimestamp;
 use crate::response::Response;
+use crate::row::ColumnData;
 use crate::row::RowData;
 use crate::rowid::Rowid;
 use crate::statement::CachedStatement;
@@ -61,7 +62,7 @@ pub enum DbValue {
     BinaryFloat(f32),
     Boolean(bool),
     Bytes(Vec<u8>),
-    Cursor(Option<Cursor>),
+    Cursor(Box<Cursor>),
     IntervalDS(OracleIntervalDS),
     IntervalYM(OracleIntervalYM),
     Json(JsonValue),
@@ -165,7 +166,7 @@ impl DbValue {
                 in_fetch,
                 statement.options(),
             )?
-            .map(|v| DbValue::Cursor(Some(v)))),
+            .map(|v| DbValue::Cursor(Box::new(v)))),
             _ => Err(Error::unsupported_db_type(db_type)),
         }?;
         if !in_fetch {
@@ -253,259 +254,225 @@ impl DbValue {
 
 /// Trait which transforms database values from the format required by the
 /// database to ones usable by applications.
-pub trait FromDbValue {
-    fn from_db_value(db_value: &Option<DbValue>) -> Result<Self, Error>
+pub trait FromDbValue<'a> {
+    /// Converts the data from the internal database format to the desired
+    /// type, if possible.
+    fn from_db_value(column_data: ColumnData<'a>) -> Result<Self, Error>
     where
         Self: Sized;
 
+    /// Converts the data from an internal database array format to a vector
+    /// of the desired type, if possible.
     fn from_db_value_array(
-        db_value_opt: &Option<DbValue>,
+        column_data: ColumnData<'a>,
     ) -> Result<Vec<Self>, Error>
     where
         Self: Sized,
     {
-        if let Some(db_value) = db_value_opt {
-            match db_value {
-                DbValue::Array(db_array) => {
-                    let mut array = Vec::<Self>::with_capacity(db_array.len());
-                    for element_value in db_array {
-                        array.push(<Self>::from_db_value(element_value)?);
-                    }
-                    Ok(array)
+        match column_data {
+            ColumnData::Borrowed(Some(DbValue::Array(db_array))) => {
+                let mut array = Vec::<Self>::with_capacity(db_array.len());
+                for element_value in db_array {
+                    array.push(<Self>::from_db_value(ColumnData::Borrowed(
+                        element_value,
+                    ))?);
                 }
-                _ => Err(Error::unsupported_conversion(
-                    db_value.type_name(),
-                    std::any::type_name::<Self>(),
-                )),
+                Ok(array)
             }
-        } else {
-            Err(Error::value_was_null())
+            ColumnData::Owned(Some(DbValue::Array(db_array))) => {
+                let mut array = Vec::<Self>::with_capacity(db_array.len());
+                for element_value in db_array {
+                    array.push(<Self>::from_db_value(ColumnData::Owned(
+                        element_value,
+                    ))?);
+                }
+                Ok(array)
+            }
+            _ => Err(Self::unsupported_conversion(column_data)),
+        }
+    }
+
+    /// Helper function that returns an unsupported conversion error.
+    fn unsupported_conversion(column_data: ColumnData<'a>) -> Error {
+        let to_type_name =
+            std::any::type_name::<Self>().split("::").last().unwrap();
+        match column_data {
+            ColumnData::Borrowed(None) | ColumnData::Owned(None) => {
+                Error::value_was_null()
+            }
+            ColumnData::Borrowed(Some(db_value)) => {
+                Error::unsupported_conversion(
+                    db_value.type_name(),
+                    to_type_name,
+                )
+            }
+            ColumnData::Owned(Some(db_value)) => {
+                Error::unsupported_conversion(
+                    db_value.type_name(),
+                    to_type_name,
+                )
+            }
         }
     }
 }
 
-impl FromDbValue for bool {
-    fn from_db_value(db_value_opt: &Option<DbValue>) -> Result<bool, Error> {
-        if let Some(db_value) = db_value_opt {
-            match db_value {
-                DbValue::Boolean(value) => Ok(*value),
-                _ => Err(Error::unsupported_conversion(
-                    db_value.type_name(),
-                    "bool",
-                )),
-            }
-        } else {
-            Err(Error::value_was_null())
+impl<'a> FromDbValue<'a> for bool {
+    fn from_db_value(column_data: ColumnData<'a>) -> Result<Self, Error> {
+        match column_data {
+            ColumnData::Borrowed(Some(DbValue::Boolean(v))) => Ok(*v),
+            ColumnData::Owned(Some(DbValue::Boolean(v))) => Ok(v),
+            _ => Err(Self::unsupported_conversion(column_data)),
         }
     }
 }
 
-impl FromDbValue for f32 {
-    fn from_db_value(db_value_opt: &Option<DbValue>) -> Result<f32, Error> {
-        if let Some(db_value) = db_value_opt {
-            match db_value {
-                DbValue::BinaryFloat(value) => Ok(*value),
-                DbValue::Number(value) => value
-                    .to_string()
-                    .parse::<f32>()
-                    .map_err(|e| Error::unexpected_error(Box::new(e))),
-                _ => Err(Error::unsupported_conversion(
-                    db_value.type_name(),
-                    "f32",
-                )),
-            }
-        } else {
-            Err(Error::value_was_null())
+impl<'a> FromDbValue<'a> for f32 {
+    fn from_db_value(column_data: ColumnData<'a>) -> Result<Self, Error> {
+        match column_data {
+            ColumnData::Borrowed(Some(DbValue::BinaryFloat(v))) => Ok(*v),
+            ColumnData::Owned(Some(DbValue::BinaryFloat(v))) => Ok(v),
+            ColumnData::Borrowed(Some(DbValue::Number(v))) => v
+                .to_string()
+                .parse::<Self>()
+                .map_err(|e| Error::unexpected_error(Box::new(e))),
+            ColumnData::Owned(Some(DbValue::Number(v))) => v
+                .to_string()
+                .parse::<Self>()
+                .map_err(|e| Error::unexpected_error(Box::new(e))),
+            _ => Err(Self::unsupported_conversion(column_data)),
         }
     }
 }
 
-impl FromDbValue for f64 {
-    fn from_db_value(db_value_opt: &Option<DbValue>) -> Result<f64, Error> {
-        if let Some(db_value) = db_value_opt {
-            match db_value {
-                DbValue::BinaryDouble(value) => Ok(*value),
-                DbValue::Number(value) => value
-                    .to_string()
-                    .parse::<f64>()
-                    .map_err(|e| Error::unexpected_error(Box::new(e))),
-                _ => Err(Error::unsupported_conversion(
-                    db_value.type_name(),
-                    "f64",
-                )),
-            }
-        } else {
-            Err(Error::value_was_null())
+impl<'a> FromDbValue<'a> for f64 {
+    fn from_db_value(column_data: ColumnData<'a>) -> Result<Self, Error> {
+        match column_data {
+            ColumnData::Borrowed(Some(DbValue::BinaryDouble(v))) => Ok(*v),
+            ColumnData::Owned(Some(DbValue::BinaryDouble(v))) => Ok(v),
+            ColumnData::Borrowed(Some(DbValue::Number(v))) => v
+                .to_string()
+                .parse::<Self>()
+                .map_err(|e| Error::unexpected_error(Box::new(e))),
+            ColumnData::Owned(Some(DbValue::Number(v))) => v
+                .to_string()
+                .parse::<Self>()
+                .map_err(|e| Error::unexpected_error(Box::new(e))),
+            _ => Err(Self::unsupported_conversion(column_data)),
         }
     }
 }
 
-impl FromDbValue for JsonValue {
-    fn from_db_value(db_value_opt: &Option<DbValue>) -> Result<Self, Error> {
-        if let Some(db_value) = db_value_opt {
-            match db_value {
-                DbValue::Json(value) => Ok(value.clone()),
-                _ => Err(Error::unsupported_conversion(
-                    db_value.type_name(),
-                    "JsonValue",
-                )),
-            }
-        } else {
-            Err(Error::value_was_null())
+impl<'a> FromDbValue<'a> for Cursor {
+    fn from_db_value(column_data: ColumnData<'a>) -> Result<Self, Error> {
+        match column_data {
+            ColumnData::Owned(Some(DbValue::Cursor(c))) => Ok(*c),
+            _ => Err(Self::unsupported_conversion(column_data)),
         }
     }
 }
 
-impl FromDbValue for OracleIntervalDS {
-    fn from_db_value(
-        db_value_opt: &Option<DbValue>,
-    ) -> Result<OracleIntervalDS, Error> {
-        if let Some(db_value) = db_value_opt {
-            match db_value {
-                DbValue::IntervalDS(value) => Ok(*value),
-                _ => Err(Error::unsupported_conversion(
-                    db_value.type_name(),
-                    "OracleIntervalDS",
-                )),
-            }
-        } else {
-            Err(Error::value_was_null())
+impl<'a> FromDbValue<'a> for JsonValue {
+    fn from_db_value(column_data: ColumnData<'a>) -> Result<Self, Error> {
+        match column_data {
+            ColumnData::Borrowed(Some(DbValue::Json(v))) => Ok(v.clone()),
+            ColumnData::Owned(Some(DbValue::Json(v))) => Ok(v),
+            _ => Err(Self::unsupported_conversion(column_data)),
         }
     }
 }
 
-impl FromDbValue for OracleIntervalYM {
-    fn from_db_value(
-        db_value_opt: &Option<DbValue>,
-    ) -> Result<OracleIntervalYM, Error> {
-        if let Some(db_value) = db_value_opt {
-            match db_value {
-                DbValue::IntervalYM(value) => Ok(*value),
-                _ => Err(Error::unsupported_conversion(
-                    db_value.type_name(),
-                    "OracleIntervalYM",
-                )),
-            }
-        } else {
-            Err(Error::value_was_null())
+impl<'a> FromDbValue<'a> for OracleIntervalDS {
+    fn from_db_value(column_data: ColumnData<'a>) -> Result<Self, Error> {
+        match column_data {
+            ColumnData::Borrowed(Some(DbValue::IntervalDS(v))) => Ok(*v),
+            ColumnData::Owned(Some(DbValue::IntervalDS(v))) => Ok(v),
+            _ => Err(Self::unsupported_conversion(column_data)),
         }
     }
 }
 
-impl FromDbValue for OracleNumber {
-    fn from_db_value(
-        db_value_opt: &Option<DbValue>,
-    ) -> Result<OracleNumber, Error> {
-        if let Some(db_value) = db_value_opt {
-            match db_value {
-                DbValue::Number(value) => Ok(*value),
-                _ => Err(Error::unsupported_conversion(
-                    db_value.type_name(),
-                    "OracleNumber",
-                )),
-            }
-        } else {
-            Err(Error::value_was_null())
+impl<'a> FromDbValue<'a> for OracleIntervalYM {
+    fn from_db_value(column_data: ColumnData<'a>) -> Result<Self, Error> {
+        match column_data {
+            ColumnData::Borrowed(Some(DbValue::IntervalYM(v))) => Ok(*v),
+            ColumnData::Owned(Some(DbValue::IntervalYM(v))) => Ok(v),
+            _ => Err(Self::unsupported_conversion(column_data)),
         }
     }
 }
 
-impl FromDbValue for OracleTimestamp {
-    fn from_db_value(
-        db_value_opt: &Option<DbValue>,
-    ) -> Result<OracleTimestamp, Error> {
-        if let Some(db_value) = db_value_opt {
-            match db_value {
-                DbValue::Timestamp(value) => Ok(*value),
-                _ => Err(Error::unsupported_conversion(
-                    db_value.type_name(),
-                    "OracleTimestamp",
-                )),
-            }
-        } else {
-            Err(Error::value_was_null())
+impl<'a> FromDbValue<'a> for OracleNumber {
+    fn from_db_value(column_data: ColumnData<'a>) -> Result<Self, Error> {
+        match column_data {
+            ColumnData::Borrowed(Some(DbValue::Number(v))) => Ok(*v),
+            ColumnData::Owned(Some(DbValue::Number(v))) => Ok(v),
+            _ => Err(Self::unsupported_conversion(column_data)),
         }
     }
 }
 
-impl FromDbValue for String {
-    fn from_db_value(db_value_opt: &Option<DbValue>) -> Result<String, Error> {
-        if let Some(db_value) = db_value_opt {
-            match db_value {
-                DbValue::String(val) => Ok(val.into()),
-                DbValue::Rowid(val) => Ok(val.to_string()),
-                _ => Err(Error::unsupported_conversion(
-                    db_value.type_name(),
-                    "String",
-                )),
-            }
-        } else {
-            Err(Error::value_was_null())
+impl<'a> FromDbValue<'a> for OracleTimestamp {
+    fn from_db_value(column_data: ColumnData<'a>) -> Result<Self, Error> {
+        match column_data {
+            ColumnData::Borrowed(Some(DbValue::Timestamp(v))) => Ok(*v),
+            ColumnData::Owned(Some(DbValue::Timestamp(v))) => Ok(v),
+            _ => Err(Self::unsupported_conversion(column_data)),
         }
     }
 }
 
-impl FromDbValue for Vec<u8> {
-    fn from_db_value(
-        db_value_opt: &Option<DbValue>,
-    ) -> Result<Vec<u8>, Error> {
-        if let Some(db_value) = db_value_opt {
-            match db_value {
-                DbValue::Bytes(val) => Ok(val.to_vec()),
-                _ => Err(Error::unsupported_conversion(
-                    db_value.type_name(),
-                    "Bytes",
-                )),
-            }
-        } else {
-            Err(Error::value_was_null())
+impl<'a> FromDbValue<'a> for String {
+    fn from_db_value(column_data: ColumnData<'a>) -> Result<Self, Error> {
+        match column_data {
+            ColumnData::Borrowed(Some(DbValue::String(v))) => Ok(v.into()),
+            ColumnData::Owned(Some(DbValue::String(v))) => Ok(v),
+            ColumnData::Borrowed(Some(DbValue::Rowid(v))) => Ok(v.to_string()),
+            ColumnData::Owned(Some(DbValue::Rowid(v))) => Ok(v.to_string()),
+            _ => Err(Self::unsupported_conversion(column_data)),
         }
     }
 }
 
-impl FromDbValue for Lob {
-    fn from_db_value(db_value_opt: &Option<DbValue>) -> Result<Lob, Error> {
-        if let Some(db_value) = db_value_opt {
-            match db_value {
-                DbValue::Lob(val) => Ok(val.clone()),
-                _ => Err(Error::unsupported_conversion(
-                    db_value.type_name(),
-                    "Lob",
-                )),
-            }
-        } else {
-            Err(Error::value_was_null())
-        }
-    }
-}
-impl FromDbValue for Vector {
-    fn from_db_value(db_value_opt: &Option<DbValue>) -> Result<Self, Error> {
-        if let Some(db_value) = db_value_opt {
-            match db_value {
-                DbValue::Vector(v) => Ok(v.clone()),
-                _ => Err(Error::unsupported_conversion(
-                    db_value.type_name(),
-                    "Vector",
-                )),
-            }
-        } else {
-            Err(Error::value_was_null())
+impl<'a> FromDbValue<'a> for Vec<u8> {
+    fn from_db_value(column_data: ColumnData<'a>) -> Result<Self, Error> {
+        match column_data {
+            ColumnData::Borrowed(Some(DbValue::Bytes(v))) => Ok(v.to_vec()),
+            ColumnData::Owned(Some(DbValue::Bytes(v))) => Ok(v),
+            _ => Err(Self::unsupported_conversion(column_data)),
         }
     }
 }
 
-impl<T> FromDbValue for Option<T>
+impl<'a> FromDbValue<'a> for Lob {
+    fn from_db_value(column_data: ColumnData<'a>) -> Result<Self, Error> {
+        match column_data {
+            ColumnData::Owned(Some(DbValue::Lob(v))) => Ok(v),
+            _ => Err(Self::unsupported_conversion(column_data)),
+        }
+    }
+}
+
+impl<'a> FromDbValue<'a> for Vector {
+    fn from_db_value(column_data: ColumnData<'a>) -> Result<Self, Error> {
+        match column_data {
+            ColumnData::Borrowed(Some(DbValue::Vector(v))) => Ok(v.clone()),
+            ColumnData::Owned(Some(DbValue::Vector(v))) => Ok(v),
+            _ => Err(Self::unsupported_conversion(column_data)),
+        }
+    }
+}
+
+impl<'a, T> FromDbValue<'a> for Option<T>
 where
-    T: FromDbValue,
+    T: FromDbValue<'a>,
 {
-    fn from_db_value(
-        db_value_opt: &Option<DbValue>,
-    ) -> Result<Option<T>, Error> {
-        if db_value_opt.is_none() {
-            Ok(None)
-        } else {
-            let result = <T>::from_db_value(db_value_opt)?;
-            Ok(Some(result))
+    fn from_db_value(column_data: ColumnData<'a>) -> Result<Self, Error> {
+        match column_data {
+            ColumnData::Borrowed(None) | ColumnData::Owned(None) => Ok(None),
+            _ => {
+                let result = <T>::from_db_value(column_data)?;
+                Ok(Some(result))
+            }
         }
     }
 }
@@ -585,29 +552,30 @@ macro_rules! impl_traits_for_integers {
                     value.to_string().parse().unwrap()
                 }
             }
-            impl FromDbValue for $t {
+            impl<'a> FromDbValue<'a> for $t {
                 fn from_db_value(
-                    db_value_opt: &Option<DbValue>
-                ) -> Result<$t, Error> {
-                    if let Some(db_value) = db_value_opt {
-                        match db_value {
-                            DbValue::Number(value) => {
-                                let str_val = value.to_string();
-                                match str_val.parse::<$t>() {
-                                    Ok(num) => Ok(num),
-                                    Err(_) => Err(Error::unsupported_conversion(
-                                        db_value.type_name(),
-                                        std::any::type_name::<$t>(),
-                                    )),
-                                }
+                    column_data: ColumnData<'a>
+                ) -> Result<Self, Error> {
+                    match column_data {
+                        ColumnData::Borrowed(Some(DbValue::Number(v))) => {
+                            let str_val = v.to_string();
+                            match str_val.parse::<$t>() {
+                                Ok(num) => Ok(num),
+                                Err(_) => Err(
+                                    Self::unsupported_conversion(column_data)
+                                ),
                             }
-                            _ => Err(Error::unsupported_conversion(
-                                db_value.type_name(),
-                                std::any::type_name::<$t>(),
-                            )),
                         }
-                    } else {
-                        Err(Error::value_was_null())
+                        ColumnData::Owned(Some(DbValue::Number(v))) => {
+                            let str_val = v.to_string();
+                            match str_val.parse::<$t>() {
+                                Ok(num) => Ok(num),
+                                Err(_) => Err(
+                                    Self::unsupported_conversion(column_data)
+                                ),
+                            }
+                        }
+                        _ => Err(Self::unsupported_conversion(column_data)),
                     }
                 }
             }

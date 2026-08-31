@@ -37,11 +37,11 @@ use std::io::{Read, Write};
 /// Validates reading a CLOB locator using 'Read::read_to_string()'.
 fn test_2500(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     let text = "Hello CLOB - café".to_string();
-    let row = conn
+    let mut row = conn
         .statement("select to_clob(:1) from dual")?
         .fetch_lobs()
         .query_row(&[&text])?;
-    let mut lob: oracledb::Lob = row.get(0)?;
+    let mut lob: oracledb::Lob = row.take(0)?;
     let mut read_back = String::new();
     lob.read_to_string(&mut read_back)?;
     assert_eq!(read_back, text);
@@ -52,11 +52,11 @@ fn test_2500(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
 /// Validates reading an NCLOB locator using 'Read::read_to_string()'.
 fn test_2501(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     let text = "Hello NCLOB - 世界".to_string();
-    let row = conn
+    let mut row = conn
         .statement("select to_nclob(:1) from dual")?
         .fetch_lobs()
         .query_row(&[&text])?;
-    let mut lob: oracledb::Lob = row.get(0)?;
+    let mut lob: oracledb::Lob = row.take(0)?;
     let mut read_back = String::new();
     lob.read_to_string(&mut read_back)?;
     assert_eq!(read_back, text);
@@ -70,18 +70,18 @@ fn test_2502(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     let payload = "Hello CLOB - café".to_string();
     conn.execute("insert into test_2502 values (empty_clob())", &[])?;
 
-    let row = conn
+    let mut row = conn
         .statement("select data from test_2502")?
         .fetch_lobs()
         .query_row(&[])?;
-    let mut lob: oracledb::Lob = row.get(0)?;
+    let mut lob: oracledb::Lob = row.take(0)?;
     lob.write_all(payload.as_bytes())?;
 
-    let row = conn
+    let mut row = conn
         .statement("select data from test_2502")?
         .fetch_lobs()
         .query_row(&[])?;
-    let mut lob: oracledb::Lob = row.get(0)?;
+    let mut lob: oracledb::Lob = row.take(0)?;
     let mut read_back = String::new();
     lob.read_to_string(&mut read_back)?;
     assert_eq!(read_back, payload);
@@ -95,18 +95,18 @@ fn test_2503(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     let payload = "Hello NCLOB - 世界".to_string();
     conn.execute("insert into test_2503 values (empty_clob())", &[])?;
 
-    let row = conn
+    let mut row = conn
         .statement("select data from test_2503")?
         .fetch_lobs()
         .query_row(&[])?;
-    let mut lob: oracledb::Lob = row.get(0)?;
+    let mut lob: oracledb::Lob = row.take(0)?;
     lob.write_all(payload.as_bytes())?;
 
-    let row = conn
+    let mut row = conn
         .statement("select data from test_2503")?
         .fetch_lobs()
         .query_row(&[])?;
-    let mut lob: oracledb::Lob = row.get(0)?;
+    let mut lob: oracledb::Lob = row.take(0)?;
     let mut read_back = String::new();
     lob.read_to_string(&mut read_back)?;
     assert_eq!(read_back, payload);
@@ -132,11 +132,11 @@ fn test_2504(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
 fn test_2505(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     let text = "repeatable CLOB read - café".to_string();
     for _ in 0..2 {
-        let row = conn
+        let mut row = conn
             .statement("select to_clob(:1) from dual")?
             .fetch_lobs()
             .query_row(&[&text])?;
-        let mut lob: oracledb::Lob = row.get(0)?;
+        let mut lob: oracledb::Lob = row.take(0)?;
         let mut read_back = String::new();
         lob.read_to_string(&mut read_back)?;
         assert_eq!(read_back, text);
@@ -186,11 +186,11 @@ fn test_2508(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
 fn test_2509(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     let _guard = common::create_table(&conn, "test_2510", "data clob")?;
     conn.execute("insert into test_2510 values (empty_clob())", &[])?;
-    let row = conn
+    let mut row = conn
         .statement("select data from test_2510")?
         .fetch_lobs()
         .query_row(&[])?;
-    let mut lob: oracledb::Lob = row.get(0)?;
+    let mut lob: oracledb::Lob = row.take(0)?;
     let error = lob
         .write(&[0xff])
         .expect_err("invalid UTF-8 must be rejected");
@@ -202,11 +202,11 @@ fn test_2509(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
 /// Validates that a CLOB read with an undersized byte buffer fails without
 /// consuming data, so the same UTF-8 character can be read successfully.
 fn test_2510(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
-    let row = conn
+    let mut row = conn
         .statement("select to_clob(:1) from dual")?
         .fetch_lobs()
         .query_row(&[&"é"])?;
-    let mut lob: oracledb::Lob = row.get(0)?;
+    let mut lob: oracledb::Lob = row.take(0)?;
 
     let mut small_buffer = [0_u8; 1];
     let error = lob.read(&mut small_buffer).expect_err(
@@ -229,11 +229,11 @@ fn test_2511(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     let _guard = common::create_table(&conn, "test_2511", "data clob")?;
     conn.execute("insert into test_2511 values (empty_clob())", &[])?;
 
-    let row = conn
+    let mut row = conn
         .statement("select data from test_2511")?
         .fetch_lobs()
         .query_row(&[])?;
-    let mut lob: oracledb::Lob = row.get(0)?;
+    let mut lob: oracledb::Lob = row.take(0)?;
     lob.write_all(b"abcdef")?;
     assert_eq!(lob.get_size()?, 6);
     lob.trim(3)?;

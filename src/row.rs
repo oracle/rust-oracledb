@@ -28,13 +28,16 @@
 // Defines the structure containing row data.
 //-----------------------------------------------------------------------------
 
-use crate::cursor::Cursor;
 use crate::db_value::{DbValue, FromDbValue};
 use crate::error::Error;
 
 pub(crate) type RowData = Vec<Option<DbValue>>;
 
-#[derive(Clone)]
+pub enum ColumnData<'a> {
+    Borrowed(&'a Option<DbValue>),
+    Owned(Option<DbValue>),
+}
+
 pub struct Row {
     column_values: RowData,
 }
@@ -45,49 +48,60 @@ impl Row {
         Row { column_values }
     }
 
-    /// Returns the value at the given column index.
-    pub fn get<T>(&self, index: usize) -> Result<T, Error>
+    /// Returns the value at the given column index, converted to the requested
+    /// type. If a reference type is supplied, a reference is provided to the
+    /// internal data, if possible. If an owned type is supplied, a copy of
+    /// the internal data is made.
+    pub fn get<'a, T>(&'a self, index: usize) -> Result<T, Error>
     where
-        T: FromDbValue,
+        T: FromDbValue<'a>,
     {
-        if index < self.column_values.len() {
-            <T>::from_db_value(&self.column_values[index])
-        } else {
-            Err(Error::invalid_column_index(index))
-        }
+        let value_opt = self
+            .column_values
+            .get(index)
+            .ok_or(Error::invalid_column_index(index))?;
+        <T>::from_db_value(ColumnData::Borrowed(value_opt))
     }
 
     /// Returns the array at the given column index as a vector.
-    pub fn get_array<T>(&self, index: usize) -> Result<Vec<T>, Error>
+    pub fn get_array<'a, T>(&'a self, index: usize) -> Result<Vec<T>, Error>
     where
-        T: FromDbValue,
+        T: FromDbValue<'a>,
     {
-        if index < self.column_values.len() {
-            <T>::from_db_value_array(&self.column_values[index])
-        } else {
-            Err(Error::invalid_column_index(index))
-        }
+        let value_opt = self
+            .column_values
+            .get(index)
+            .ok_or(Error::invalid_column_index(index))?;
+        <T>::from_db_value_array(ColumnData::Borrowed(value_opt))
     }
 
-    /// Returns a cursor from the given column index. Ownership is transferred
-    /// from the row to the caller.
-    pub fn get_cursor(&mut self, index: usize) -> Result<Cursor, Error> {
-        if index < self.column_values.len() {
-            if let Some(db_value) = &mut self.column_values[index] {
-                match db_value {
-                    DbValue::Cursor(cursor_opt) => {
-                        Ok(cursor_opt.take().ok_or(Error::value_was_null())?)
-                    }
-                    _ => Err(Error::unsupported_conversion(
-                        db_value.type_name(),
-                        "cursor",
-                    )),
-                }
-            } else {
-                Err(Error::value_was_null())
-            }
-        } else {
-            Err(Error::invalid_column_index(index))
-        }
+    /// Returns the value at the given column index, converted to the requested
+    /// type. Ownership of the data that was stored in the row at the given
+    /// column index is transferred to the caller. If this is attempted with a
+    /// reference type, an error will take place.
+    pub fn take<'a, T>(&'a mut self, index: usize) -> Result<T, Error>
+    where
+        T: FromDbValue<'a>,
+    {
+        let value_opt = self
+            .column_values
+            .get_mut(index)
+            .ok_or(Error::invalid_column_index(index))?;
+        <T>::from_db_value(ColumnData::Owned(value_opt.take()))
+    }
+
+    /// Returns the array at the given column index as a vector.
+    pub fn take_array<'a, T>(
+        &'a mut self,
+        index: usize,
+    ) -> Result<Vec<T>, Error>
+    where
+        T: FromDbValue<'a>,
+    {
+        let value_opt = self
+            .column_values
+            .get_mut(index)
+            .ok_or(Error::invalid_column_index(index))?;
+        <T>::from_db_value_array(ColumnData::Owned(value_opt.take()))
     }
 }

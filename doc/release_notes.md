@@ -2,6 +2,15 @@
 
 ## rust-oracledb 26.0.0-beta.3 (TBD)
 
+1.  Added methods [Row::take()](crate::Row::take()) and
+    [Row::take_array()](crate::Row::take_array()) which transfer ownership of
+    the data in the row to the caller. The existing methods
+    [Row::get()](crate::Row::get()) and
+    [Row::get_array()](crate::Row::get_array()) return references to the row
+    data where possible and clone the data where an owned type is desired. The
+    method ``Row::get_cursor()`` has been removed in favor of the new method
+    [Row::take()](crate::Row::take()).
+
 
 ## rust-oracledb 26.0.0-beta.2 (August 20, 2026)
 
