@@ -1,5 +1,8 @@
 # <a name="releasenotes"></a> rust-oracledb Release Notes
 
+## rust-oracledb 26.0.0-beta.3 (TBD)
+
+
 ## rust-oracledb 26.0.0-beta.2 (August 20, 2026)
 
 1.  Added method [Statement::bind_names()](crate::Statement::bind_names()) in
