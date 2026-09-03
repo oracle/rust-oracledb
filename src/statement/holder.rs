@@ -36,7 +36,7 @@ use crate::messages::ExecuteMessage;
 use crate::messages::FetchMessage;
 use crate::metadata::Metadata;
 use crate::response::Response;
-use crate::row::RowData;
+use crate::row::DbRow;
 use crate::statement::CachedStatement;
 
 #[derive(Clone)]
@@ -115,7 +115,7 @@ impl StatementHolder {
     /// Fetches another set of rows from the database.
     pub(crate) fn fetch(
         &self,
-        last_row: Option<RowData>,
+        last_row: Option<DbRow>,
     ) -> Result<Response, Error> {
         let mut message = FetchMessage::new(&self.statement, last_row);
         self.client_ref

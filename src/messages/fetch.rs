@@ -33,19 +33,19 @@ use crate::constants;
 use crate::error::Error;
 use crate::messages::Message;
 use crate::response::Response;
-use crate::row::RowData;
+use crate::row::DbRow;
 use crate::statement::CachedStatement;
 use crate::write_buffer::WriteBuffer;
 
 pub struct FetchMessage<'statement> {
     statement: &'statement CachedStatement,
-    last_row: Option<RowData>,
+    last_row: Option<DbRow>,
 }
 
 impl FetchMessage<'_> {
     pub fn new<'statement>(
         statement: &'statement CachedStatement,
-        last_row: Option<RowData>,
+        last_row: Option<DbRow>,
     ) -> FetchMessage<'statement> {
         FetchMessage {
             statement,

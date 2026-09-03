@@ -42,7 +42,7 @@ use crate::packet::Packet;
 use crate::read_buffer::FromBuf;
 use crate::read_buffer::FromBufFallible;
 use crate::read_buffer::ReadBuffer;
-use crate::row::RowData;
+use crate::row::DbRow;
 use crate::statement::CachedStatement;
 
 use error_info::ErrorInfo;
@@ -56,8 +56,8 @@ pub(crate) struct Response {
     edition: Option<String>,
     current_schema: Option<String>,
     warning: Option<String>,
-    rows: Option<Vec<RowData>>,
-    prev_fetch_last_row: Option<RowData>,
+    rows: Option<Vec<DbRow>>,
+    prev_fetch_last_row: Option<DbRow>,
     bit_vector: Option<Vec<u8>>,
     num_columns: usize,
     end_of_fetch: bool,
@@ -120,17 +120,20 @@ impl Response {
         statement: &CachedStatement,
         in_fetch: bool,
     ) -> Result<(), Error> {
-        let mut column_values = RowData::new();
+        let metadata = statement.out_metadata();
+        let mut column_values: Vec<Option<DbValue>> =
+            Vec::with_capacity(metadata.len());
         for (i, metadata) in statement.out_metadata().iter().enumerate() {
             let value = DbValue::from_response(
                 self, client, statement, metadata, in_fetch, i,
             )?;
             column_values.push(value);
         }
+        let db_row = DbRow::new(column_values);
         if let Some(rows) = self.rows.as_mut() {
-            rows.push(column_values);
+            rows.push(db_row);
         } else {
-            self.rows = Some(vec![column_values]);
+            self.rows = Some(vec![db_row]);
         }
         Ok(())
     }
@@ -232,7 +235,7 @@ impl Response {
         }
     }
 
-    pub(crate) fn get_last_row_fetched(&self) -> &RowData {
+    pub(crate) fn get_last_row_fetched(&self) -> &DbRow {
         if let Some(rows) = self.rows.as_ref() {
             rows.last().unwrap()
         } else {
@@ -465,10 +468,7 @@ impl Response {
         self.end_of_fetch = false;
     }
 
-    pub(crate) fn set_prev_fetch_last_row(
-        &mut self,
-        last_row: Option<RowData>,
-    ) {
+    pub(crate) fn set_prev_fetch_last_row(&mut self, last_row: Option<DbRow>) {
         self.prev_fetch_last_row = last_row;
     }
 
@@ -477,7 +477,7 @@ impl Response {
     }
 
     /// Takes the rows from the response and returns them.
-    pub(crate) fn take_rows(&mut self) -> Option<Vec<RowData>> {
+    pub(crate) fn take_rows(&mut self) -> Option<Vec<DbRow>> {
         self.rows.take()
     }
 

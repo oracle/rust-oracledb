@@ -32,7 +32,7 @@ use std::sync::Arc;
 
 use crate::metadata::Metadata;
 use crate::response::Response;
-use crate::row::{Row, RowData};
+use crate::row::{DbRow, Row};
 
 /// Represents the result returned by the database when calling
 /// [Connection::execute()](`crate::Connection::execute()`),
@@ -40,7 +40,7 @@ use crate::row::{Row, RowData};
 /// [Connection::execute_batch()](`crate::Connection::execute_batch()`).
 pub struct ExecResult {
     column_info: Arc<Vec<Metadata>>,
-    returned_data: Option<Vec<RowData>>,
+    returned_data: Option<Vec<DbRow>>,
     rows_affected: u64,
 }
 

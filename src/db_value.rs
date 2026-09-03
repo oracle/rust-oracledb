@@ -47,7 +47,7 @@ use crate::ora_type::OracleNumber;
 use crate::ora_type::OracleTimestamp;
 use crate::response::Response;
 use crate::row::ColumnData;
-use crate::row::RowData;
+use crate::row::DbRow;
 use crate::rowid::Rowid;
 use crate::statement::CachedStatement;
 use crate::utils;
@@ -55,9 +55,8 @@ use crate::vector::Vector;
 use crate::write_buffer::ToBuf;
 use crate::write_buffer::WriteBuffer;
 
-#[derive(Clone)]
 pub enum DbValue {
-    Array(RowData),
+    Array(DbRow),
     BinaryDouble(f64),
     BinaryFloat(f32),
     Boolean(bool),
@@ -82,13 +81,13 @@ impl DbValue {
         db_type: &'static DbType,
     ) -> Result<Option<DbValue>, Error> {
         let num_elements = resp.read_ub4()? as usize;
-        let mut array = <RowData>::with_capacity(num_elements);
+        let mut array: Vec<Option<DbValue>> = Vec::with_capacity(num_elements);
         for _ in 0..num_elements {
             array.push(DbValue::scalar_from_response(
                 resp, client, statement, db_type, false,
             )?);
         }
-        Ok(Some(DbValue::Array(array)))
+        Ok(Some(DbValue::Array(DbRow::new(array))))
     }
 
     fn scalar_from_response(
@@ -209,7 +208,7 @@ impl DbValue {
             return Ok(None);
         } else if resp.is_duplicate_data(column_num) {
             let last_row = resp.get_last_row_fetched();
-            return Ok(last_row[column_num].clone());
+            return Ok(last_row.clone_column(column_num));
         }
 
         if metadata.is_array() {
@@ -271,22 +270,10 @@ pub trait FromDbValue<'a> {
     {
         match column_data {
             ColumnData::Borrowed(Some(DbValue::Array(db_array))) => {
-                let mut array = Vec::<Self>::with_capacity(db_array.len());
-                for element_value in db_array {
-                    array.push(<Self>::from_db_value(ColumnData::Borrowed(
-                        element_value,
-                    ))?);
-                }
-                Ok(array)
+                db_array.transform_ref::<Self>()
             }
             ColumnData::Owned(Some(DbValue::Array(db_array))) => {
-                let mut array = Vec::<Self>::with_capacity(db_array.len());
-                for element_value in db_array {
-                    array.push(<Self>::from_db_value(ColumnData::Owned(
-                        element_value,
-                    ))?);
-                }
-                Ok(array)
+                db_array.transform_owned::<Self>()
             }
             _ => Err(Self::unsupported_conversion(column_data)),
         }

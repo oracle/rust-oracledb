@@ -49,7 +49,6 @@ use std::io;
 /// or Rust `char` counts. Supplemental characters use two Oracle units.
 /// Decoding to UTF-8 can expand the data, so reads need a large enough caller
 /// buffer and writes need complete UTF-8 in each call.
-#[derive(Clone)]
 pub struct Lob {
     client_ref: ClientRef,
     locator: Vec<u8>,

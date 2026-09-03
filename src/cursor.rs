@@ -37,7 +37,7 @@ use crate::client::Client;
 use crate::error::Error;
 use crate::metadata::Metadata;
 use crate::response::Response;
-use crate::row::{Row, RowData};
+use crate::row::{DbRow, Row};
 use crate::statement::CachedStatement;
 use crate::statement::StatementHolder;
 use crate::statement::StatementOptions;
@@ -46,12 +46,11 @@ use crate::statement::StatementOptions;
 /// [Connection::query()](`crate::Connection::query`) or
 /// [Connection::query_named()](`crate::Connection::query_named`). This struct
 /// implements the Iterator trait.
-#[derive(Clone)]
 pub struct Cursor {
     statement_holder: StatementHolder,
     column_info: Arc<Vec<Metadata>>,
-    rows: VecDeque<RowData>,
-    last_row: Option<RowData>,
+    rows: VecDeque<DbRow>,
+    last_row: Option<DbRow>,
     end_of_fetch: bool,
 }
 
@@ -106,7 +105,7 @@ impl Cursor {
         Self {
             statement_holder,
             column_info: Arc::new(metadata),
-            rows: VecDeque::<RowData>::new(),
+            rows: VecDeque::<DbRow>::new(),
             last_row: None,
             end_of_fetch: false,
         }
