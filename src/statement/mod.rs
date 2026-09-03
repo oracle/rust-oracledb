@@ -381,6 +381,12 @@ impl CachedStatement {
         Ok(())
     }
 
+    /// Indicates that the binds are now known to the database and a re-execute
+    /// is possible.
+    pub(crate) fn set_binds_not_changed(&mut self) {
+        self.binds_changed = false;
+    }
+
     /// Sets the cache slot number for the statement.
     pub(crate) fn set_cache_slot_num(&mut self, slot_num: usize) {
         self.cache_slot_num = slot_num;

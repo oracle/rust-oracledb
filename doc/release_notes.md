@@ -20,6 +20,8 @@
 1.  Added support for the HA readiness requirements of Oracle Database 23.26.3.
 1.  Removed the ability to clone [Cursor](crate::Cursor) and [Lob](crate::Lob).
 1.  Fixed bug which caused a named binding containing a single quote to panic.
+1.  Fixed bug which caused a hang when executing a statement with PL/SQL out
+    binds multiple times.
 1.  Fixed bug which permitted a pool to be created with the maximum number of
     connections set to zero.  The error
     [ErrorKind::PoolMaxInvalid](crate::ErrorKind::PoolMaxInvalid) was renamed

@@ -81,12 +81,14 @@ impl ExecuteMessage<'_, '_> {
     }
 
     /// Writes bind parameter data to the buffer.
-    fn write_bind_params(&self, buf: &mut WriteBuffer) {
+    fn write_bind_params(&self, buf: &mut WriteBuffer, input_only: bool) {
         let binds = self.statement.binds();
         for row_index in 0..self.params.num_rows() {
             buf.write_u8(constants::TTC_MSG_TYPE_ROW_DATA);
             for (column_index, bind_info) in binds.iter().enumerate() {
-                if bind_info.is_input_bind() {
+                if (!input_only && !bind_info.is_return_bind)
+                    || bind_info.is_input_bind()
+                {
                     self.params.write_to_buf(
                         row_index,
                         column_index,
@@ -260,7 +262,7 @@ impl ExecuteMessage<'_, '_> {
         } else if has_binds {
             self.write_bind_metadata(client, buf);
             if self.statement.has_input_binds() {
-                self.write_bind_params(buf);
+                self.write_bind_params(buf, false);
             }
         }
     }
@@ -290,7 +292,7 @@ impl ExecuteMessage<'_, '_> {
         buf.write_ub4(options_1);
         buf.write_ub4(options_2);
         if self.statement.has_input_binds() {
-            self.write_bind_params(buf);
+            self.write_bind_params(buf, true);
         }
     }
 }
@@ -374,6 +376,7 @@ impl Message for ExecuteMessage<'_, '_> {
         resp: &mut Response,
     ) -> Result<(), Error> {
         self.statement.set_cursor_id(resp.get_cursor_id());
+        self.statement.set_binds_not_changed();
         resp.check_for_end_of_fetch(self.statement)
     }
 

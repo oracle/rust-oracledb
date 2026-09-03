@@ -75,16 +75,16 @@ fn test_2700(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
 #[rstest]
 /// Tests PL/SQL OUT and IN/OUT binds through ExecResult::returned_data().
 fn test_2701(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
-    let mut result = conn.execute_named(
-        "begin :out_value := :input_value * 2; end;",
-        &[("input_value", &21), ("out_value", &0)],
-    )?;
-    let returned_data = result.returned_data();
-    assert_eq!(returned_data.len(), 1);
-    let out_value: i32 = returned_data[0].get(0)?;
-    assert_eq!(out_value, 42);
-    assert!(result.returned_data().is_empty());
-
+    for value in [100, 200, 300] {
+        let mut result = conn.execute_named(
+            "begin :out_value := :input_value * 2; end;",
+            &[("input_value", &value), ("out_value", &0)],
+        )?;
+        let returned_data = result.returned_data();
+        assert_eq!(returned_data.len(), 1);
+        assert!(result.returned_data().is_empty());
+        assert_eq!(returned_data[0].get::<i32>(0)?, value * 2);
+    }
     let mut result =
         conn.execute("begin :1 := :1 || :2; end;", &[&"value", &"-updated"])?;
     let returned_data = result.returned_data();
