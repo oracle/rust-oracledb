@@ -524,3 +524,22 @@ fn test_2718(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     assert_eq!(values, vec![1, 2, 3]);
     Ok(())
 }
+
+#[rstest]
+/// Tests quoted named bind (valid and invalid and mixed with unquoted binds)
+fn test_2719(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let result = conn.query_named("select :missing from dual", &[("\"", &0)]);
+    assert!(result.is_err());
+    let row = conn.query_row_named(
+        "select :\"TeSt_2719\" from dual",
+        &[("\"TeSt_2719\"", &2719)],
+    )?;
+    assert_eq!(row.get::<usize>(0)?, 2719);
+    let row = conn.query_row_named(
+        "select :TeSt_2719a, :\"TeSt_2719b\" from dual",
+        &[("test_2719a", &"test_2719a"), ("\"TeSt_2719b\"", &2719)],
+    )?;
+    assert_eq!(row.get::<&str>(0)?, "test_2719a");
+    assert_eq!(row.get::<usize>(1)?, 2719);
+    Ok(())
+}

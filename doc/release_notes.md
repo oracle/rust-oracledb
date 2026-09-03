@@ -17,6 +17,7 @@
     columns in [Row::get()](crate::Row::get()) and
     [Row::take()](crate::Row::take())
     ([issue 12](https://github.com/oracle/rust-oracledb/issues/12)).
+1.  Fixed bug which caused a named binding containing a single quote to panic.
 
 
 ## rust-oracledb 26.0.0-beta.2 (August 20, 2026)

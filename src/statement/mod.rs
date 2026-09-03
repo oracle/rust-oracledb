@@ -159,12 +159,14 @@ impl CachedStatement {
         // sent to the server
         let mut bind_map: HashMap<String, &dyn ToDbValue> = HashMap::new();
         for (name, value) in params.iter() {
-            let normalized_name =
-                if name.starts_with('"') && name.ends_with('"') {
-                    name[1..name.len() - 1].to_string()
-                } else {
-                    name.to_uppercase()
-                };
+            let normalized_name = if name.starts_with('"')
+                && name.ends_with('"')
+                && name.len() > 2
+            {
+                name[1..name.len() - 1].to_string()
+            } else {
+                name.to_uppercase()
+            };
             bind_map.insert(normalized_name, *value);
         }
 
