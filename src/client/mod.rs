@@ -81,6 +81,8 @@ pub struct Client {
     pending_client_info: Option<Vec<u8>>,
     pending_db_op: Option<Vec<u8>>,
     pending_module: Option<Vec<u8>>,
+    pending_ha_readiness: bool,
+    pool_id: String,
     last_warning: Option<String>,
     security_context: Option<EndUserSecurityContext>,
 }
@@ -337,6 +339,38 @@ impl Client {
         }
     }
 
+    /// Writes the HA readiness piggyback.
+    fn write_piggyback_ha_readiness(&mut self, buf: &mut WriteBuffer) {
+        const NAMESPACE: &[u8] = b"ORA$HA";
+        let num_pairs: u32 = if self.pool_id.is_empty() { 1 } else { 3 };
+        buf.write_piggyback_header(self, constants::TTC_RPC_SET_KEY_VALUE);
+        buf.write_u8(1); // pointer (namespace)
+        buf.write_ub4(NAMESPACE.len().try_into().unwrap());
+        buf.write_u8(1); // pointer (num key/value pairs)a
+        buf.write_ub4(num_pairs);
+        buf.write_ub2(0x21); // flag (set HA values)
+        buf.write_u8(0); // pointer (unused)
+        buf.write_bytes_with_length(NAMESPACE);
+        if !self.pool_id.is_empty() {
+            // key/value pair 1
+            buf.write_bytes_with_double_length(Some(b"CONNECTION_POOL"));
+            buf.write_bytes_with_double_length(Some(b"RUST"));
+            buf.write_ub4(0);
+
+            // key/value pair 2
+            buf.write_bytes_with_double_length(Some(b"CONNECTION_POOL_ID"));
+            buf.write_bytes_with_double_length(Some(self.pool_id.as_bytes()));
+            buf.write_ub4(0);
+        }
+
+        // key/value pair 3
+        buf.write_bytes_with_double_length(Some(b"INBAND_NOTIFICATION"));
+        buf.write_bytes_with_double_length(Some(b"1"));
+        buf.write_ub4(0);
+
+        self.pending_ha_readiness = false;
+    }
+
     /// Writes the Deep Data Security context piggyback expected by the TTC
     /// protocol.
     fn write_piggyback_end_user_security_context(
@@ -378,6 +412,9 @@ impl Client {
             || self.pending_module.is_some()
         {
             self.write_piggyback_end_to_end(buf);
+        }
+        if self.pending_ha_readiness {
+            self.write_piggyback_ha_readiness(buf);
         }
     }
 
@@ -576,7 +613,7 @@ impl Client {
     }
 
     /// Creates a new client and returns it.
-    pub(crate) fn new(config: Config) -> Self {
+    pub(crate) fn new(config: Config, pool_id: String) -> Self {
         let cache_size = config.stmtcachesize();
         let sdu = config.get_sdu();
         Self {
@@ -595,8 +632,10 @@ impl Client {
             pending_client_info: None,
             pending_db_op: None,
             pending_module: None,
+            pending_ha_readiness: false,
             last_warning: None,
             security_context: None,
+            pool_id,
         }
     }
 
@@ -611,6 +650,9 @@ impl Client {
         let max_open_cursors = db_info.get_max_open_cursors();
         if max_open_cursors < self.statement_cache.max_size() {
             self.statement_cache.resize(max_open_cursors);
+        }
+        if self.caps.supports_ha_readiness() {
+            self.pending_ha_readiness = true;
         }
         Ok(db_info)
     }

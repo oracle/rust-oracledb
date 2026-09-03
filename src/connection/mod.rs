@@ -81,9 +81,9 @@ impl Connection {
         }
     }
 
-    /// Establishes a connection to the database and returns it.
+    /// Establishes a standalone connection to the database and returns it.
     pub(crate) fn connect(config: Config) -> Result<Connection, Error> {
-        let conn_impl = ConnImpl::connect(config)?;
+        let conn_impl = ConnImpl::connect(config, String::new())?;
         Ok(Connection {
             conn_impl: Some(conn_impl),
             pool_contents_ref: None,

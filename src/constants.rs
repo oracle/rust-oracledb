@@ -233,6 +233,7 @@ pub const TTC_RPC_REEXECUTE_AND_FETCH: u8 = 78;
 pub const _TTC_RPC_SESSION_GET: u8 = 162;
 pub const _TTC_RPC_SESSION_RELEASE: u8 = 163;
 pub const _TTC_RPC_SESSION_STATE: u8 = 176;
+pub const TTC_RPC_SET_KEY_VALUE: u8 = 154;
 pub const _TTC_RPC_SET_SCHEMA: u8 = 152;
 pub const _TTC_RPC_TPC_TXN_SWITCH: u8 = 103;
 pub const _TTC_RPC_TPC_TXN_CHANGE_STATE: u8 = 104;

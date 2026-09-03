@@ -32,7 +32,7 @@
 use crate::constants;
 
 // capability array sizes
-const COMPILE_CAPS_SIZE: usize = 53;
+const COMPILE_CAPS_SIZE: usize = 55;
 const RUNTIME_CAPS_SIZE: usize = 11;
 
 // compile capability indexes
@@ -60,6 +60,7 @@ const CCAP_IX_LOB2: usize = 42;
 const CCAP_IX_TTC5: usize = 44;
 const CCAP_IX_FEATURE_BACKPORT2: usize = 45;
 const CCAP_IX_VECTOR_FEATURES: usize = 52;
+const CCAP_IX_TTC6: usize = 54;
 
 // compile capability values
 const CCAP_VAL_O5LOGON: u8 = 8;
@@ -102,6 +103,7 @@ const CCAP_VAL_PIPELINING_BREAK: u8 = 0x10;
 const CCAP_VAL_END_USER_SEC_CTX_PIGGYBACK: u8 = 0x02;
 const CCAP_VAL_VECTOR_FEATURE_BINARY: u8 = 0x01;
 const CCAP_VAL_VECTOR_FEATURE_SPARSE: u8 = 0x02;
+const CCAP_VAL_TTC6_HA_READINESS: u8 = 0x04;
 
 // runtime capability indexes
 const RCAP_IX_COMPAT: usize = 0;
@@ -128,6 +130,7 @@ pub struct Capabilities {
     supports_pipelining: bool,
     supports_request_boundaries: bool,
     supports_end_user_security_context: bool,
+    supports_ha_readiness: bool,
 }
 
 impl Capabilities {
@@ -159,6 +162,11 @@ impl Capabilities {
                 != 0
         {
             self.supports_end_user_security_context = true;
+        }
+        if caps.len() > CCAP_IX_TTC6
+            && caps[CCAP_IX_TTC6] & CCAP_VAL_TTC6_HA_READINESS != 0
+        {
+            self.supports_ha_readiness = true;
         }
     }
 
@@ -227,6 +235,7 @@ impl Capabilities {
             CCAP_VAL_VECTOR_FEATURE_BINARY | CCAP_VAL_VECTOR_FEATURE_SPARSE;
         self.compile_caps[CCAP_IX_FEATURE_BACKPORT2] =
             CCAP_VAL_END_USER_SEC_CTX_PIGGYBACK;
+        self.compile_caps[CCAP_IX_TTC6] = CCAP_VAL_TTC6_HA_READINESS;
     }
 
     fn init_runtime_caps(&mut self) {
@@ -247,6 +256,7 @@ impl Capabilities {
             supports_pipelining: false,
             supports_request_boundaries: false,
             supports_end_user_security_context: false,
+            supports_ha_readiness: false,
         };
         caps.init_compile_caps();
         caps.init_runtime_caps();
@@ -275,6 +285,11 @@ impl Capabilities {
 
     pub fn supports_fast_auth(&self) -> bool {
         self.supports_fast_auth
+    }
+
+    /// Returns whether the server supports the HA readiness integration.
+    pub fn supports_ha_readiness(&self) -> bool {
+        self.supports_ha_readiness
     }
 
     pub fn supports_ttc_field_version(&self, version: u8) -> bool {

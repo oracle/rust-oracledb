@@ -17,6 +17,7 @@
     columns in [Row::get()](crate::Row::get()) and
     [Row::take()](crate::Row::take())
     ([issue 12](https://github.com/oracle/rust-oracledb/issues/12)).
+1.  Added support for the HA readiness requirements of Oracle Database 23.26.3.
 1.  Fixed bug which caused a named binding containing a single quote to panic.
 1.  Fixed bug which permitted a pool to be created with the maximum number of
     connections set to zero.  The error

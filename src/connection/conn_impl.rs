@@ -90,9 +90,12 @@ impl ConnImpl {
     }
 
     /// Establishes a connection to the database and returns it.
-    pub(crate) fn connect(config: Config) -> Result<ConnImpl, Error> {
+    pub(crate) fn connect(
+        config: Config,
+        pool_id: String,
+    ) -> Result<ConnImpl, Error> {
         config.validate()?;
-        let mut client = Client::new(config);
+        let mut client = Client::new(config, pool_id);
         let db_info = client.connect()?;
         let client_ref = std::sync::Arc::new(std::sync::Mutex::new(client));
         Ok(ConnImpl {

@@ -45,9 +45,28 @@ pub struct PoolConfig {
     connection_increment: Option<usize>,
     ping_interval: Option<Duration>,
     ping_timeout: Option<Duration>,
+    pool_id: String,
 }
 
 impl PoolConfig {
+    /// Returns the pool id.
+    pub(crate) fn pool_id(&self) -> &str {
+        &self.pool_id
+    }
+
+    /// Sets the pool id for the pool configuration and sets the connection
+    /// class if it has not been set earlier.
+    pub(crate) fn set_pool_id_and_cclass(mut self) -> Self {
+        let uuid_val = uuid::Uuid::new_v4();
+        self.pool_id = uuid_val.to_string();
+        if self.cclass().is_none() {
+            let cclass = format!("RSO:{}", uuid_val);
+            self.set_cclass(cclass)
+        } else {
+            self
+        }
+    }
+
     /// Validates the configuration.
     pub(crate) fn validate(&self) -> Result<(), Error> {
         if self.max_connections() < self.min_connections()
@@ -315,6 +334,7 @@ impl Default for PoolConfig {
             connection_increment: None,
             ping_interval: Some(Duration::from_secs(60)),
             ping_timeout: None,
+            pool_id: String::new(),
         }
     }
 }

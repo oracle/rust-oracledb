@@ -52,8 +52,10 @@ pub(super) enum PoolManagerRequest {
 impl PoolManager {
     /// Grows the pool by creating a connection and adding it to the pool.
     fn grow_pool(&self) {
-        let result =
-            ConnImpl::connect(self.config.connection_config().clone());
+        let result = ConnImpl::connect(
+            self.config.connection_config().clone(),
+            self.config.pool_id().into(),
+        );
         self.contents_ref.lock().unwrap().add_new_connection(result);
     }
 

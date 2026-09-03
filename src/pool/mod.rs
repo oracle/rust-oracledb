@@ -63,11 +63,7 @@ impl Pool {
     /// Creates a new pool and returns it.
     pub(crate) fn create(config: PoolConfig) -> Result<Self, Error> {
         config.validate()?;
-        let mut actual_config = config;
-        if actual_config.cclass().is_none() {
-            let cclass = format!("RSO:{}", uuid::Uuid::new_v4());
-            actual_config = actual_config.set_cclass(cclass);
-        }
+        let actual_config = config.set_pool_id_and_cclass();
         let manager_config = actual_config.clone();
         let (tx, rx) = mpsc::channel();
         let contents = PoolContents::new(actual_config, tx);
