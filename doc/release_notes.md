@@ -34,7 +34,7 @@
     of listener redirects
     ([issue 2](https://github.com/oracle/rust-oracledb/issues/2)).
 1.  Fixed bug handling multiple packet responses with databases older than
-    Oracle Database 26ai
+    Oracle AI Database 26ai
     ([issue 5](https://github.com/oracle/rust-oracledb/issues/5)).
 1.  Fixed bugs with reading and writing CLOB/NCLOB when the database character
     set is a fixed width character set.

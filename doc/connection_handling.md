@@ -660,7 +660,7 @@ Oracle Deep Data Security is a database-enforced data authorization framework
 which enables you to specify application-level security requirements directly
 at the database layer. Deep Data Security ensures fine-grained and end-to-end
 user access control at the row, column, and cell levels. Deep Data Security
-requires Oracle Database 26ai.
+requires Oracle AI Database 26ai.
 
 With Deep Data Security, an application sends a specific set of identity and
 authorization details to the database called end-user security context payload.
