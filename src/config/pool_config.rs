@@ -50,8 +50,10 @@ pub struct PoolConfig {
 impl PoolConfig {
     /// Validates the configuration.
     pub(crate) fn validate(&self) -> Result<(), Error> {
-        if self.max_connections() < self.min_connections() {
-            Err(Error::pool_max_less_than_min())
+        if self.max_connections() < self.min_connections()
+            || self.max_connections() == 0
+        {
+            Err(Error::pool_max_invalid())
         } else if self.connection_increment() == 0
             && self.max_connections() != self.min_connections()
         {

@@ -78,7 +78,7 @@ pub enum ErrorKind {
     PemFileOperation,
     PoolHasBusyConnections,
     PoolIncrementZero,
-    PoolMaxLessThanMin,
+    PoolMaxInvalid,
     PoolNotOpen,
     ServerVersionNotSupported,
     StreamOperation,
@@ -326,9 +326,9 @@ impl fmt::Display for Error {
             ErrorKind::PoolIncrementZero => fmt.write_str(
                 "dynamically sized pools must have a non-zero increment",
             )?,
-            ErrorKind::PoolMaxLessThanMin => fmt.write_str(
+            ErrorKind::PoolMaxInvalid => fmt.write_str(
                 "pool max connections must be greater or equal to pool min \
-                 connections",
+                 connections and must be non-zero",
             )?,
             ErrorKind::PoolNotOpen => fmt.write_str("pool is not open")?,
             ErrorKind::ServerVersionNotSupported => fmt.write_str(
@@ -665,8 +665,8 @@ impl Error {
         Error::new(ErrorKind::PoolIncrementZero, None)
     }
 
-    pub(crate) fn pool_max_less_than_min() -> Error {
-        Error::new(ErrorKind::PoolMaxLessThanMin, None)
+    pub(crate) fn pool_max_invalid() -> Error {
+        Error::new(ErrorKind::PoolMaxInvalid, None)
     }
 
     pub(crate) fn pool_not_open() -> Error {

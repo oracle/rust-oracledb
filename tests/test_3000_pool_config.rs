@@ -65,10 +65,17 @@ fn test_3001() {
         Ok(_) => panic!("max_connections below min_connections must fail"),
         Err(err) => err,
     };
-    assert!(matches!(
-        err.kind(),
-        oracledb::ErrorKind::PoolMaxLessThanMin
-    ));
+    assert!(matches!(err.kind(), oracledb::ErrorKind::PoolMaxInvalid));
+
+    let err = match oracledb::create_pool(
+        oracledb::PoolConfig::default()
+            .set_min_connections(0)
+            .set_max_connections(0),
+    ) {
+        Ok(_) => panic!("max_connections = 0 must fail"),
+        Err(err) => err,
+    };
+    assert!(matches!(err.kind(), oracledb::ErrorKind::PoolMaxInvalid));
 
     let err = match oracledb::create_pool(
         oracledb::PoolConfig::default()

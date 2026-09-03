@@ -18,6 +18,10 @@
     [Row::take()](crate::Row::take())
     ([issue 12](https://github.com/oracle/rust-oracledb/issues/12)).
 1.  Fixed bug which caused a named binding containing a single quote to panic.
+1.  Fixed bug which permitted a pool to be created with the maximum number of
+    connections set to zero.  The error
+    [ErrorKind::PoolMaxInvalid](crate::ErrorKind::PoolMaxInvalid) was renamed
+    from `ErrorKind::PoolMaxLessThanMin` which now covers both scenarios.
 
 
 ## rust-oracledb 26.0.0-beta.2 (August 20, 2026)
