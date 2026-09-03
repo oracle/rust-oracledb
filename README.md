@@ -66,19 +66,21 @@ fn main() -> Result<(), oracledb::Error> {
 
     // get value by position
     let user: String = row.get(0)?;
+    println!("Connected as {user}");
 
     // get value by name
     let user: String = row.get("user")?;
 
     // perform query that returns multiple rows with a bind parameter
+    // Assuming that emp table exists
     let cursor = conn.query(
         "select ename, sal, comm from emp where deptno = :1", &[&30]
     )?;
     for row_result in cursor {
         let row = row_result?;
-        let ename: String = row.get(0)?;
-        let sal: i32 = row.get(1)?;
-        let comm: Option<i32> = row.get(2)?;
+        let ename: String = row.get("ename")?;
+        let sal: i32 = row.get("sal")?;
+        let comm: Option<i32> = row.get("comm")?;
     }
 }
 ```
