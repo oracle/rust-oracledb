@@ -28,8 +28,6 @@
 // Shows fetching multiple rows from a query.
 //-----------------------------------------------------------------------------
 
-use oracledb;
-
 mod common;
 
 fn main() -> Result<(), oracledb::Error> {

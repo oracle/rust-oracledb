@@ -28,8 +28,6 @@
 // Shows a simple connection to Oracle Database using the driver.
 //-----------------------------------------------------------------------------
 
-use oracledb;
-
 mod common;
 
 fn main() -> Result<(), oracledb::Error> {

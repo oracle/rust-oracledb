@@ -29,7 +29,6 @@
 mod common;
 
 use common::conn;
-use oracledb;
 use rstest::*;
 use std::collections::HashMap;
 use std::str::FromStr;

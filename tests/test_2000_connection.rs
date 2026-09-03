@@ -29,7 +29,6 @@
 mod common;
 
 use common::conn;
-use oracledb;
 use rstest::*;
 use std::time::Duration;
 
@@ -54,7 +53,7 @@ fn test_end_to_end_attr(
     for row in cursor {
         let row = row?;
         let fetched_value: Option<String> = row.get(0)?;
-        assert_eq!(fetched_value.unwrap_or(String::new()), value);
+        assert_eq!(fetched_value.unwrap_or_default(), value);
     }
     Ok(())
 }

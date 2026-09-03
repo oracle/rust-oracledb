@@ -26,8 +26,6 @@
 // test_2900_pool()
 //-----------------------------------------------------------------------------
 
-use oracledb;
-
 fn pool_config(
     min_connections: usize,
     max_connections: usize,

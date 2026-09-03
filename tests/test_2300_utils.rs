@@ -26,8 +26,6 @@
 // test_2300_utils()
 //-----------------------------------------------------------------------------
 
-use oracledb;
-
 #[test]
 /// Test enquote_literal().
 fn test_2300() -> Result<(), oracledb::Error> {

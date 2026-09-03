@@ -29,7 +29,6 @@
 mod common;
 
 use common::conn;
-use oracledb;
 use rstest::*;
 
 /// Test querying a DENSE FLOAT32 VECTOR

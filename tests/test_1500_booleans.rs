@@ -29,7 +29,6 @@
 mod common;
 
 use common::conn;
-use oracledb;
 use rstest::*;
 
 #[rstest]
@@ -42,7 +41,7 @@ fn test_1500(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     for row in cursor {
         let row = row?;
         let value: bool = row.get(0)?;
-        assert_eq!(value, true);
+        assert!(value);
     }
     Ok(())
 }

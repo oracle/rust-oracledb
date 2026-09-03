@@ -28,7 +28,6 @@
 // Shows a simple connection pool to Oracle Database using the driver.
 //-----------------------------------------------------------------------------
 
-use oracledb;
 use std::time::Duration;
 
 mod common;

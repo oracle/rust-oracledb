@@ -26,7 +26,6 @@
 // Common module for testing the oracledb crate.
 //-----------------------------------------------------------------------------
 
-use oracledb;
 use rstest::*;
 
 pub struct TableGuard<'a> {
@@ -47,12 +46,11 @@ impl TableGuard<'_> {
     fn drop_table(&self) -> Result<(), oracledb::Error> {
         let sql = format!("drop table {} purge", self.table_name);
         let result = self.conn.execute(&sql, &[]);
-        if let Err(err) = result {
-            if let oracledb::ErrorKind::DbError(message) = err.kind() {
-                if !message.starts_with("ORA-00942:") {
-                    return Err(err);
-                }
-            }
+        if let Err(err) = result
+            && let oracledb::ErrorKind::DbError(message) = err.kind()
+            && !message.starts_with("ORA-00942:")
+        {
+            return Err(err);
         }
         Ok(())
     }
