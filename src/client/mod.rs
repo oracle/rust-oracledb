@@ -612,6 +612,11 @@ impl Client {
         Ok(info)
     }
 
+    /// Returns the maximum string size for the database.
+    pub(crate) fn max_string_size(&self) -> u32 {
+        self.caps.max_string_size()
+    }
+
     /// Creates a new client and returns it.
     pub(crate) fn new(config: Config, pool_id: String) -> Self {
         let cache_size = config.stmtcachesize();

@@ -79,14 +79,17 @@ impl Metadata {
     }
 
     /// Returns a new structure suitable for defining CLOB/BLOB as
-    /// string/bytes. Currently LOB locators are not supported at all.
+    /// string/bytes.
     pub(crate) fn define_metadata(&self) -> Metadata {
+        let mut metadata = self.clone();
+        metadata.max_size = 0;
         match *self.db_type {
-            DB_TYPE_BLOB => Metadata::new(&DB_TYPE_LONG_RAW, 0, false),
-            DB_TYPE_CLOB => Metadata::new(&DB_TYPE_LONG, 0, false),
-            DB_TYPE_NCLOB => Metadata::new(&DB_TYPE_LONG_NVARCHAR, 0, false),
-            _ => self.clone(),
+            DB_TYPE_BLOB => metadata.db_type = &DB_TYPE_LONG_RAW,
+            DB_TYPE_CLOB => metadata.db_type = &DB_TYPE_LONG,
+            DB_TYPE_NCLOB => metadata.db_type = &DB_TYPE_LONG_NVARCHAR,
+            _ => {}
         }
+        metadata
     }
 
     /// Returns a new structure from the metadata returned by the database.

@@ -110,6 +110,35 @@ impl CachedStatement {
         &self.binds
     }
 
+    /// Returns the indexes of the binds in the order required for executing a
+    /// statement. For SQL statements, the server expects long binds to be at
+    /// the end of the list of binds. When performing a full execute, all binds
+    /// must be included, but when re-executing, only input binds are included.
+    pub(crate) fn bind_indexes_for_execute(
+        &self,
+        max_string_size: u32,
+        input_only: bool,
+    ) -> Vec<usize> {
+        let mut binds: Vec<usize> = Vec::with_capacity(self.binds.len());
+        let mut long_binds: Vec<usize> = Vec::new();
+        for (column_index, bind_info) in self.binds.iter().enumerate() {
+            if (!input_only && !bind_info.is_return_bind)
+                || bind_info.is_input_bind()
+            {
+                let metadata = bind_info.metadata.as_ref().unwrap();
+                if self.is_plsql || metadata.buffer_size() <= max_string_size {
+                    binds.push(column_index);
+                } else {
+                    long_binds.push(column_index);
+                }
+            }
+        }
+        if !long_binds.is_empty() {
+            binds.append(&mut long_binds);
+        }
+        binds
+    }
+
     /// Returns a copy of the names of the binds defined for the statement.
     pub(crate) fn bind_names(&self) -> Vec<String> {
         self.bind_names.clone()
@@ -256,16 +285,6 @@ impl CachedStatement {
     /// statement.
     pub(crate) fn has_cursor(&self) -> bool {
         self.cursor_id != 0
-    }
-
-    /// Returns whether or not the statement has input binds.
-    pub(crate) fn has_input_binds(&self) -> bool {
-        for bind_info in &self.binds {
-            if bind_info.is_input_bind() {
-                return true;
-            }
-        }
-        false
     }
 
     /// Returns whether or not the statement is in the statement cache.

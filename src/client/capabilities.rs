@@ -244,6 +244,11 @@ impl Capabilities {
             RCAP_VAL_TTC_ZERO_COPY | RCAP_VAL_TTC_32K;
     }
 
+    /// Returns the maximum string size for the database.
+    pub(crate) fn max_string_size(&self) -> u32 {
+        self.max_string_size
+    }
+
     pub fn new() -> Capabilities {
         let mut caps = Capabilities {
             protocol_version: 0,

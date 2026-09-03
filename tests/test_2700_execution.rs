@@ -542,3 +542,25 @@ fn test_2719(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     assert_eq!(row.get::<usize>(1)?, 2719);
     Ok(())
 }
+
+#[rstest]
+/// Tests binding order when long columns are detected.
+fn test_2720(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let _guard = common::create_table(
+        &conn,
+        "test_2720",
+        "id number, c clob, v varchar2(30)",
+    )?;
+    let big_data = "x".repeat(40_000);
+    let small_data = "small_value";
+    conn.execute(
+        "insert into test_2720 values (:1, :2, :3)",
+        &[&1, &big_data, &small_data],
+    )?;
+    conn.commit()?;
+    let row = conn.query_row("select * from test_2720", &[])?;
+    assert_eq!(row.get::<usize>("id")?, 1);
+    assert_eq!(row.get::<&str>("c")?, big_data);
+    assert_eq!(row.get::<&str>("v")?, small_data);
+    Ok(())
+}
