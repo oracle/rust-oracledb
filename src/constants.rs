@@ -232,7 +232,7 @@ pub const TTC_RPC_REEXECUTE: u8 = 4;
 pub const TTC_RPC_REEXECUTE_AND_FETCH: u8 = 78;
 pub const _TTC_RPC_SESSION_GET: u8 = 162;
 pub const _TTC_RPC_SESSION_RELEASE: u8 = 163;
-pub const _TTC_RPC_SESSION_STATE: u8 = 176;
+pub const TTC_RPC_SESSION_STATE: u8 = 176;
 pub const TTC_RPC_SET_KEY_VALUE: u8 = 154;
 pub const _TTC_RPC_SET_SCHEMA: u8 = 152;
 pub const _TTC_RPC_TPC_TXN_SWITCH: u8 = 103;
@@ -326,6 +326,11 @@ pub const TTC_BIND_FLAG_USE_INDICATORS: u8 = 0x01;
 // TTC bind directions
 pub const TTC_BIND_DIR_INPUT: u8 = 0x20;
 pub const TTC_BIND_DIR_OUTPUT: u8 = 0x10;
+
+// session state constants
+pub const TTC_SESSION_STATE_REQUEST_BEGIN: u8 = 0x04;
+pub const TTC_SESSION_STATE_REQUEST_END: u8 = 0x08;
+pub const TTC_SESSION_STATE_EXPLICIT_BOUNDARY: u8 = 0x40;
 
 // character sets
 pub const CHARSET_ID_UTF8: u16 = 873;

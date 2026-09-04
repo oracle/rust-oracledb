@@ -62,6 +62,7 @@ pub(crate) struct Response {
     prev_fetch_last_row: Option<DbRow>,
     bit_vector: Option<Vec<u8>>,
     num_columns: usize,
+    call_status: u32,
     end_of_fetch: bool,
 }
 
@@ -77,6 +78,11 @@ impl Response {
     pub(crate) fn advance(&mut self, cnt: usize) -> Result<(), Error> {
         self.buf.read_bytes(cnt)?;
         Ok(())
+    }
+
+    /// Returns the call status of the response.
+    pub(crate) fn call_status(&self) -> u32 {
+        self.call_status
     }
 
     pub(crate) fn check_for_end_of_fetch(
@@ -219,6 +225,13 @@ impl Response {
         Ok(())
     }
 
+    /// Deserializes call status from the buffer.
+    pub(crate) fn deserialize_status(&mut self) -> Result<(), Error> {
+        self.call_status = self.read_ub4()?;
+        let _seq_num = self.read_ub2()?;
+        Ok(())
+    }
+
     pub(crate) fn deserialize_warning(&mut self) -> Result<(), Error> {
         let error_num = self.read_ub2()?;
         let num_bytes = self.read_ub2()?;
@@ -325,6 +338,7 @@ impl Response {
             prev_fetch_last_row: None,
             bit_vector: None,
             num_columns: 0,
+            call_status: 0,
             end_of_fetch: false,
         }
     }

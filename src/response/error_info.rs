@@ -48,8 +48,7 @@ impl ErrorInfo {
         resp: &mut Response,
         client: &Client,
     ) -> Result<ErrorInfo, Error> {
-        resp.read_ub4()?; // end of call status
-        resp.read_ub2()?; // end to end seq#
+        resp.deserialize_status()?;
         resp.read_ub4()?; // current row number
         resp.read_ub2()?; // error number (short)
         resp.read_ub2()?; // array elem error

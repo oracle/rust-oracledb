@@ -84,8 +84,6 @@ impl ConnImpl {
     /// Closes the connection and makes it unsable now instead of when the
     /// connection is dropped.
     pub(crate) fn close(&mut self) -> Result<(), Error> {
-        self.clear_end_user_security_context()?;
-        self.rollback()?;
         self.client_ref.lock().unwrap().close()
     }
 
@@ -133,8 +131,10 @@ impl ConnImpl {
     }
 
     /// Sets the returned to pool instant which is used in pool management.
-    pub(crate) fn set_returned_to_pool(&mut self) {
+    pub(crate) fn set_returned_to_pool(&mut self) -> Result<(), Error> {
+        self.client_ref.lock().unwrap().end_request()?;
         self.returned_to_pool = Instant::now();
+        Ok(())
     }
 
     /// Commits any pending transactions.

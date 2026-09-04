@@ -241,9 +241,19 @@ impl PoolContents {
     }
 
     /// Returns a connection to the pool.
-    pub(crate) fn return_connection(&mut self, conn_impl: ConnImpl) {
+    pub(crate) fn return_connection(
+        &mut self,
+        mut conn_impl: ConnImpl,
+    ) -> Result<(), Error> {
+        let result = conn_impl.set_returned_to_pool();
         self.num_busy -= 1;
-        self.free_connections.push_front(conn_impl);
-        self.satisfy_requests();
+        if result.is_err() {
+            self.connections_requiring_drop.push(conn_impl);
+            self.notify_manager();
+        } else {
+            self.free_connections.push_front(conn_impl);
+            self.satisfy_requests();
+        }
+        result
     }
 }

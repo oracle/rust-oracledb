@@ -69,11 +69,8 @@ impl Connection {
     pub fn close(&mut self) -> Result<(), Error> {
         if let Some(pool_contents_ref) = self.pool_contents_ref.take() {
             let mut pool_contents = pool_contents_ref.lock().unwrap();
-            let mut conn_impl = self.conn_impl.take().unwrap();
-            conn_impl.clear_end_user_security_context()?;
-            conn_impl.set_returned_to_pool();
-            pool_contents.return_connection(conn_impl);
-            Ok(())
+            let conn_impl = self.conn_impl.take().unwrap();
+            pool_contents.return_connection(conn_impl)
         } else if let Some(mut conn_impl) = self.conn_impl.take() {
             conn_impl.close()
         } else {

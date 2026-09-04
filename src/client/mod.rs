@@ -52,6 +52,7 @@ use crate::messages::LogoffMessage;
 use crate::messages::MarkerMessage;
 use crate::messages::Message;
 use crate::messages::ProtocolMessage;
+use crate::messages::RollbackMessage;
 use crate::packet::Packet;
 use crate::response::Response;
 use crate::statement::CachedStatement;
@@ -74,6 +75,7 @@ pub struct Client {
     ncharset_id: u16,
     statement_cache: StatementCache,
     drcp_establish_session: bool,
+    in_request: bool,
     override_ttc_field_version: u8,
     pending_error_num: usize,
     pending_action: Option<Vec<u8>>,
@@ -82,6 +84,8 @@ pub struct Client {
     pending_db_op: Option<Vec<u8>>,
     pending_module: Option<Vec<u8>>,
     pending_ha_readiness: bool,
+    pending_session_state: u8,
+    transaction_in_progress: bool,
     pool_id: String,
     last_warning: Option<String>,
     security_context: Option<EndUserSecurityContext>,
@@ -118,6 +122,11 @@ impl Client {
             self.pending_error_num = resp.read_u32be()? as usize;
         }
         Ok(())
+    }
+
+    /// Processes the call status flags returned by the server.
+    fn process_call_status(&mut self, call_status: u32) {
+        self.transaction_in_progress = call_status & 0x00000002 != 0
     }
 
     /// Receives a data packet from the database. Control packets and marker
@@ -401,6 +410,17 @@ impl Client {
         buf.write_bytes_with_double_length(Some(&oson_bytes));
     }
 
+    /// Writes the session state piggyback. This is used to let the database
+    /// know when the client is beginning and ending a request. The database
+    /// uses this information to optimise its resources.
+    fn write_piggyback_session_state(&mut self, buf: &mut WriteBuffer) {
+        let state = self.pending_session_state
+            | constants::TTC_SESSION_STATE_EXPLICIT_BOUNDARY;
+        buf.write_piggyback_header(self, constants::TTC_RPC_SESSION_STATE);
+        buf.write_ub8(state as u64);
+        self.pending_session_state = 0;
+    }
+
     /// Writes all of the piggybacks for the given round trip.
     fn write_piggybacks(&mut self, buf: &mut WriteBuffer) {
         if let Some(context) = self.security_context.as_ref() {
@@ -418,6 +438,9 @@ impl Client {
             || self.pending_module.is_some()
         {
             self.write_piggyback_end_to_end(buf);
+        }
+        if self.pending_session_state != 0 {
+            self.write_piggyback_session_state(buf);
         }
         if self.pending_ha_readiness {
             self.write_piggyback_ha_readiness(buf);
@@ -462,10 +485,9 @@ impl Client {
 
     /// Closes the connection to the database.
     pub(crate) fn close(&mut self) -> Result<(), Error> {
-        let mut logoff_message = LogoffMessage::new();
-        let mut eof_message = EofMessage::new();
-        self.process_message(&mut logoff_message)?;
-        self.send_message(&mut eof_message)?;
+        self.end_request()?;
+        self.process_message(&mut LogoffMessage::new())?;
+        self.send_message(&mut EofMessage::new())?;
         self.transport.close()
     }
 
@@ -577,6 +599,26 @@ impl Client {
         }
     }
 
+    /// Ends the current request against the database.This clears any end user
+    /// security context and warnings, rolls back any open transactions and
+    /// releases any session to the DRCP pool, if applicable.
+    pub(crate) fn end_request(&mut self) -> Result<(), Error> {
+        self.security_context = None;
+        self.last_warning = None;
+        if self.in_request {
+            if self.pending_session_state != 0 {
+                self.in_request = false;
+            } else {
+                self.pending_session_state =
+                    constants::TTC_SESSION_STATE_REQUEST_END;
+            }
+        }
+        if self.in_request || self.transaction_in_progress {
+            self.process_message(&mut RollbackMessage::new())?;
+        }
+        Ok(())
+    }
+
     /// Returns the call timeout set on the connection or an error if the
     /// connection is not currently established.
     pub(crate) fn get_call_timeout(
@@ -637,6 +679,7 @@ impl Client {
             ncharset_id: 0,
             statement_cache: StatementCache::new(cache_size),
             drcp_establish_session: false,
+            in_request: false,
             override_ttc_field_version: 0,
             pending_error_num: 0,
             pending_action: None,
@@ -645,8 +688,10 @@ impl Client {
             pending_db_op: None,
             pending_module: None,
             pending_ha_readiness: false,
+            pending_session_state: 0,
             last_warning: None,
             security_context: None,
+            transaction_in_progress: false,
             pool_id,
         }
     }
@@ -665,6 +710,12 @@ impl Client {
         }
         if self.caps.supports_ha_readiness() {
             self.pending_ha_readiness = true;
+        }
+        if !self.pool_id.is_empty() && self.caps.supports_request_boundaries()
+        {
+            self.pending_session_state =
+                constants::TTC_SESSION_STATE_REQUEST_BEGIN;
+            self.in_request = true;
         }
         Ok(db_info)
     }
@@ -718,6 +769,7 @@ impl Client {
             return Err(e);
         }
         message.post_deserialize(self, response)?;
+        self.process_call_status(response.call_status());
         if let Some(warning) = response.take_warning() {
             self.last_warning = Some(warning);
         }

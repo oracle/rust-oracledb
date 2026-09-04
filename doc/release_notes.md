@@ -20,6 +20,9 @@
 1.  Added support for binding long values in any order
     ([issue 10](https://github.com/oracle/rust-oracledb/issues/10)).
 1.  Added support for the HA readiness requirements of Oracle Database 23.26.3.
+1.  Fixed bug where returning a connection to the pool did not end the request
+    correctly
+    ([issue 15](https://github.com/oracle/rust-oracledb/issues/15)).
 1.  Removed the ability to clone [Cursor](crate::Cursor) and [Lob](crate::Lob).
 1.  Fixed bug which caused a named binding containing a single quote to panic.
 1.  Fixed bug which caused a hang when executing a statement with PL/SQL out

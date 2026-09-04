@@ -26,6 +26,8 @@
 // test_2900_pool()
 //-----------------------------------------------------------------------------
 
+mod common;
+
 fn pool_config(
     min_connections: usize,
     max_connections: usize,
@@ -112,5 +114,29 @@ fn test_2903() -> Result<(), oracledb::Error> {
     second.close()?;
     assert_eq!(pool.busy_count()?, 0);
     assert_eq!(pool.open_count()?, 2);
+    Ok(())
+}
+
+#[test]
+/// Verifies releasing a pooled connection rolls back uncommitted work before
+/// the physical session can be acquired again.
+fn test_2904() -> Result<(), oracledb::Error> {
+    let observer = common::conn();
+    let _guard = common::create_table(&observer, "test_2904", "id number")?;
+    let mut pool = oracledb::create_pool(pool_config(0, 1, 1)?)?;
+
+    let mut first = pool.acquire()?;
+    let first_session_id = first.session_id()?;
+    first.execute("insert into test_2904 values (1)", &[])?;
+    first.close()?;
+
+    let mut second = pool.acquire()?;
+    assert_eq!(second.session_id()?, first_session_id);
+    let row = second.query_row("select count(*) from test_2904", &[])?;
+    let count: i32 = row.get(0)?;
+    second.close()?;
+    pool.close()?;
+
+    assert_eq!(count, 0, "pooled release leaked an open transaction");
     Ok(())
 }

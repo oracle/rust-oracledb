@@ -297,6 +297,11 @@ impl Capabilities {
         self.supports_ha_readiness
     }
 
+    /// Returns whether the connection supports setting request boundaries.
+    pub fn supports_request_boundaries(&self) -> bool {
+        self.supports_request_boundaries
+    }
+
     pub fn supports_ttc_field_version(&self, version: u8) -> bool {
         self.ttc_field_version >= version
     }
