@@ -72,7 +72,7 @@ fn main() -> Result<(), oracledb::Error> {
     let user: String = row.get("user")?;
 
     // perform query that returns multiple rows with a bind parameter
-    // Assuming that emp table exists
+    // Assuming that the EMP table exists
     let cursor = conn.query(
         "select ename, sal, comm from emp where deptno = :1", &[&30]
     )?;
