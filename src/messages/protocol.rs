@@ -74,7 +74,7 @@ impl Message for ProtocolMessage {
         message_type: u8,
     ) -> Result<(), Error> {
         if message_type != constants::TTC_MSG_TYPE_PROTOCOL {
-            return Err(Error::unknown_ttc_message_type(message_type));
+            return Err(resp.unknown_ttc_message_type(message_type));
         }
         self.skip_array(resp)?; // protocol message version
         self.skip_array(resp)?; // server banner

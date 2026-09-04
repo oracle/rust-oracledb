@@ -63,6 +63,16 @@ impl Packet {
         }
     }
 
+    /// Returns the size of the header. Data packets are 10 bytes (because they
+    /// include the data flags, unlike other packets).
+    pub(crate) fn header_size(&self) -> usize {
+        if self.packet_type == constants::PACKET_TYPE_DATA {
+            10
+        } else {
+            8
+        }
+    }
+
     /// Creates a new packet from the supplied buffer.
     pub(crate) fn new(data: &[u8]) -> Packet {
         let packet_type = data[4];

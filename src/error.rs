@@ -34,6 +34,7 @@ use std::io;
 use std::str;
 
 use crate::db_type::DbType;
+use crate::response::ResponseLocation;
 
 /// Types of errors returned by the library.
 #[derive(Debug, PartialEq)]
@@ -90,7 +91,7 @@ pub enum ErrorKind {
     UnexpectedRefuse(String),
     UnexpectedResult,
     UnknownServerSidePiggyback(u8),
-    UnknownTtcMessageType(u8),
+    UnknownTtcMessageType(u8, ResponseLocation),
     UnsupportedArrowType(String),
     UnsupportedConversion(String, String),
     UnsupportedDbType(&'static DbType),
@@ -368,10 +369,12 @@ impl fmt::Display for Error {
                 fmt,
                 "internal error: unknown server-side piggyback opcode {opcode}"
             )?,
-            ErrorKind::UnknownTtcMessageType(ttc_message_type) => write!(
+            ErrorKind::UnknownTtcMessageType(
+                ttc_message_type, location
+            ) => write!(
                 fmt,
-                "internal error: unknown TTC message type {}",
-                ttc_message_type
+                "internal error: unknown TTC message type {} at {}",
+                ttc_message_type, location
             )?,
             ErrorKind::UnsupportedArrowType(arrow_type) => {
                 write!(fmt, "binding Arow type {}", arrow_type)?
@@ -722,8 +725,14 @@ impl Error {
         Error::new(ErrorKind::UnknownServerSidePiggyback(opcode), None)
     }
 
-    pub(crate) fn unknown_ttc_message_type(ttc_message_type: u8) -> Error {
-        Error::new(ErrorKind::UnknownTtcMessageType(ttc_message_type), None)
+    pub(crate) fn unknown_ttc_message_type(
+        ttc_message_type: u8,
+        location: ResponseLocation,
+    ) -> Error {
+        Error::new(
+            ErrorKind::UnknownTtcMessageType(ttc_message_type, location),
+            None,
+        )
     }
 
     #[cfg(feature = "arrow")]

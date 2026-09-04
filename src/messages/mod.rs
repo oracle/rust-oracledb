@@ -176,7 +176,7 @@ pub(crate) trait Message {
             }
             constants::TTC_MSG_TYPE_STATUS => resp.deserialize_status(),
             constants::TTC_MSG_TYPE_WARNING => resp.deserialize_warning(),
-            _ => Err(Error::unknown_ttc_message_type(message_type)),
+            _ => Err(resp.unknown_ttc_message_type(message_type)),
         }
     }
 

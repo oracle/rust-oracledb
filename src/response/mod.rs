@@ -138,6 +138,21 @@ impl Response {
         }
     }
 
+    /// Returns the current location in the response.
+    pub(crate) fn current_location(&self) -> ResponseLocation {
+        let mut packet_num = 1;
+        let mut offset = self.buf.get_pos();
+        for packet in &self.packets {
+            if offset <= packet.buf.len() {
+                offset += packet.header_size();
+                break;
+            }
+            packet_num += 1;
+            offset -= packet.buf.len();
+        }
+        ResponseLocation { packet_num, offset }
+    }
+
     pub(crate) fn deserialize_bit_vector(&mut self) -> Result<(), Error> {
         let num_columns = self.read_ub2()? as usize;
         if self.num_columns == 0 {
@@ -552,5 +567,24 @@ impl Response {
         if let Some(error_info) = self.error_info.as_mut() {
             error_info.rowcount += other_resp.get_rowcount();
         }
+    }
+
+    /// Returns an error indicating that an unknown TTC message type was
+    /// encountered. It first calculates the packet number and offset into the
+    /// packet to aid in debugging.
+    pub(crate) fn unknown_ttc_message_type(&self, message_type: u8) -> Error {
+        Error::unknown_ttc_message_type(message_type, self.current_location())
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct ResponseLocation {
+    packet_num: usize,
+    offset: usize,
+}
+
+impl std::fmt::Display for ResponseLocation {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(fmt, "packet {}, offset {}", self.packet_num, self.offset)
     }
 }

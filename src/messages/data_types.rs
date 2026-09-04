@@ -893,7 +893,7 @@ impl Message for DataTypesMessage {
         ttc_message_type: u8,
     ) -> Result<(), Error> {
         if ttc_message_type != constants::TTC_MSG_TYPE_DATA_TYPES {
-            return Err(Error::unknown_ttc_message_type(ttc_message_type));
+            return Err(resp.unknown_ttc_message_type(ttc_message_type));
         }
         loop {
             let data_type = resp.read_u16be()?;
