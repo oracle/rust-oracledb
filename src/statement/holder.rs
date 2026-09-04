@@ -39,7 +39,6 @@ use crate::response::Response;
 use crate::row::DbRow;
 use crate::statement::CachedStatement;
 
-#[derive(Clone)]
 pub(crate) struct StatementHolder {
     client_ref: ClientRef,
     statement: CachedStatement,
@@ -62,8 +61,9 @@ impl StatementHolder {
     ) -> Result<Response, Error> {
         let mut client = self.client_ref.lock().unwrap();
         let mut message = ExecuteMessage::new(&mut self.statement, params);
-        let response = client
-            .process_message_with_ref(&mut message, Some(&self.client_ref))?;
+        let mut response = client.process_message(&mut message)?;
+        response
+            .finalize_rows(&self.client_ref, self.statement.out_metadata());
         if self.statement.requires_define() {
             self.statement.clear_requires_define();
         }
@@ -117,11 +117,12 @@ impl StatementHolder {
         &self,
         last_row: Option<DbRow>,
     ) -> Result<Response, Error> {
+        let mut client = self.client_ref.lock().unwrap();
         let mut message = FetchMessage::new(&self.statement, last_row);
-        self.client_ref
-            .lock()
-            .unwrap()
-            .process_message_with_ref(&mut message, Some(&self.client_ref))
+        let mut response = client.process_message(&mut message)?;
+        response
+            .finalize_rows(&self.client_ref, self.statement.out_metadata());
+        Ok(response)
     }
 
     /// Creates a new statement holder used for performing the actual

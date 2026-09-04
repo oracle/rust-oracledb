@@ -194,6 +194,19 @@ impl Metadata {
         self.is_array = is_array;
     }
 
+    /// Returns whether any values retrieved by the database need to go into
+    /// the pending values vector for processing after deserialization has
+    /// completed.
+    pub(crate) fn should_defer_value(&self) -> bool {
+        !self.null_by_describe
+            && matches!(
+                self.db_type.ora_type_num,
+                constants::ORA_TYPE_NUM_CLOB
+                    | constants::ORA_TYPE_NUM_BLOB
+                    | constants::ORA_TYPE_NUM_CURSOR
+            )
+    }
+
     /// Writes the metadata to the buffer.
     pub(crate) fn write_to_buf(&self, buf: &mut WriteBuffer, client: &Client) {
         let mut cont_flag: u64 = 0;

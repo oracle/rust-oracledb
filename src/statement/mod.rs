@@ -276,6 +276,21 @@ impl CachedStatement {
         self.cursor_id
     }
 
+    /// Deserializes a nested cursor statement from a database response.
+    pub(crate) fn from_cursor_response(
+        resp: &mut Response,
+        client: &Client,
+        is_nested: bool,
+        options: &StatementOptions,
+    ) -> Result<Self, Error> {
+        let mut statement =
+            Self::create_empty(String::new(), is_nested, options);
+        let _length = resp.read_u8()?;
+        statement.populate_from_describe_info(client, resp)?;
+        statement.set_cursor_id(resp.read_ub2()?);
+        Ok(statement)
+    }
+
     /// Returns whether or not the statement has any bind variables.
     pub(crate) fn has_binds(&self) -> bool {
         !self.binds.is_empty()

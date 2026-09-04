@@ -58,6 +58,37 @@ pub struct Lob {
     offset: usize,
 }
 
+pub(crate) struct PendingLobData {
+    chunk_size: usize,
+    db_type: &'static DbType,
+    locator: Vec<u8>,
+    size: usize,
+}
+
+impl PendingLobData {
+    /// Deserializes LOB data from a database response.
+    pub(crate) fn from_resp(
+        resp: &mut Response,
+        db_type: &'static DbType,
+    ) -> Result<Option<Self>, Error> {
+        let non_null_indicator = resp.read_ub4()?;
+        if non_null_indicator == 0 {
+            Ok(None)
+        } else {
+            let size: usize = resp.read_ub8()?.try_into().unwrap();
+            let chunk_size: usize = resp.read_ub4()?.try_into().unwrap();
+            // LOB locators are returned as a length-encoded byte sequence.
+            let locator = resp.read_bytes_with_length()?.into_owned();
+            Ok(Some(Self {
+                chunk_size,
+                db_type,
+                locator,
+                size,
+            }))
+        }
+    }
+}
+
 impl fmt::Debug for Lob {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Lob")
@@ -163,28 +194,15 @@ impl Lob {
         Ok(())
     }
 
-    /// Deserializes a LOB locator from a database response.
-    pub(crate) fn from_resp(
-        resp: &mut Response,
-        db_type: &'static DbType,
-    ) -> Result<Option<Lob>, Error> {
-        let non_null_indicator = resp.read_ub4()?;
-        if non_null_indicator == 0 {
-            Ok(None)
-        } else {
-            let size: usize = resp.read_ub8()?.try_into().unwrap();
-            let chunk_size: usize = resp.read_ub4()?.try_into().unwrap();
-            // For BLOB/CLOB locators the protocol returns the locator as a
-            // length-encoded byte sequence (no prefetched data payload)
-            let locator = resp.read_bytes_with_length()?.into_owned();
-            Ok(Some(Lob {
-                client_ref: resp.get_client_ref(),
-                locator,
-                db_type,
-                size: Some(size),
-                chunk_size: Some(chunk_size),
-                offset: 1,
-            }))
+    /// Creates a LOB from its internal data.
+    pub(crate) fn new(client_ref: ClientRef, data: PendingLobData) -> Self {
+        Self {
+            client_ref,
+            locator: data.locator,
+            db_type: data.db_type,
+            size: Some(data.size),
+            chunk_size: Some(data.chunk_size),
+            offset: 1,
         }
     }
 

@@ -251,7 +251,7 @@ fn test_2607(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
 }
 
 #[rstest]
-/// Tests fetching a nested REF CURSOR through Row::get_cursor().
+/// Tests fetching a cursor returned as a column through Row::take().
 fn test_2608(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     let mut row = conn.query_row(
         "select cursor(select level from dual connect by level <= 3) from dual",

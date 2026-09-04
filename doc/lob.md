@@ -85,11 +85,11 @@ connection.execute(
 You can fetch with a LOB locator as shown below:
 
 ```rust
-let row = connection
+let mut row = connection
     .statement("select b from lob_locator_tbl where id = :1")?
     .fetch_lobs()
     .query_row(&[&id])?;
-let mut blob: oracledb::Lob = row.get(0)?;
+let mut blob: oracledb::Lob = row.take(0)?;
 let mut fetched_blob = Vec::new();
 blob.read_to_end(&mut fetched_blob)?;
 println!("BLOB bytes: {fetched_blob:?}");

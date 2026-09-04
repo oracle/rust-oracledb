@@ -26,6 +26,8 @@
 // test_2700_execution()
 //-----------------------------------------------------------------------------
 
+use std::io::Read;
+
 mod common;
 
 use common::conn;
@@ -562,5 +564,56 @@ fn test_2720(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     assert_eq!(row.get::<usize>("id")?, 1);
     assert_eq!(row.get::<&str>("c")?, big_data);
     assert_eq!(row.get::<&str>("v")?, small_data);
+    Ok(())
+}
+
+#[rstest]
+/// Tests mixed regular and pending values across execute prefetch and fetch.
+fn test_2721(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let _guard = common::create_table(
+        &conn,
+        "test_2721",
+        "id number primary key, data1 blob, data2 blob",
+    )?;
+    let payloads = [
+        (vec![1, 2, 3], vec![4, 5, 6]),
+        (vec![7, 8, 9], vec![10, 11, 12]),
+        (vec![13, 14, 15], vec![16, 17, 18]),
+    ];
+    for (index, (payload1, payload2)) in payloads.iter().enumerate() {
+        let id = (index + 1) as i32;
+        conn.execute(
+            "insert into test_2721 values (:1, :2, :3)",
+            &[&id, payload1, payload2],
+        )?;
+    }
+    let mut statement = conn.statement(
+        r#"
+        select id, data1, id + 20, data2, cursor(select 99 from dual)
+        from test_2721
+        order by id
+        "#,
+    )?;
+    statement.prefetch_rows(1).fetch_array_size(1).fetch_lobs();
+    let cursor = statement.query(&[])?;
+    for (index, row) in cursor.enumerate() {
+        let mut row = row?;
+        let id = (index + 1) as i32;
+        assert_eq!(row.get::<i32>(0)?, id);
+        assert_eq!(row.get::<i32>(2)?, id + 20);
+        let mut lob1: oracledb::Lob = row.take(1)?;
+        let mut lob2: oracledb::Lob = row.take(3)?;
+        let nested_cursor: oracledb::Cursor = row.take(4)?;
+        let mut data1 = Vec::new();
+        let mut data2 = Vec::new();
+        lob1.read_to_end(&mut data1)?;
+        lob2.read_to_end(&mut data2)?;
+        assert_eq!(data1, payloads[index].0);
+        assert_eq!(data2, payloads[index].1);
+        let values: Vec<i32> = nested_cursor
+            .map(|row| row?.get(0))
+            .collect::<Result<Vec<_>, _>>()?;
+        assert_eq!(values, vec![99]);
+    }
     Ok(())
 }

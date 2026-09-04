@@ -29,6 +29,7 @@
 //-----------------------------------------------------------------------------
 
 use crate::client::Client;
+use crate::client::ClientRef;
 use crate::constants;
 use crate::cursor::Cursor;
 use crate::db_type::DbType;
@@ -40,6 +41,7 @@ use crate::db_type::{
 use crate::error::Error;
 use crate::json::JsonValue;
 use crate::lob::Lob;
+use crate::lob::PendingLobData;
 use crate::metadata::Metadata;
 use crate::ora_type::OracleIntervalDS;
 use crate::ora_type::OracleIntervalYM;
@@ -50,6 +52,7 @@ use crate::row::ColumnData;
 use crate::row::DbRow;
 use crate::rowid::Rowid;
 use crate::statement::CachedStatement;
+use crate::statement::StatementHolder;
 use crate::utils;
 use crate::vector::Vector;
 use crate::write_buffer::ToBuf;
@@ -71,6 +74,29 @@ pub enum DbValue {
     Timestamp(OracleTimestamp),
     Vector(Vector),
     Lob(Lob),
+}
+
+/// Contains LOB and cursor data until a client reference can be added.
+pub(crate) enum PendingDbValue {
+    Cursor(CachedStatement),
+    Lob(PendingLobData),
+}
+
+impl PendingDbValue {
+    /// Converts pending data into a public value with a client reference.
+    pub(crate) fn into_db_value(self, client_ref: &ClientRef) -> DbValue {
+        match self {
+            PendingDbValue::Cursor(statement) => {
+                DbValue::Cursor(Box::new(Cursor::new(StatementHolder::new(
+                    client_ref.clone(),
+                    statement,
+                ))))
+            }
+            PendingDbValue::Lob(data) => {
+                DbValue::Lob(Lob::new(client_ref.clone(), data))
+            }
+        }
+    }
 }
 
 impl DbValue {
@@ -157,15 +183,22 @@ impl DbValue {
                 Ok(resp.read_value_lob::<JsonValue>()?.map(DbValue::Json))
             }
             constants::ORA_TYPE_NUM_CLOB | constants::ORA_TYPE_NUM_BLOB => {
-                Ok(Lob::from_resp(resp, db_type)?.map(DbValue::Lob))
+                let data = PendingLobData::from_resp(resp, db_type)?;
+                resp.add_pending_db_value(data.map(PendingDbValue::Lob));
+                Ok(None)
             }
-            constants::ORA_TYPE_NUM_CURSOR => Ok(Cursor::from_resp(
-                resp,
-                client,
-                in_fetch,
-                statement.options(),
-            )?
-            .map(|v| DbValue::Cursor(Box::new(v)))),
+            constants::ORA_TYPE_NUM_CURSOR => {
+                let statement = CachedStatement::from_cursor_response(
+                    resp,
+                    client,
+                    in_fetch,
+                    statement.options(),
+                )?;
+                resp.add_pending_db_value(Some(PendingDbValue::Cursor(
+                    statement,
+                )));
+                Ok(None)
+            }
             _ => Err(Error::unsupported_db_type(db_type)),
         }?;
         if !in_fetch {
@@ -175,7 +208,7 @@ impl DbValue {
             {
                 value = None;
             } else if max_num_bytes != 0
-                && let Some(internal_value) = value
+                && let Some(ref internal_value) = value
             {
                 let actual_num_bytes = match internal_value {
                     DbValue::String(v) => v.len(),
@@ -196,6 +229,7 @@ impl DbValue {
         Ok(value)
     }
 
+    /// Creates a database value from the response.
     pub(crate) fn from_response(
         resp: &mut Response,
         client: &Client,

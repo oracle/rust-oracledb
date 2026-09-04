@@ -95,17 +95,23 @@ impl Client {
     fn perform_round_trip(
         &mut self,
         message: &mut impl Message,
-        client_ref_opt: Option<&ClientRef>,
     ) -> Result<Response, Error> {
         message.pre_process(self);
         self.send_message(message)?;
-        self.receive_response(message, client_ref_opt)
+        let mut response = Response::new();
+        if let Err(e) = self.receive_response(message, &mut response) {
+            response.cleanup_pending_values(self);
+            Err(e)
+        } else {
+            Ok(response)
+        }
     }
 
     /// Process a control packet received from the database.
     fn process_control_packet(&mut self, packet: Packet) -> Result<(), Error> {
         let packets = vec![packet];
-        let mut resp = Response::new(&packets);
+        let mut resp = Response::new();
+        resp.reset(&packets);
         let control_type = resp.read_u16be()?;
         if control_type == constants::TTC_CONTROL_TYPE_INBAND_NOTIF {
             resp.advance(4)?;
@@ -505,7 +511,8 @@ impl Client {
         while !connect_message.accepted {
             self.process_message(&mut connect_message)?;
             if connect_message.redirect_data_len > 0 {
-                self.receive_response(&mut connect_message, None)?;
+                let mut response = Response::new();
+                self.receive_response(&mut connect_message, &mut response)?;
                 let redirect_data =
                     connect_message.redirect_data.take().unwrap();
                 if let Some((before, after)) =
@@ -669,20 +676,9 @@ impl Client {
         &mut self,
         message: &mut impl Message,
     ) -> Result<Response, Error> {
-        self.process_message_with_ref(message, None)
-    }
-
-    /// Processes a single message and receives back the response. An optional
-    /// 'ClientRef' can be provided and will be placed in the response for
-    /// later use.
-    pub(crate) fn process_message_with_ref(
-        &mut self,
-        message: &mut impl Message,
-        client_ref_opt: Option<&ClientRef>,
-    ) -> Result<Response, Error> {
-        let mut response = self.perform_round_trip(message, client_ref_opt)?;
+        let mut response = self.perform_round_trip(message)?;
         if message.resend_needed() {
-            response = self.perform_round_trip(message, client_ref_opt)?;
+            response = self.perform_round_trip(message)?;
         }
         Ok(response)
     }
@@ -705,18 +701,15 @@ impl Client {
     }
 
     /// Returns the response of the database to the message sent by the client.
-    pub(crate) fn receive_response(
+    fn receive_response(
         &mut self,
         message: &mut impl Message,
-        client_ref_opt: Option<&ClientRef>,
-    ) -> Result<Response, Error> {
+        response: &mut Response,
+    ) -> Result<(), Error> {
         let mut packets = self.receive_packets()?;
-        let mut response = Response::new(&packets);
-        if let Some(client_ref) = client_ref_opt {
-            response.set_client_ref(client_ref.clone());
-        }
-        message.pre_deserialize(self, &mut response);
-        while let Err(e) = message.deserialize(self, &mut response) {
+        response.reset(&packets);
+        message.pre_deserialize(self, response);
+        while let Err(e) = message.deserialize(self, response) {
             if e.is_out_of_data() {
                 packets.extend(self.receive_packets()?);
                 response.reset(&packets);
@@ -724,11 +717,11 @@ impl Client {
             }
             return Err(e);
         }
-        message.post_deserialize(self, &mut response)?;
+        message.post_deserialize(self, response)?;
         if let Some(warning) = response.take_warning() {
             self.last_warning = Some(warning);
         }
-        Ok(response)
+        Ok(())
     }
 
     /// Returns whether the client should be closed based on the pending error

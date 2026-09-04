@@ -30,8 +30,9 @@
 
 use std::sync::Arc;
 
+use crate::client::ClientRef;
 use crate::column_index::ColumnIndex;
-use crate::db_value::{DbValue, FromDbValue};
+use crate::db_value::{DbValue, FromDbValue, PendingDbValue};
 use crate::error::Error;
 use crate::metadata::Metadata;
 
@@ -82,6 +83,17 @@ impl DbRow {
     /// Clones the value at the specified index.
     pub(crate) fn clone_column(&self, index: usize) -> Option<DbValue> {
         Self::clone_value(&self.column_values[index])
+    }
+
+    /// Finalizes the value at the specified index by transforming a pending
+    /// database value into the actual database value presented to callers.
+    pub(crate) fn finalize_column(
+        &mut self,
+        index: usize,
+        client_ref: &ClientRef,
+        value: PendingDbValue,
+    ) {
+        self.column_values[index] = Some(value.into_db_value(client_ref));
     }
 
     /// Creates a new database value row from a set of column values
