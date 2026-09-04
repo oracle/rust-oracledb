@@ -109,6 +109,7 @@ pub enum ErrorKind {
 struct ErrorInner {
     kind: ErrorKind,
     cause: Option<Box<dyn error::Error + Sync + Send>>,
+    backtrace: std::backtrace::Backtrace,
 }
 
 /// Represents errors returned by the library.
@@ -116,10 +117,13 @@ pub struct Error(Box<ErrorInner>);
 
 impl fmt::Debug for Error {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt.debug_struct("Error")
-            .field("kind", &self.0.kind)
-            .field("cause", &self.0.cause)
-            .finish()
+        write!(fmt, "{}", self)?;
+        if self.0.backtrace.status()
+            == std::backtrace::BacktraceStatus::Captured
+        {
+            write!(fmt, "\n\nStack Backtrace:\n{}", self.0.backtrace)?;
+        }
+        Ok(())
     }
 }
 
@@ -431,7 +435,11 @@ impl Error {
         kind: ErrorKind,
         cause: Option<Box<dyn error::Error + Sync + Send>>,
     ) -> Error {
-        Error(Box::new(ErrorInner { kind, cause }))
+        Error(Box::new(ErrorInner {
+            kind,
+            cause,
+            backtrace: std::backtrace::Backtrace::capture(),
+        }))
     }
 
     pub(crate) fn column_truncated(
