@@ -23,7 +23,7 @@
 //-----------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------
-// Common module for testing the oracledb crate.
+// Common module for examples for the oracledb crate.
 //-----------------------------------------------------------------------------
 
 use std::env;
@@ -60,4 +60,58 @@ pub fn get_sample_pool_config() -> Result<oracledb::PoolConfig, oracledb::Error>
     oracledb::PoolConfig::default()
         .set_credentials(&user, &password)
         .set_connect_string(&connect_string)
+}
+
+/// Guard that drops a sample table when it goes out of scope.
+pub struct TableGuard<'a> {
+    conn: &'a oracledb::Connection,
+    table_name: &'a str,
+}
+
+// Helper used to drop the table explicitly before creating it.
+impl TableGuard<'_> {
+    /// Drops the table from the database but ignores the error if the table
+    /// does not exist.
+    fn drop_table(&self) -> Result<(), oracledb::Error> {
+        drop_table(self.conn, self.table_name)
+    }
+}
+
+// Automatically drops the table when the guard goes out of scope.
+impl Drop for TableGuard<'_> {
+    fn drop(&mut self) {
+        let _ = self.drop_table();
+    }
+}
+
+#[allow(dead_code)]
+/// Drops the table from the database but ignores the error if the table does
+/// not exist.
+pub fn drop_table(
+    conn: &oracledb::Connection,
+    table_name: &str,
+) -> Result<(), oracledb::Error> {
+    let sql = format!("drop table {table_name} purge");
+    let result = conn.execute(&sql, &[]);
+    if let Err(err) = result
+        && let oracledb::ErrorKind::DbError(message) = err.kind()
+        && !message.starts_with("ORA-00942:")
+    {
+        return Err(err);
+    }
+    Ok(())
+}
+
+#[allow(dead_code)]
+/// Creates the table with the given name and definition.
+pub fn create_table<'a>(
+    conn: &'a oracledb::Connection,
+    table_name: &'a str,
+    definition: &str,
+) -> Result<TableGuard<'a>, oracledb::Error> {
+    let guard = TableGuard { conn, table_name };
+    guard.drop_table()?;
+    let sql = format!("create table {table_name} ({definition})");
+    conn.execute(&sql, &[])?;
+    Ok(guard)
 }
