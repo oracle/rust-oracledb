@@ -181,16 +181,22 @@ pub(crate) fn write_to_buf(
         DataType::Utf8 => {
             &(!is_null).then(|| column.as_string::<i32>().value(row_index))
         }
+        DataType::Utf8View => {
+            &(!is_null).then(|| column.as_string_view().value(row_index))
+        }
         DataType::LargeUtf8 => {
             &(!is_null).then(|| column.as_string::<i64>().value(row_index))
         }
         DataType::Binary => {
             &(!is_null).then(|| column.as_binary::<i32>().value(row_index))
         }
+        DataType::BinaryView => {
+            &(!is_null).then(|| column.as_binary_view().value(row_index))
+        }
         DataType::LargeBinary => {
             &(!is_null).then(|| column.as_binary::<i64>().value(row_index))
         }
-        _ => todo!(),
+        _ => unreachable!("should be handled in column_db_type()"),
     };
     value.to_buf(buf, metadata.db_type(), true);
 }

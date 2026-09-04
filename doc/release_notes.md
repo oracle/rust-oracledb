@@ -38,6 +38,7 @@
     connections set to zero.  The error
     [ErrorKind::PoolMaxInvalid](crate::ErrorKind::PoolMaxInvalid) was renamed
     from `ErrorKind::PoolMaxLessThanMin` which now covers both scenarios.
+1.  Fixed bug binding Arrow arrays of type `StringView` and `BinaryView`.
 
 
 ## rust-oracledb 26.0.0-beta.2 (August 20, 2026)
