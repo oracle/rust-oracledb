@@ -224,7 +224,7 @@ fn test_3203(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
         "234.5570",
         "1.0620",
     ];
-    for (index, value) in data.as_slice().into_iter().enumerate() {
+    for (index, value) in data.as_slice().iter().enumerate() {
         conn.execute(
             "insert into test_3203 values (:1, to_number(:2))",
             &[&(index + 1), value],

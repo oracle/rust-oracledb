@@ -30,7 +30,6 @@
 //-----------------------------------------------------------------------------
 
 use arrow_array::{Array, StringArray};
-use oracledb;
 
 mod common;
 
