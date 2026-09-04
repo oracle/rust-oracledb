@@ -133,7 +133,7 @@ pub(crate) trait Message {
         let _num_iters = resp.read_ub4()?;
         let _buffer_len = resp.read_ub2()?;
         resp.read_bit_vector()?;
-        let _rxhrid = resp.read_bytes_with_length()?;
+        let _rxhrid = resp.read_bytes_with_double_length()?;
         Ok(())
     }
 

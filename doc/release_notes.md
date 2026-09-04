@@ -32,6 +32,8 @@
 1.  Fixed bug which caused a hang when executing a statement with PL/SQL out
     binds multiple times
     ([issue 17](https://github.com/oracle/rust-oracledb/issues/17)).
+1.  Fixed bug which caused a protocol error when parsing the response to a
+    `SELECT FOR UPDATE` statement.
 1.  Fixed bug which permitted a pool to be created with the maximum number of
     connections set to zero.  The error
     [ErrorKind::PoolMaxInvalid](crate::ErrorKind::PoolMaxInvalid) was renamed
