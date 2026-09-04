@@ -113,9 +113,8 @@ impl Client {
 
     /// Process a control packet received from the database.
     fn process_control_packet(&mut self, packet: Packet) -> Result<(), Error> {
-        let packets = vec![packet];
         let mut resp = Response::new();
-        resp.reset(&packets);
+        resp.add_packets(vec![packet]);
         let control_type = resp.read_u16be()?;
         if control_type == constants::TTC_CONTROL_TYPE_INBAND_NOTIF {
             resp.advance(4)?;
@@ -165,6 +164,46 @@ impl Client {
             }
             _ => Ok(Some(packet)),
         }
+    }
+
+    /// Returns the list of packets making up the response from the server (if
+    /// the database is capable of indicating the end of its response) or a
+    /// single data packet which may not be the entire response.
+    fn receive_packets(&mut self) -> Result<Vec<Packet>, Error> {
+        let mut packets = Vec::<Packet>::new();
+        let supports_end_of_response = self.supports_end_of_response();
+        loop {
+            let packet = self.receive_data_packet()?;
+            let has_end_of_response = packet.has_end_of_response();
+            packets.push(packet);
+            if !supports_end_of_response || has_end_of_response {
+                break;
+            }
+        }
+        Ok(packets)
+    }
+
+    /// Returns the response of the database to the message sent by the client.
+    fn receive_response(
+        &mut self,
+        message: &mut impl Message,
+        response: &mut Response,
+    ) -> Result<(), Error> {
+        response.add_packets(self.receive_packets()?);
+        message.pre_deserialize(self, response);
+        while let Err(e) = message.deserialize(self, response) {
+            if e.is_out_of_data() {
+                response.add_packets(self.receive_packets()?);
+                continue;
+            }
+            return Err(e);
+        }
+        message.post_deserialize(self, response)?;
+        self.process_call_status(response.call_status());
+        if let Some(warning) = response.take_warning() {
+            self.last_warning = Some(warning);
+        }
+        Ok(())
     }
 
     /// Called when a timeout occurs and attempts to recover from it by sending
@@ -732,48 +771,6 @@ impl Client {
             response = self.perform_round_trip(message)?;
         }
         Ok(response)
-    }
-
-    /// Returns the list of packets making up the response from the server (if
-    /// the database is capable of indicating the end of its response) or a
-    /// single data packet which may not be the entire response.
-    pub(crate) fn receive_packets(&mut self) -> Result<Vec<Packet>, Error> {
-        let mut packets = Vec::<Packet>::new();
-        let supports_end_of_response = self.supports_end_of_response();
-        loop {
-            let packet = self.receive_data_packet()?;
-            let has_end_of_response = packet.has_end_of_response();
-            packets.push(packet);
-            if !supports_end_of_response || has_end_of_response {
-                break;
-            }
-        }
-        Ok(packets)
-    }
-
-    /// Returns the response of the database to the message sent by the client.
-    fn receive_response(
-        &mut self,
-        message: &mut impl Message,
-        response: &mut Response,
-    ) -> Result<(), Error> {
-        let mut packets = self.receive_packets()?;
-        response.reset(&packets);
-        message.pre_deserialize(self, response);
-        while let Err(e) = message.deserialize(self, response) {
-            if e.is_out_of_data() {
-                packets.extend(self.receive_packets()?);
-                response.reset(&packets);
-                continue;
-            }
-            return Err(e);
-        }
-        message.post_deserialize(self, response)?;
-        self.process_call_status(response.call_status());
-        if let Some(warning) = response.take_warning() {
-            self.last_warning = Some(warning);
-        }
-        Ok(())
     }
 
     /// Returns whether the client should be closed based on the pending error
