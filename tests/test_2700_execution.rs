@@ -75,22 +75,19 @@ fn test_2700(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
 }
 
 #[rstest]
-/// Tests PL/SQL OUT and IN/OUT binds through ExecResult::returned_data().
+/// Tests PL/SQL OUT and IN/OUT binds through ExecResult::out_bind_data().
 fn test_2701(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     for value in [100, 200, 300] {
         let mut result = conn.execute_named(
             "begin :out_value := :input_value * 2; end;",
             &[("input_value", &value), ("out_value", &0)],
         )?;
-        let returned_data = result.returned_data();
-        assert_eq!(returned_data.len(), 1);
-        assert!(result.returned_data().is_empty());
-        assert_eq!(returned_data[0].get::<i32>(0)?, value * 2);
+        let out_bind_data = result.out_bind_data();
+        assert_eq!(out_bind_data.get::<i32>(0)?, value * 2);
     }
     let mut result =
         conn.execute("begin :1 := :1 || :2; end;", &[&"value", &"-updated"])?;
-    let returned_data = result.returned_data();
-    let value: String = returned_data[0].get(0)?;
+    let value: String = result.out_bind_data().get(0)?;
     assert_eq!(value, "value-updated");
     Ok(())
 }
@@ -117,8 +114,10 @@ fn test_2702(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     conn.commit()?;
     assert_eq!(result.rows_affected(), 1);
     let returned_data = result.returned_data();
-    assert_eq!(returned_data.len(), 1);
-    let values: Vec<String> = returned_data[0].get_array(0)?;
+    let values: Vec<String> = returned_data
+        .into_iter()
+        .map(|v| v.get(0).unwrap())
+        .collect();
     assert_eq!(values, vec!["returned value"]);
     Ok(())
 }
@@ -185,9 +184,7 @@ fn test_2705(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
         "begin :out_value := cast(null as number); end;",
         &[("out_value", &0)],
     )?;
-    let returned_data = result.returned_data();
-    assert_eq!(returned_data.len(), 1);
-    let out_value: Option<i32> = returned_data[0].get(0)?;
+    let out_value: Option<i32> = result.out_bind_data().get(0)?;
     assert!(out_value.is_none());
     Ok(())
 }
@@ -418,9 +415,10 @@ fn test_2715(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     assert_eq!(result.rows_affected(), 2);
 
     let returned_data = result.returned_data();
-    assert_eq!(returned_data.len(), 1);
-    let ids: Vec<usize> = returned_data[0].get_array(0)?;
-    let values: Vec<String> = returned_data[0].get_array(1)?;
+    let ids: Vec<usize> =
+        returned_data.iter().map(|r| r.get(0).unwrap()).collect();
+    let values: Vec<String> =
+        returned_data.iter().map(|r| r.get(1).unwrap()).collect();
     assert_eq!(ids, vec![1, 2]);
     assert_eq!(values, vec!["one-updated", "two-updated"]);
     Ok(())
@@ -446,9 +444,11 @@ fn test_2716(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     )?;
     assert_eq!(result.rows_affected(), 1);
 
-    let returned_data = result.returned_data();
-    assert_eq!(returned_data.len(), 1);
-    let values: Vec<String> = returned_data[0].get_array(0)?;
+    let values: Vec<String> = result
+        .returned_data()
+        .into_iter()
+        .map(|r| r.get(0).unwrap())
+        .collect();
     assert_eq!(values, vec!["no-space-returning"]);
     Ok(())
 }
@@ -472,9 +472,11 @@ fn test_2717(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     )?;
     assert_eq!(result.rows_affected(), 0);
 
-    let returned_data = result.returned_data();
-    assert_eq!(returned_data.len(), 1);
-    let values: Vec<String> = returned_data[0].get_array(0)?;
+    let values: Vec<String> = result
+        .returned_data()
+        .into_iter()
+        .map(|r| r.get(0).unwrap())
+        .collect();
     assert!(values.is_empty());
     Ok(())
 }
@@ -615,5 +617,62 @@ fn test_2721(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
             .collect::<Result<Vec<_>, _>>()?;
         assert_eq!(values, vec![99]);
     }
+    Ok(())
+}
+
+#[rstest]
+/// Tests PL/SQL OUT binds returned from each execute_batch invocation.
+fn test_2722(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let params = oracledb::BindParameters::Slice(&[
+        &[&0, &100],
+        &[&0, &200],
+        &[&0, &300],
+    ]);
+    let mut result = conn.execute_batch("begin :2 := :1 * 2; end;", params)?;
+
+    let out_bind_data = result.out_bind_data();
+    let values: Vec<i32> = out_bind_data
+        .iter()
+        .map(|row| row.get(0).unwrap())
+        .collect();
+    assert_eq!(values, vec![200, 400, 600]);
+    Ok(())
+}
+
+#[rstest]
+/// Tests DML RETURNING data grouped by execute_batch invocation.
+fn test_2723(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let _guard = common::create_table(
+        &conn,
+        "test_2723",
+        "id number primary key, value varchar2(30)",
+    )?;
+
+    conn.execute("insert into test_2723 values (1, 'one')", &[])?;
+    conn.execute("insert into test_2723 values (2, 'two')", &[])?;
+    conn.execute("insert into test_2723 values (3, 'three')", &[])?;
+    let params = oracledb::BindParameters::Slice(&[
+        &[&"-first", &1, &0],
+        &[&"-second", &2, &0],
+        &[&"-third", &3, &0],
+    ]);
+    let mut result = conn.execute_batch(
+        r#"
+        update test_2723
+            set value = value || :1
+        where id <= :2
+        returning id
+        into :3
+        "#,
+        params,
+    )?;
+    conn.commit()?;
+
+    let returned_data = result.returned_data();
+    let ids: Vec<Vec<usize>> = returned_data
+        .iter()
+        .map(|rows| rows.iter().map(|row| row.get(0).unwrap()).collect())
+        .collect();
+    assert_eq!(ids, vec![vec![1], vec![1, 2], vec![1, 2, 3]]);
     Ok(())
 }

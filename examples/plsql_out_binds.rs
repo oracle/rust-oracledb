@@ -50,8 +50,7 @@ fn main() -> Result<(), oracledb::Error> {
     // positional bind variables
     let mut result = connection
         .execute("begin rso_examples_proc(:1, :2); end;", &[&100, &0])?;
-    let rows = result.returned_data();
-    let p2: i32 = rows[0].get(0)?;
+    let p2: i32 = result.out_bind_data().get(0)?;
     println!("{p2}");
 
     // named bind variables
@@ -59,8 +58,7 @@ fn main() -> Result<(), oracledb::Error> {
         "begin rso_examples_proc(:p1, :p2); end;",
         &[("p1", &200), ("p2", &0)],
     )?;
-    let rows = result.returned_data();
-    let p2: i32 = rows[0].get(0)?;
+    let p2: i32 = result.out_bind_data().get(0)?;
     println!("{p2}");
 
     Ok(())

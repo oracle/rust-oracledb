@@ -41,6 +41,7 @@ use crate::db_info::DbInfo;
 use crate::db_value::ToDbValue;
 use crate::end_user_security_context::EndUserSecurityContext;
 use crate::error::Error;
+use crate::exec_result::ExecBatchResult;
 use crate::exec_result::ExecResult;
 use crate::messages::CommitMessage;
 use crate::messages::PingMessage;
@@ -160,7 +161,7 @@ impl ConnImpl {
         &self,
         sql: &str,
         params: BindParameters,
-    ) -> Result<ExecResult, Error> {
+    ) -> Result<ExecBatchResult, Error> {
         self.statement(sql).execute_batch(params)
     }
 

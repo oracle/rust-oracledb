@@ -6,8 +6,8 @@
 // 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose
 // either license.
 //
-// If you elect to accept the software under the Apache License, Version 2.0,
-// the following applies:
+// If you elect to accept the software under the Apache License 2.0, the
+// following applies:
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,9 +23,9 @@
 //-----------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------
-// plsql_in_out_binds.rs
+// plsql_batch_out_binds.rs
 //
-// Shows using positional and named IN/OUT binds with PL/SQL.
+// Shows using OUT binds with PL/SQL execute_batch().
 //-----------------------------------------------------------------------------
 
 mod common;
@@ -36,46 +36,34 @@ fn main() -> Result<(), oracledb::Error> {
 
     connection.execute(
         r#"
-        create or replace procedure rso_examples_proc (
+        create or replace procedure rso_examples_batch_proc (
             p1 in number,
-            p2 in out varchar2
+            p2 out number
         ) as
         begin
-            p2 := p2 || ' ' || p1;
+            p2 := p1 * 2;
         end;
         "#,
         &[],
     )?;
 
-    // positional bind variables
-    let data = [(440, "Gregory"), (550, "Haley"), (660, "Ian")];
-    let mut outvals = Vec::new();
+    let params = oracledb::BindParameters::Slice(&[
+        &[&100, &0],
+        &[&200, &0],
+        &[&300, &0],
+    ]);
 
-    for (p1, p2) in data {
-        let mut result = connection
-            .execute("begin rso_examples_proc(:1, :2); end;", &[&p1, &p2])?;
+    let mut result = connection.execute_batch(
+        "begin rso_examples_batch_proc(:1, :2); end;",
+        params,
+    )?;
 
-        let outval: String = result.out_bind_data().get(0)?;
-
-        outvals.push(outval);
+    for row in result.out_bind_data() {
+        let p2: i32 = row.get(0)?;
+        println!("{p2}");
     }
-    println!("Positional binds: {outvals:?}");
 
-    // named bind variables
-    let data = [(440, "Julia"), (550, "Tina"), (660, "Tracy")];
-    let mut outvals = Vec::new();
-
-    for (p1, p2) in data {
-        let mut result = connection.execute_named(
-            "begin rso_examples_proc(:p1, :p2); end;",
-            &[("p1", &p1), ("p2", &p2)],
-        )?;
-
-        let outval: String = result.out_bind_data().get(0)?;
-
-        outvals.push(outval);
-    }
-    println!("Named binds: {outvals:?}");
+    connection.execute("drop procedure rso_examples_batch_proc", &[])?;
 
     Ok(())
 }

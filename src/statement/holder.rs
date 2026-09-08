@@ -34,7 +34,6 @@ use crate::db_value::ToDbValue;
 use crate::error::Error;
 use crate::messages::ExecuteMessage;
 use crate::messages::FetchMessage;
-use crate::metadata::Metadata;
 use crate::response::Response;
 use crate::row::DbRow;
 use crate::statement::CachedStatement;
@@ -45,13 +44,6 @@ pub(crate) struct StatementHolder {
 }
 
 impl StatementHolder {
-    /// Returns the metadata of the data that is being returned by the
-    /// statement. This will be fetch metadata or the metadata of PL/SQL out
-    /// variables or DML returning out variables.
-    pub(crate) fn out_metadata(&self) -> &Vec<Metadata> {
-        self.statement.out_metadata()
-    }
-
     /// Base execution of a statement. At this point binds have been
     /// checked and transformed (if needed) into the sequence required by the
     /// server.
@@ -137,9 +129,9 @@ impl StatementHolder {
         }
     }
 
-    /// Returns the SQL associated with the statement that is held.
-    pub(crate) fn sql(&self) -> &str {
-        self.statement.sql()
+    /// Returns a reference to the associated statement.
+    pub(crate) fn statement(&self) -> &CachedStatement {
+        &self.statement
     }
 }
 

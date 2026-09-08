@@ -37,14 +37,13 @@ let mut result = connection.execute(
     &[&123, &0],
 )?;
 
-let returned_data = result.returned_data();
-let out_val: i32 = returned_data[0].get(0)?;
+let out_val: i32 = result.out_bind_data().get(0)?;
 
 println!("{out_val}"); // will print 246
 ```
 
 The OUT bind value is returned from
-[ExecResult::returned_data()](crate::ExecResult::returned_data).
+[ExecResult::out_bind_data()](crate::ExecResult::out_bind_data).
 
 See [Using Bind Variables](#bind) for information on binding.
 
@@ -79,10 +78,10 @@ let mut result = connection.execute(
     &[&0, &"a string", &15, &date_hint],
 )?;
 
-let returned_data = result.returned_data();
+let out_bind_data = result.out_bind_data();
 
-let return_val: i32 = returned_data[0].get(0)?;
-let out_date: OracleTimestamp = returned_data[0].get(1)?;
+let return_val: i32 = out_bind_data.get(0)?;
+let out_date: OracleTimestamp = out_bind_data.get(1)?;
 
 println!("{return_val}");
 println!("{out_date}");
@@ -114,8 +113,7 @@ let mut result = connection.execute_named(
     ],
 )?;
 
-let returned_data = result.returned_data();
-let out_val: i32 = returned_data[0].get(0)?;
+let out_val: i32 = result.out_bind_data().get(0)?;
 
 println!("{out_val}"); // will print 15
 ```
@@ -254,14 +252,14 @@ loop {
     )?;
 
     // Get the OUT bind values returned by the PL/SQL call
-    let returned_data = result.returned_data();
+    let out_bind_data = result.out_bind_data();
 
     // Read the line OUT bind. It can be NULL when no line is returned
-    let line: Option<String> = returned_data[0].get(0)?;
+    let line: Option<String> = out_bind_data.get(0)?;
 
     // Read the status OUT bind. 0 means a line was returned; 1 means no more
     // lines
-    let status: i32 = returned_data[0].get(1)?;
+    let status: i32 = out_bind_data.get(1)?;
 
     if status != 0 {
         break;

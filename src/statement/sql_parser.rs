@@ -207,7 +207,7 @@ impl SqlParser<'_> {
                 } else if self.returning_keyword_found
                     && keyword.to_uppercase() == "INTO"
                 {
-                    statement.is_returning = true;
+                    statement.is_dml_returning = true;
                 }
             }
 

@@ -82,7 +82,7 @@ impl Cursor {
 
     /// Creates a new cursor.
     pub(crate) fn new(statement_holder: StatementHolder) -> Self {
-        let metadata = statement_holder.out_metadata().to_vec();
+        let metadata = statement_holder.statement().out_metadata().to_vec();
         Self {
             statement_holder,
             column_info: Arc::new(metadata),
@@ -102,12 +102,12 @@ impl Cursor {
     /// Returns the columns associated with the cursor. If the cursor does not
     /// reference a query, the vector will be empty.
     pub fn columns(&self) -> &Vec<Metadata> {
-        self.statement_holder.out_metadata()
+        self.statement_holder.statement().out_metadata()
     }
 
     /// Returns the sql associated with the cursor.
     pub fn sql(&self) -> &str {
-        self.statement_holder.sql()
+        self.statement_holder.statement().sql()
     }
 }
 

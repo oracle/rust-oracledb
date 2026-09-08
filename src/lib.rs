@@ -77,6 +77,7 @@ pub use crate::db_type::DbType;
 pub use crate::end_user_security_context::EndUserSecurityContext;
 pub use crate::end_user_security_context::EndUserSecurityContextBuilder;
 pub use crate::error::Error;
+pub use crate::exec_result::ExecBatchResult;
 pub use crate::exec_result::ExecResult;
 pub use crate::lob::Lob;
 pub use crate::metadata::Metadata;

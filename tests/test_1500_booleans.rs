@@ -89,9 +89,8 @@ fn test_1503(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
         "begin :out_value := not :in_value; end;",
         &[("in_value", &true), ("out_value", &false)],
     )?;
-    let returned_data = result.returned_data();
-    assert_eq!(returned_data.len(), 1);
-    let out_value: bool = returned_data[0].get(0)?;
+    let out_bind_data = result.out_bind_data();
+    let out_value: bool = out_bind_data.get(0)?;
     assert!(!out_value);
     Ok(())
 }

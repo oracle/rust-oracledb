@@ -49,9 +49,7 @@ fn main() -> Result<(), oracledb::Error> {
     let mut result = connection
         .execute("begin :1 := rso_examples_func(:2); end;", &[&0, &19])?;
 
-    let returned_data = result.returned_data();
-
-    let return_val: i32 = returned_data[0].get(0)?;
+    let return_val: i32 = result.out_bind_data().get(0)?;
 
     println!("Return value: {return_val}");
 

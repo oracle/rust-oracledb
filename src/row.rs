@@ -126,6 +126,39 @@ impl DbRow {
         }
         Ok(array)
     }
+
+    /// Transpose the row where each column is an array of values into a vector
+    /// of rows. The original row is no longer usable after this process is
+    /// complete.
+    pub(crate) fn transpose_arrays(self) -> Vec<Self> {
+        // extract the column values from the DbValue::Array enum
+        let mut columns_iter =
+            self.column_values.into_iter().map(|val| match val {
+                Some(DbValue::Array(array)) => array.column_values,
+                _ => unreachable!("returned data is always found in arrays"),
+            });
+
+        // create row accumulators based on the first column
+        let first_column = match columns_iter.next() {
+            Some(col) => col,
+            None => return Vec::new(),
+        };
+        let mut row_accumulators: Vec<Vec<Option<DbValue>>> =
+            first_column.into_iter().map(|v| vec![v]).collect();
+        for next_column in columns_iter {
+            row_accumulators = row_accumulators
+                .into_iter()
+                .zip(next_column)
+                .map(|(mut current_row, next_val)| {
+                    current_row.push(next_val);
+                    current_row
+                })
+                .collect();
+        }
+
+        // transform the accumulated values into DbRows
+        row_accumulators.into_iter().map(Self::new).collect()
+    }
 }
 
 impl Clone for DbRow {
@@ -153,6 +186,14 @@ impl Row {
         Self {
             column_info: Arc::clone(column_info),
             column_values,
+        }
+    }
+
+    /// Creates a new empty row with no column values or data.
+    pub(crate) fn new_empty() -> Self {
+        Self {
+            column_info: Arc::new(vec![]),
+            column_values: DbRow::new(vec![]),
         }
     }
 

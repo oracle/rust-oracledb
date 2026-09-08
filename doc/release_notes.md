@@ -17,6 +17,18 @@
     columns in [Row::get()](crate::Row::get()) and
     [Row::take()](crate::Row::take())
     ([issue 12](https://github.com/oracle/rust-oracledb/issues/12)).
+1.  Added new struct [ExecBatchResult](crate::ExecBatchResult) for getting the
+    results from calling
+    [Statement::execute_batch()](crate::Statement::execute_batch()) instead of
+    using [ExecResult](crate::ExecResult). Methods
+    [ExecResult::out_bind_data()](crate::ExecResult::out_bind_data()) and
+    [ExecBatchResult::out_bind_data()](crate::ExecBatchResult::out_bind_data())
+    were added for getting [PL/SQL out bind](#batchplsql) data. The methods
+    [ExecResult::returned_data()](crate::ExecResult::returned_data()) and
+    [ExecBatchResult::returned_data()](crate::ExecBatchResult::returned_data())
+    are only used for getting [DML returning data](#dmlreturning) and they are
+    returned in a manner more conducive to further manipulation
+    ([discussion 14](https://github.com/oracle/rust-oracledb/discussions/14)).
 1.  Added support for binding long values in any order
     ([issue 10](https://github.com/oracle/rust-oracledb/issues/10)).
 1.  Added support for the HA readiness requirements of Oracle Database 23.26.3.

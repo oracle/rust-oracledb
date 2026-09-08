@@ -23,10 +23,12 @@
 //-----------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------
-// plsql_in_out_binds.rs
+// dml_returning.rs
 //
-// Shows using positional and named IN/OUT binds with PL/SQL.
+// Shows the use of DML returning.
 //-----------------------------------------------------------------------------
+
+use oracledb;
 
 mod common;
 
@@ -34,48 +36,45 @@ fn main() -> Result<(), oracledb::Error> {
     let config = common::get_sample_config()?;
     let connection = oracledb::connect(config)?;
 
-    connection.execute(
+    let _guard = common::create_table(
+        &connection,
+        "rso_examples_dml_returning",
         r#"
-        create or replace procedure rso_examples_proc (
-            p1 in number,
-            p2 in out varchar2
-        ) as
-        begin
-            p2 := p2 || ' ' || p1;
-        end;
+        department_id number primary key,
+        department_name varchar2(100),
+        location_id number
         "#,
-        &[],
     )?;
 
-    // positional bind variables
-    let data = [(440, "Gregory"), (550, "Haley"), (660, "Ian")];
-    let mut outvals = Vec::new();
+    connection.execute(
+        "insert into rso_examples_dml_returning values (:1, :2, :3)",
+        &[&50 as &dyn oracledb::ToDbValue, &"Shipping", &1500],
+    )?;
+    connection.commit()?;
 
-    for (p1, p2) in data {
-        let mut result = connection
-            .execute("begin rso_examples_proc(:1, :2); end;", &[&p1, &p2])?;
+    let dept_name = " ".repeat(100);
+    let mut result = connection.execute_named(
+        r#"
+        update rso_examples_dml_returning set
+            location_id = :loc_id
+        where department_id = :dept_id
+        returning department_name
+        into :dept_name
+        "#,
+        &[
+            ("loc_id", &1700 as &dyn oracledb::ToDbValue),
+            ("dept_id", &50),
+            ("dept_name", &dept_name),
+        ],
+    )?;
 
-        let outval: String = result.out_bind_data().get(0)?;
+    let dept_names: Vec<String> = result
+        .returned_data()
+        .into_iter()
+        .map(|r| r.get(0).unwrap())
+        .collect();
 
-        outvals.push(outval);
-    }
-    println!("Positional binds: {outvals:?}");
-
-    // named bind variables
-    let data = [(440, "Julia"), (550, "Tina"), (660, "Tracy")];
-    let mut outvals = Vec::new();
-
-    for (p1, p2) in data {
-        let mut result = connection.execute_named(
-            "begin rso_examples_proc(:p1, :p2); end;",
-            &[("p1", &p1), ("p2", &p2)],
-        )?;
-
-        let outval: String = result.out_bind_data().get(0)?;
-
-        outvals.push(outval);
-    }
-    println!("Named binds: {outvals:?}");
+    println!("{dept_names:?}");
 
     Ok(())
 }

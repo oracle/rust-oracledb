@@ -213,7 +213,10 @@ let mut result = connection.execute_named(
 )?;
 
 let returned_data = result.returned_data();
-let dept_names: Vec<String> = returned_data[0].get(0)?;
+let dept_names: Vec<String> = returned_data
+    .iter()
+    .map(|r| r.get(0).unwrap())
+    .collect();
 
 println!("{dept_names:?}"); // will print ["Shipping"]
 ```

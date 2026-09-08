@@ -56,7 +56,7 @@ pub(crate) struct CachedStatement {
     is_plsql: bool,
     is_ddl: bool,
     is_dml: bool,
-    is_returning: bool,
+    is_dml_returning: bool,
     binds: Vec<BindInfo>,
     bind_names: Vec<String>,
     bind_names_set: HashSet<String>,
@@ -74,7 +74,7 @@ impl CachedStatement {
         if !self.is_plsql || !exists {
             self.binds.push(BindInfo {
                 name: name.clone(),
-                is_return_bind: self.is_returning,
+                is_return_bind: self.is_dml_returning,
                 metadata: None,
                 bind_direction: constants::TTC_BIND_DIR_INPUT,
             });
@@ -259,7 +259,7 @@ impl CachedStatement {
             is_plsql: false,
             is_ddl: false,
             is_dml: false,
-            is_returning: false,
+            is_dml_returning: false,
             binds: Vec::new(),
             bind_names: Vec::new(),
             bind_names_set: HashSet::new(),
@@ -310,6 +310,11 @@ impl CachedStatement {
     /// Returns whether or not the statement is a DDL statement.
     pub(crate) fn is_ddl(&self) -> bool {
         self.is_ddl
+    }
+
+    /// Returns whether or not the statement is a DML returning statement.
+    pub(crate) fn is_dml_returning(&self) -> bool {
+        self.is_dml_returning
     }
 
     /// Returns whether or not the statement is a nested statement.

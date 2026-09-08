@@ -39,6 +39,7 @@ use crate::cursor::Cursor;
 use crate::db_value::ToDbValue;
 use crate::end_user_security_context::EndUserSecurityContext;
 use crate::error::Error;
+use crate::exec_result::ExecBatchResult;
 use crate::exec_result::ExecResult;
 use crate::ora_version::OracleVersion;
 use crate::pool::PoolContentsRef;
@@ -150,7 +151,7 @@ impl Connection {
         &self,
         sql: &str,
         params: impl Into<BindParameters<'a>>,
-    ) -> Result<ExecResult, Error> {
+    ) -> Result<ExecBatchResult, Error> {
         self.get_impl()?.execute_batch(sql, params.into())
     }
 
