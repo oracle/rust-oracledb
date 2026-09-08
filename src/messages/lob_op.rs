@@ -38,6 +38,8 @@ use std::borrow::Cow;
 
 /// Represents a LOB operation and the values needed to serialize it.
 pub(crate) enum LobOp<'a> {
+    /// Create a temporary LOB.
+    CreateTemp { ora_type_num: u16, csfrm: u8 },
     /// Close an opened LOB locator.
     Close,
     /// Retrieve the optimal database chunk size for the LOB.
@@ -67,6 +69,27 @@ impl LobOp<'_> {
         }
     }
 
+    /// Returns the character set ID required for the operation.
+    fn charset_id(&self, client: &Client) -> u16 {
+        match self {
+            LobOp::CreateTemp { csfrm, .. }
+                if *csfrm == constants::CS_FORM_NCHAR =>
+            {
+                client.get_ncharset_id()
+            }
+            LobOp::CreateTemp { .. } => constants::CHARSET_ID_UTF8,
+            _ => 0,
+        }
+    }
+
+    /// Returns the character set pointer value.
+    fn charset_pointer(&self) -> u8 {
+        match self {
+            LobOp::CreateTemp { .. } => 1,
+            _ => 0,
+        }
+    }
+
     /// Returns the data payload to send with the operation, if any.
     fn data_to_send(&self) -> Option<&[u8]> {
         match self {
@@ -75,9 +98,34 @@ impl LobOp<'_> {
         }
     }
 
+    /// Returns the destination length value.
+    fn destination_length(&self) -> u32 {
+        match self {
+            LobOp::CreateTemp { .. } => constants::TTC_DURATION_SESSION,
+            _ => 0,
+        }
+    }
+
+    /// Returns the destination offset value for operations that use one.
+    fn destination_offset(&self) -> u64 {
+        match self {
+            LobOp::CreateTemp { ora_type_num, .. } => (*ora_type_num).into(),
+            _ => 0,
+        }
+    }
+
+    /// Returns the NULL LOB pointer value.
+    fn null_lob_pointer(&self) -> u8 {
+        match self {
+            LobOp::CreateTemp { .. } | LobOp::IsOpen => 1,
+            _ => 0,
+        }
+    }
+
     /// Returns the TTC operation code sent for this LOB operation.
     fn operation(&self) -> u32 {
         match self {
+            LobOp::CreateTemp { .. } => constants::TTC_LOB_OP_CREATE_TEMP,
             LobOp::Close => constants::TTC_LOB_OP_CLOSE,
             LobOp::GetChunkSize => constants::TTC_LOB_OP_GET_CHUNK_SIZE,
             LobOp::GetLength => constants::TTC_LOB_OP_GET_LENGTH,
@@ -92,6 +140,11 @@ impl LobOp<'_> {
     /// Returns whether the operation expects a boolean return value.
     fn returns_bool(&self) -> bool {
         matches!(self, LobOp::IsOpen)
+    }
+
+    /// Returns whether the operation returns character set metadata.
+    fn returns_charset(&self) -> bool {
+        matches!(self, LobOp::CreateTemp { .. })
     }
 
     /// Returns whether the operation sends an amount pointer.
@@ -109,6 +162,7 @@ impl LobOp<'_> {
     /// Returns the source offset value for operations that use one.
     fn source_offset(&self) -> u64 {
         match self {
+            LobOp::CreateTemp { csfrm, .. } => (*csfrm).into(),
             LobOp::Read(offset, _) | LobOp::Write(offset, _) => *offset,
             _ => 0,
         }
@@ -179,7 +233,10 @@ impl Message for LobOpMessage<'_> {
     ) -> Result<(), Error> {
         let new_locator = resp.read_bytes(self.source_locator.len())?.to_vec();
         self.returned_locator = Some(new_locator);
-        if self.op.sends_amount() {
+        if self.op.returns_charset() {
+            let _charsetid = resp.read_ub2()?;
+            let _flags = resp.read_u8()?;
+        } else if self.op.sends_amount() {
             self.returned_amount = resp.read_sb8()?;
         }
         if self.op.returns_bool() {
@@ -194,21 +251,17 @@ impl Message for LobOpMessage<'_> {
         buf.write_u8(1); // source pointer
         buf.write_ub4(self.source_locator.len().try_into().unwrap());
         buf.write_u8(0); // dest pointer
-        buf.write_ub4(0); // dest length
+        buf.write_ub4(self.op.destination_length());
         buf.write_ub4(0); // short source offset
         buf.write_ub4(0); // short dest offset
-        buf.write_u8(0); // pointer (character set)
+        buf.write_u8(self.op.charset_pointer());
         buf.write_u8(0); // pointer (short amount)
-        if self.op.returns_bool() {
-            buf.write_u8(1); // pointer (NULL LOB)
-        } else {
-            buf.write_u8(0); // pointer (NULL LOB)
-        }
+        buf.write_u8(self.op.null_lob_pointer());
         buf.write_ub4(self.op.operation());
         buf.write_u8(0); // pointer (SCN array)
         buf.write_u8(0); // SCN array length
         buf.write_ub8(self.op.source_offset());
-        buf.write_ub8(0); // dest offset
+        buf.write_ub8(self.op.destination_offset());
         if self.op.sends_amount() {
             buf.write_u8(1); // pointer (amount)
         } else {
@@ -218,6 +271,9 @@ impl Message for LobOpMessage<'_> {
             buf.write_u16be(0); // array LOB (not used)
         }
         buf.write_bytes(&self.source_locator);
+        if self.op.returns_charset() {
+            buf.write_ub4(self.op.charset_id(client).into());
+        }
         if let Some(data) = self.op.data_to_send() {
             buf.write_u8(constants::TTC_MSG_TYPE_LOB_DATA);
             buf.write_bytes_with_length(data);

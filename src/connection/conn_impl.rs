@@ -38,11 +38,13 @@ use crate::client::{Client, ClientRef};
 use crate::config::Config;
 use crate::cursor::Cursor;
 use crate::db_info::DbInfo;
+use crate::db_type::DbType;
 use crate::db_value::ToDbValue;
 use crate::end_user_security_context::EndUserSecurityContext;
 use crate::error::Error;
 use crate::exec_result::ExecBatchResult;
 use crate::exec_result::ExecResult;
+use crate::lob::Lob;
 use crate::messages::CommitMessage;
 use crate::messages::PingMessage;
 use crate::messages::RollbackMessage;
@@ -102,6 +104,14 @@ impl ConnImpl {
             db_info,
             returned_to_pool: Instant::now(),
         })
+    }
+
+    /// Creates an empty temporary BLOB, CLOB, or NCLOB.
+    pub(crate) fn create_lob(
+        &self,
+        db_type: &'static DbType,
+    ) -> Result<Lob, Error> {
+        Lob::create_temp(self.client_ref.clone(), db_type)
     }
 
     /// Returns the current status of the connection.

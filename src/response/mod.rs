@@ -129,11 +129,17 @@ impl Response {
         Ok(())
     }
 
-    /// Queues cursors created before response deserialization failed.
+    /// Queues resources created before response deserialization failed.
     pub(crate) fn cleanup_pending_values(&mut self, client: &mut Client) {
         for value in std::mem::take(&mut self.pending_values) {
-            if let Some(PendingDbValue::Cursor(statement)) = value {
-                client.return_statement(&statement);
+            match value {
+                Some(PendingDbValue::Cursor(statement)) => {
+                    client.return_statement(&statement);
+                }
+                Some(PendingDbValue::Lob(mut data)) => {
+                    client.add_lob_to_close(data.take_locator());
+                }
+                None => {}
             }
         }
     }

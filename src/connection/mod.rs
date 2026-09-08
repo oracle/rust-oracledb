@@ -36,11 +36,13 @@ pub(crate) use conn_impl::ConnImplStatus;
 use crate::bind_params::BindParameters;
 use crate::config::Config;
 use crate::cursor::Cursor;
+use crate::db_type::DbType;
 use crate::db_value::ToDbValue;
 use crate::end_user_security_context::EndUserSecurityContext;
 use crate::error::Error;
 use crate::exec_result::ExecBatchResult;
 use crate::exec_result::ExecResult;
+use crate::lob::Lob;
 use crate::ora_version::OracleVersion;
 use crate::pool::PoolContentsRef;
 use crate::row::Row;
@@ -124,6 +126,12 @@ impl Connection {
     /// Commits any pending transactions.
     pub fn commit(&self) -> Result<(), Error> {
         self.get_impl()?.commit()
+    }
+
+    /// Creates an empty temporary BLOB, CLOB, or NCLOB.
+    /// The returned LOB can be streamed or used with LOB operations.
+    pub fn create_lob(&self, db_type: &'static DbType) -> Result<Lob, Error> {
+        self.get_impl()?.create_lob(db_type)
     }
 
     /// Returns the domain of the database.

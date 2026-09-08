@@ -89,6 +89,7 @@ pub struct Client {
     pool_id: String,
     last_warning: Option<String>,
     security_context: Option<EndUserSecurityContext>,
+    temp_lobs_to_close: Vec<Vec<u8>>,
 }
 
 pub(crate) type ClientRef = std::sync::Arc<std::sync::Mutex<Client>>;
@@ -288,6 +289,39 @@ impl Client {
         }
     }
 
+    /// Writes the temporary LOB locators that can be freed by the server.
+    fn write_piggyback_close_temp_lobs(&mut self, buf: &mut WriteBuffer) {
+        let temp_lobs_to_close = mem::take(&mut self.temp_lobs_to_close);
+        let total_size: usize = temp_lobs_to_close.iter().map(Vec::len).sum();
+        buf.write_piggyback_header(self, constants::TTC_RPC_LOB_OP);
+        buf.write_u8(1); // pointer (temporary LOB array)
+        buf.write_ub4(total_size.try_into().unwrap());
+        buf.write_u8(0); // destination locator pointer
+        buf.write_ub4(0);
+        buf.write_ub4(0); // source locator offset
+        buf.write_ub4(0);
+        buf.write_u8(0); // source offset pointer
+        buf.write_u8(0); // destination offset pointer
+        buf.write_u8(0); // character set pointer
+        buf.write_ub4(
+            constants::TTC_LOB_OP_FREE_TEMP | constants::TTC_LOB_OP_ARRAY,
+        );
+        buf.write_u8(0); // SCN pointer
+        buf.write_ub4(0);
+        buf.write_ub8(0);
+        buf.write_ub8(0);
+        buf.write_u8(0); // amount pointer
+        buf.write_u8(0); // array destination locator pointer
+        buf.write_ub4(0);
+        buf.write_u8(0); // array source locator pointer
+        buf.write_ub4(0);
+        buf.write_u8(0); // array source offset pointer
+        buf.write_ub4(0);
+        for locator in temp_lobs_to_close {
+            buf.write_bytes(&locator);
+        }
+    }
+
     /// Writes the end-to-end attributes piggyback.
     fn write_piggyback_end_to_end(&mut self, buf: &mut WriteBuffer) {
         // determine which flags to send
@@ -481,8 +515,24 @@ impl Client {
         if self.pending_session_state != 0 {
             self.write_piggyback_session_state(buf);
         }
+        if !self.temp_lobs_to_close.is_empty() {
+            self.write_piggyback_close_temp_lobs(buf);
+        }
         if self.pending_ha_readiness {
             self.write_piggyback_ha_readiness(buf);
+        }
+    }
+
+    /// Adds a temporary LOB locator to the list of locators that will be
+    /// freed by the server on the next round trip.
+    pub(crate) fn add_lob_to_close(&mut self, locator: Vec<u8>) {
+        let flags1 = locator[constants::TTC_LOB_LOC_OFFSET_FLAG_1];
+        let flags4 = locator[constants::TTC_LOB_LOC_OFFSET_FLAG_4];
+
+        if flags1 & constants::TTC_LOB_LOC_FLAGS_ABSTRACT != 0
+            || flags4 & constants::TTC_LOB_LOC_FLAGS_TEMP != 0
+        {
+            self.temp_lobs_to_close.push(locator);
         }
     }
 
@@ -676,6 +726,11 @@ impl Client {
         self.last_warning.clone()
     }
 
+    /// Returns the database character set id used for NCHAR data.
+    pub(crate) fn get_ncharset_id(&self) -> u16 {
+        self.ncharset_id
+    }
+
     /// Returns the runtime capabilities.
     pub(crate) fn get_runtime_caps(&self) -> &[u8] {
         self.caps.runtime_caps()
@@ -732,6 +787,7 @@ impl Client {
             security_context: None,
             transaction_in_progress: false,
             pool_id,
+            temp_lobs_to_close: Vec::new(),
         }
     }
 

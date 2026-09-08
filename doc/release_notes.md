@@ -29,6 +29,8 @@
     are only used for getting [DML returning data](#dmlreturning) and they are
     returned in a manner more conducive to further manipulation
     ([discussion 14](https://github.com/oracle/rust-oracledb/discussions/14)).
+1.  Added method [Connection::create_lob()](crate::Connection::create_lob) for
+    creating temporary BLOB, CLOB and NCLOB values.
 1.  Added support for binding long values in any order
     ([issue 10](https://github.com/oracle/rust-oracledb/issues/10)).
 1.  Added support for the HA readiness requirements of Oracle Database 23.26.3.

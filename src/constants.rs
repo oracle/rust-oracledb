@@ -294,10 +294,12 @@ pub const TTC_LOB_OP_GET_LENGTH: u32 = 0x0001;
 pub const TTC_LOB_OP_TRIM: u32 = 0x0020;
 pub const TTC_LOB_OP_WRITE: u32 = 0x0040;
 pub const TTC_LOB_OP_GET_CHUNK_SIZE: u32 = 0x4000;
+pub const TTC_LOB_OP_CREATE_TEMP: u32 = 0x0110;
+pub const TTC_LOB_OP_FREE_TEMP: u32 = 0x0111;
 pub const TTC_LOB_OP_OPEN: u32 = 0x8000;
 pub const TTC_LOB_OP_CLOSE: u32 = 0x10000;
 pub const TTC_LOB_OP_IS_OPEN: u32 = 0x11000;
-pub const _TTC_LOB_OP_FREE_TEMP: u32 = 0x0111;
+pub const TTC_LOB_OP_ARRAY: u32 = 0x80000;
 pub const _TTC_LOB_OP_FILE_EXISTS: u32 = 0x0800;
 pub const _TTC_LOB_OP_FILE_OPEN: u32 = 0x0100;
 pub const _TTC_LOB_OP_FILE_CLOSE: u32 = 0x0200;
@@ -307,9 +309,14 @@ pub const _TTC_LOB_OP_FILE_ISOPEN: u32 = 0x0400;
 pub const TTC_LOB_OPEN_READ_WRITE: u64 = 2;
 pub const TTC_LOB_OPEN_READ_ONLY: u64 = 11;
 
+// TTC duration values
+pub const TTC_DURATION_SESSION: u32 = 10;
+
 // LOB locator constants (offsets/flags)
+pub const TTC_LOB_LOC_OFFSET_FLAG_1: usize = 4;
 pub const TTC_LOB_LOC_OFFSET_FLAG_3: usize = 6;
 pub const TTC_LOB_LOC_OFFSET_FLAG_4: usize = 7;
+pub const TTC_LOB_LOC_FLAGS_TEMP: u8 = 0x01;
 pub const TTC_LOB_LOC_FLAGS_VAR_LENGTH_CHARSET: u8 = 0x80;
 pub const TTC_LOB_LOC_FLAGS_LITTLE_ENDIAN: u8 = 0x40;
 

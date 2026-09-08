@@ -163,3 +163,22 @@ pub fn skip_unless_vectors_supported(conn: &oracledb::Connection) -> bool {
         skip_test("database does not support vectors (requires 23.4+)")
     }
 }
+
+#[allow(dead_code)]
+/// Returns the number of temporary LOBs held by this session.
+pub fn temporary_lob_count(
+    conn: &oracledb::Connection,
+) -> Result<i64, oracledb::Error> {
+    let sid: String = conn
+        .query_row("select sys_context('USERENV', 'SID') from dual", &[])?
+        .get(0)?;
+    conn.query_row(
+        r#"
+        select cache_lobs + nocache_lobs + abstract_lobs
+        from v$temporary_lobs
+        where sid = :1
+        "#,
+        &[&sid],
+    )?
+    .get(0)
+}
