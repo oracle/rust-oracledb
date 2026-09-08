@@ -33,14 +33,14 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-oracledb = "26.0.0-beta.2"
+oracledb = "26.0.0-beta.3"
 ```
 
 If you wish to make use of the optional Arrow support, use this instead:
 
 ```toml
 [dependencies]
-oracledb = { version = "26.0.0-beta.2", features = ["arrow"] }
+oracledb = { version = "26.0.0-beta.3", features = ["arrow"] }
 ```
 
 ## Documentation
