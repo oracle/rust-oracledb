@@ -23,9 +23,9 @@
 //-----------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------
-// plsql_out_binds.rs
+// ref_cursor.rs
 //
-// Shows using positional and named OUT binds with PL/SQL.
+// Shows how to call a PL/SQL procedure to get a REF cursor and fetch from it.
 //-----------------------------------------------------------------------------
 
 mod common;
@@ -36,32 +36,30 @@ fn main() -> Result<(), oracledb::Error> {
 
     connection.execute(
         r#"
-        create or replace procedure rso_examples_proc (
-            p1 in number,
-            p2 out number
+        create or replace procedure rso_examples_ref_cursor (
+            a_NumVal number,
+            a_RefCursor out sys_refcursor
         ) as
         begin
-            p2 := p1 * 2;
+            open a_RefCursor for
+            select level * 100
+            from dual connect by level <= a_NumVal;
         end;
         "#,
         &[],
     )?;
 
-    // positional bind variables
     let mut result = connection.execute(
-        "begin rso_examples_proc(:1, :2); end;",
-        &[&100, &&oracledb::DB_TYPE_NUMBER],
+        "begin rso_examples_ref_cursor(:1, :2); end;",
+        &[&3, &&oracledb::DB_TYPE_CURSOR],
     )?;
-    let p2: i32 = result.out_bind_data().get(0)?;
-    println!("{p2}");
 
-    // named bind variables
-    let mut result = connection.execute_named(
-        "begin rso_examples_proc(:p1, :p2); end;",
-        &[("p1", &200), ("p2", &&oracledb::DB_TYPE_NUMBER)],
-    )?;
-    let p2: i32 = result.out_bind_data().get(0)?;
-    println!("{p2}");
+    let cursor: oracledb::Cursor = result.out_bind_data().take(0)?;
+    for row_result in cursor {
+        let row = row_result?;
+        let value: usize = row.get(0)?;
+        println!("Fetched {value}");
+    }
 
     Ok(())
 }

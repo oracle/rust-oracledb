@@ -33,6 +33,8 @@
     creating temporary BLOB, CLOB and NCLOB values.
 1.  Added support for binding long values in any order
     ([issue 10](https://github.com/oracle/rust-oracledb/issues/10)).
+1.  Added support for binding pure OUT binds using the Oracle data type instead
+    of a dummy value. This also allows for binding of REF CURSOR out binds.
 1.  Added support for the HA readiness requirements of Oracle Database 23.26.3.
 1.  Errors that are returned now capture the backtrace and display it if
     configured with `RUST_BACKTRACE=1`, which aids in debugging.

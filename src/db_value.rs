@@ -697,3 +697,13 @@ where
         }
     }
 }
+
+impl ToDbValue for &'static DbType {
+    fn db_type(&self) -> &'static DbType {
+        *self
+    }
+
+    fn max_size(&self) -> usize {
+        self.default_size as usize
+    }
+}
