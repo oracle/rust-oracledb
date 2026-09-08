@@ -83,8 +83,9 @@ instead of the mouse.
    3.1 [SELECT Statements](#sqlqueries)
    - 3.1.1 [Fetching a Single Row](#fetchsinglerow)
    - 3.1.2 [Fetching Multiple Rows](#fetchmultiplerows)
-   - 3.1.3 [Fetch Data Types](#defaultfetchtypes)
-   - 3.1.4 [Limiting Rows](#rowlimit)
+   - 3.1.3 [Getting Row Values](#gettingrowvalues)
+   - 3.1.4 [Fetch Data Types](#defaultfetchtypes)
+   - 3.1.5 [Limiting Rows](#rowlimit)
 
    3.2 [INSERT and UPDATE Statements](#dml)
 

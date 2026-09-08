@@ -111,7 +111,68 @@ fn main() -> Result<(), oracledb::Error> {
 }
 ```
 
-### <a name="defaultfetchtypes"></a> 3.1.3 Fetch Data Types
+### <a name="gettingrowvalues"></a> 3.1.3 Getting Row Values
+
+Column values in a [Row](crate::Row) can be accessed by position or by column
+name. When using a position, pass the column index as a `usize`, where the
+first selected column is `0`. When using a column name, pass the column name.
+For example:
+
+```rust
+let row = connection.query_row(
+    "select 'Learning rust-oracledb' as title, 100 as book_id from dual",
+    &[],
+)?;
+
+let title: String = row.get(0)?;
+let book_id: i32 = row.get("book_id")?;
+```
+
+Use [Row::get()](crate::Row::get()) to read a value without changing the row.
+It can return borrowed values, such as `&str` or `&[u8]`, or owned values, such
+as `String` or `Vec<u8>`. Owned values are copied from the row. For example,
+this reads the `TITLE` column and leaves it available in the row:
+
+```rust
+let title_from_get: String = row.get("title")?;
+println!("get() title: {title_from_get}");
+```
+
+Use [Row::take()](crate::Row::take()) to move a value out of the row. This is
+useful when you want to avoid copying the value, and it is required for values
+that cannot be copied, such as [Cursor](crate::Cursor) and [Lob](crate::Lob).
+The row must be mutable. After the value is taken, that column is null in the
+row. For example:
+
+```rust
+let mut row =
+    connection.query_row(
+    "select 'Learning rust-oracledb' as title from dual", &[]
+)?;
+
+// Row::take() moves the value out of the row.
+let title_from_take: String = row.take("TITLE")?;
+println!("take() title: {title_from_take}");
+
+// After take(), the column is null in this row.
+let title_after_take: Option<String> = row.get("TITLE")?;
+println!("title after take(): {title_after_take:?}");
+```
+
+The output is:
+
+```text
+take() title: Learning rust-oracledb
+title after take(): None
+```
+
+The methods [Row::get_array()](crate::Row::get_array()) and
+[Row::take_array()](crate::Row::take_array()) are used when a column value in
+the row is an array. They behave like `get()` and `take()`: `get_array()` reads
+the array without changing the row, while `take_array()` moves the array out of
+the row.
+
+### <a name="defaultfetchtypes"></a> 3.1.4 Fetch Data Types
 
 The following table lists Oracle Database types that rust-oracledb can fetch,
 the corresponding oracledb database type, and common Rust types that values can
@@ -148,7 +209,7 @@ When fetching NUMBER values as Rust integer types, the value must be in range
 for the requested Rust type. Binary types are represented as byte arrays
 (`Vec<u8>`).
 
-### <a name="rowlimit"></a> 3.1.4 Limiting Rows
+### <a name="rowlimit"></a> 3.1.5 Limiting Rows
 
 Query data is commonly broken into one or more sets:
 
