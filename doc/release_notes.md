@@ -5,6 +5,8 @@
 1.  All of the database type constants have been made references in order to
     avoid the necssity of taking a reference (or a double reference when
     binding the type directly).
+1.  Eliminated hang when an error occurs during a DML returning statemnt
+    ([issue 16](https://github.com/oracle/rust-oracledb/issues/16)).
 
 
 ## rust-oracledb 26.0.0-beta.3 (September 8, 2026)

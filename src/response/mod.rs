@@ -63,6 +63,7 @@ pub(crate) struct Response {
     num_columns: usize,
     call_status: u32,
     end_of_fetch: bool,
+    flush_out_binds: bool,
 }
 
 impl Response {
@@ -85,6 +86,7 @@ impl Response {
         self.pending_values.clear();
         self.bit_vector = None;
         self.end_of_fetch = false;
+        self.flush_out_binds = false;
     }
 
     /// Records one pending value position while deserializing rows.
@@ -326,6 +328,11 @@ impl Response {
         }
     }
 
+    /// Returns whether or not the response requires out binds to be flushed.
+    pub(crate) fn get_flush_out_binds(&self) -> bool {
+        self.flush_out_binds
+    }
+
     pub(crate) fn get_last_row_fetched(&self) -> &DbRow {
         if let Some(rows) = self.rows.as_ref() {
             rows.last().unwrap()
@@ -382,6 +389,7 @@ impl Response {
             num_columns: 0,
             call_status: 0,
             end_of_fetch: false,
+            flush_out_binds: false,
         }
     }
 
@@ -539,6 +547,14 @@ impl Response {
         &mut self,
     ) -> Result<Cow<'_, str>, Error> {
         self.buf.read_utf8_with_length()
+    }
+
+    /// Specifies that the response requires out binds to be flushed. The
+    /// packet data is cleared as well since the real response comes after the
+    /// flush out binds packet is sent!
+    pub(crate) fn set_flush_out_binds(&mut self) {
+        self.flush_out_binds = true;
+        self.packets.clear();
     }
 
     pub(crate) fn set_prev_fetch_last_row(&mut self, last_row: Option<DbRow>) {

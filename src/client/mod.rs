@@ -48,6 +48,7 @@ use crate::messages::ConnectMessage;
 use crate::messages::DataTypesMessage;
 use crate::messages::EofMessage;
 use crate::messages::FastAuthMessage;
+use crate::messages::FlushOutBindsMessage;
 use crate::messages::LogoffMessage;
 use crate::messages::MarkerMessage;
 use crate::messages::Message;
@@ -131,39 +132,30 @@ impl Client {
 
     /// Receives a data packet from the database. Control packets and marker
     /// packets are processed. Only data packets are returned.
-    fn receive_data_packet(&mut self) -> Result<Packet, Error> {
+    fn receive_data_packet(&mut self) -> Result<(Packet, bool), Error> {
         loop {
-            match self.receive_packet() {
-                Ok(packet_opt) => {
-                    if let Some(packet) = packet_opt {
-                        return Ok(packet);
+            match self.transport.receive_packet() {
+                Ok(packet) => match packet.packet_type {
+                    constants::PACKET_TYPE_CONTROL => {
+                        self.process_control_packet(packet)?;
+                        continue;
                     }
-                }
+                    constants::PACKET_TYPE_MARKER => {
+                        let packet = self
+                            .reset()
+                            .map_err(|_| self.unrecoverable_error())?;
+                        return Ok((packet, false));
+                    }
+                    _ => return Ok((packet, true)),
+                },
                 Err(err) => {
                     if err.is_call_timeout_exceeded() {
-                        return self.recover_from_error(err);
+                        let packet = self.recover_from_error(err)?;
+                        return Ok((packet, false));
                     }
                     return Err(err);
                 }
             }
-        }
-    }
-
-    /// Receives a packet from the database and either processes it immediately
-    /// (and returns None) or returns it directly for the caller to process.
-    fn receive_packet(&mut self) -> Result<Option<Packet>, Error> {
-        let packet = self.transport.receive_packet()?;
-        match packet.packet_type {
-            constants::PACKET_TYPE_CONTROL => {
-                self.process_control_packet(packet)?;
-                Ok(None)
-            }
-            constants::PACKET_TYPE_MARKER => {
-                let packet =
-                    self.reset().map_err(|_| self.unrecoverable_error())?;
-                Ok(Some(packet))
-            }
-            _ => Ok(Some(packet)),
         }
     }
 
@@ -174,10 +166,13 @@ impl Client {
         let mut packets = Vec::<Packet>::new();
         let supports_end_of_response = self.supports_end_of_response();
         loop {
-            let packet = self.receive_data_packet()?;
-            let has_end_of_response = packet.has_end_of_response();
+            let (packet, check_end_of_response) =
+                self.receive_data_packet()?;
+            let wait_for_more = check_end_of_response
+                && supports_end_of_response
+                && !packet.has_end_of_response();
             packets.push(packet);
-            if !supports_end_of_response || has_end_of_response {
+            if !wait_for_more {
                 break;
             }
         }
@@ -198,6 +193,11 @@ impl Client {
                 continue;
             }
             return Err(e);
+        }
+        if response.get_flush_out_binds() {
+            self.send_message(&mut FlushOutBindsMessage)?;
+            response.add_packets(self.receive_packets()?);
+            message.deserialize(self, response)?;
         }
         message.post_deserialize(self, response)?;
         self.process_call_status(response.call_status());

@@ -37,6 +37,7 @@ mod eof;
 mod execute;
 mod fast_auth;
 mod fetch;
+mod flush_out_binds;
 mod lob_op;
 mod logoff;
 mod marker;
@@ -174,6 +175,10 @@ pub(crate) trait Message {
             constants::TTC_MSG_TYPE_SERVER_SIDE_PIGGYBACK => {
                 resp.deserialize_server_side_piggyback()
             }
+            constants::TTC_MSG_TYPE_FLUSH_OUT_BINDS => {
+                resp.set_flush_out_binds();
+                Ok(())
+            }
             constants::TTC_MSG_TYPE_STATUS => resp.deserialize_status(),
             constants::TTC_MSG_TYPE_WARNING => resp.deserialize_warning(),
             _ => Err(resp.unknown_ttc_message_type(message_type)),
@@ -208,7 +213,9 @@ pub(crate) trait Message {
         client: &Client,
         message_type: u8,
     ) -> bool {
-        if client.supports_end_of_response() {
+        if message_type == constants::TTC_MSG_TYPE_FLUSH_OUT_BINDS {
+            true
+        } else if client.supports_end_of_response() {
             message_type == constants::TTC_MSG_TYPE_END_OF_RESPONSE
         } else {
             message_type == constants::TTC_MSG_TYPE_ERROR
@@ -260,6 +267,7 @@ pub(crate) use eof::EofMessage;
 pub(crate) use execute::ExecuteMessage;
 pub(crate) use fast_auth::FastAuthMessage;
 pub(crate) use fetch::FetchMessage;
+pub(crate) use flush_out_binds::FlushOutBindsMessage;
 pub(crate) use lob_op::{LobOp, LobOpMessage};
 pub(crate) use logoff::LogoffMessage;
 pub(crate) use marker::MarkerMessage;
