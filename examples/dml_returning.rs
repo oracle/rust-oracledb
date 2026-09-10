@@ -28,8 +28,6 @@
 // Shows the use of DML returning.
 //-----------------------------------------------------------------------------
 
-use oracledb;
-
 mod common;
 
 fn main() -> Result<(), oracledb::Error> {

@@ -700,7 +700,7 @@ where
 
 impl ToDbValue for &'static DbType {
     fn db_type(&self) -> &'static DbType {
-        *self
+        self
     }
 
     fn max_size(&self) -> usize {
