@@ -1,5 +1,7 @@
 # <a name="releasenotes"></a> rust-oracledb Release Notes
 
+## rust-oracledb 26.0.0-beta.4 (TBD)
+
 ## rust-oracledb 26.0.0-beta.3 (September 8, 2026)
 
 1.  Added methods [Row::take()](crate::Row::take()) and
