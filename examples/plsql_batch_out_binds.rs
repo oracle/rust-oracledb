@@ -48,9 +48,9 @@ fn main() -> Result<(), oracledb::Error> {
     )?;
 
     let params = oracledb::BindParameters::Slice(&[
-        &[&100, &&oracledb::DB_TYPE_NUMBER],
-        &[&200, &&oracledb::DB_TYPE_NUMBER],
-        &[&300, &&oracledb::DB_TYPE_NUMBER],
+        &[&100, &oracledb::DB_TYPE_NUMBER],
+        &[&200, &oracledb::DB_TYPE_NUMBER],
+        &[&300, &oracledb::DB_TYPE_NUMBER],
     ]);
 
     let mut result = connection.execute_batch(

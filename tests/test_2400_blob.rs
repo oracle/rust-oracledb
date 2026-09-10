@@ -345,7 +345,7 @@ fn test_2416(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
 /// Validates creation and use of a temporary BLOB.
 #[rstest]
 fn test_2417(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
-    let mut lob = conn.create_lob(&oracledb::DB_TYPE_BLOB)?;
+    let mut lob = conn.create_lob(oracledb::DB_TYPE_BLOB)?;
     let payload = b"temporary blob";
     lob.write_all(payload)?;
     assert_eq!(lob.get_size()?, payload.len());
@@ -391,7 +391,7 @@ fn test_2419(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
 #[rstest]
 fn test_2420(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     assert_eq!(common::temporary_lob_count(&conn)?, 0);
-    let lob = conn.create_lob(&oracledb::DB_TYPE_BLOB)?;
+    let lob = conn.create_lob(oracledb::DB_TYPE_BLOB)?;
     assert_eq!(common::temporary_lob_count(&conn)?, 1);
     drop(lob);
     // The next query piggybacks the queued cleanup and confirms the LOB was freed.
@@ -402,7 +402,7 @@ fn test_2420(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
 /// Validates that a LOB cannot be used after its connection is closed.
 #[rstest]
 fn test_2421(mut conn: oracledb::Connection) -> Result<(), oracledb::Error> {
-    let mut lob = conn.create_lob(&oracledb::DB_TYPE_BLOB)?;
+    let mut lob = conn.create_lob(oracledb::DB_TYPE_BLOB)?;
     lob.write_all(b"temporary data")?;
     conn.close()?;
 

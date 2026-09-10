@@ -115,135 +115,141 @@ pub use crate::ora_type::OracleTimestamp;
 // database types
 /// Describes columns, attributes or array elements in a database that are of
 /// type BFILE.
-pub use crate::db_type::DB_TYPE_BFILE;
+pub const DB_TYPE_BFILE: &DbType = &crate::db_type::DB_TYPE_BFILE;
 
 /// Describes columns, attributes or array elements in a database that are of
 /// type BINARY_DOUBLE.
-pub use crate::db_type::DB_TYPE_BINARY_DOUBLE;
+pub const DB_TYPE_BINARY_DOUBLE: &DbType =
+    &crate::db_type::DB_TYPE_BINARY_DOUBLE;
 
 /// Describes columns, attributes or array elements in a database that are of
 /// type BINARY_FLOAT.
-pub use crate::db_type::DB_TYPE_BINARY_FLOAT;
+pub const DB_TYPE_BINARY_FLOAT: &DbType =
+    &crate::db_type::DB_TYPE_BINARY_FLOAT;
 
 /// Describes attributes or array elements in a database that are of type
 /// BINARY_INTEGER.
-pub use crate::db_type::DB_TYPE_BINARY_INTEGER;
+pub const DB_TYPE_BINARY_INTEGER: &DbType =
+    &crate::db_type::DB_TYPE_BINARY_INTEGER;
 
 /// Describes columns, attributes or array elements in a database that are of
 /// type BLOB.
-pub use crate::db_type::DB_TYPE_BLOB;
+pub const DB_TYPE_BLOB: &DbType = &crate::db_type::DB_TYPE_BLOB;
 
 /// Describes columns, attributes or array elements in a database that are of
 /// type BOOLEAN. Prior to Oracle Database 26ai, columns could not be of type
 /// BOOLEAN and the type could only be used in PL/SQL.
-pub use crate::db_type::DB_TYPE_BOOLEAN;
+pub const DB_TYPE_BOOLEAN: &DbType = &crate::db_type::DB_TYPE_BOOLEAN;
 
 /// Describes columns, attributes or array elements in a database that are of
 /// type CHAR.
 ///
 /// Note that these are fixed length string values and behave
 /// differently from VARCHAR2.
-pub use crate::db_type::DB_TYPE_CHAR;
+pub const DB_TYPE_CHAR: &DbType = &crate::db_type::DB_TYPE_CHAR;
 
 /// Describes columns, attributes or array elements in a database that are of
 /// type CLOB.
-pub use crate::db_type::DB_TYPE_CLOB;
+pub const DB_TYPE_CLOB: &DbType = &crate::db_type::DB_TYPE_CLOB;
 
 /// Describes columns in a database that are of type CURSOR. In PL/SQL, these
 /// are known as REF CURSOR.
-pub use crate::db_type::DB_TYPE_CURSOR;
+pub const DB_TYPE_CURSOR: &DbType = &crate::db_type::DB_TYPE_CURSOR;
 
 /// Describes columns, attributes or array elements in a database that are of
 /// type DATE.
-pub use crate::db_type::DB_TYPE_DATE;
+pub const DB_TYPE_DATE: &DbType = &crate::db_type::DB_TYPE_DATE;
 
 /// Describes columns, attributes or array elements in a database that are of
 /// type INTERVAL DAY TO SECOND.
-pub use crate::db_type::DB_TYPE_INTERVAL_DS;
+pub const DB_TYPE_INTERVAL_DS: &DbType = &crate::db_type::DB_TYPE_INTERVAL_DS;
 
 /// Describes columns, attributes or array elements in a database that are of
 /// type INTERVAL YEAR TO MONTH.
-pub use crate::db_type::DB_TYPE_INTERVAL_YM;
+pub const DB_TYPE_INTERVAL_YM: &DbType = &crate::db_type::DB_TYPE_INTERVAL_YM;
 
 /// Describes columns in a database that are of type JSON (with Oracle Database
 /// 21 or later).
-pub use crate::db_type::DB_TYPE_JSON;
+pub const DB_TYPE_JSON: &DbType = &crate::db_type::DB_TYPE_JSON;
 
 /// Describes columns, attributes or array elements in a database that are of
 /// type LONG.
-pub use crate::db_type::DB_TYPE_LONG;
+pub const DB_TYPE_LONG: &DbType = &crate::db_type::DB_TYPE_LONG;
 
 /// This type is used internally to describe columns that are of type
 /// [`DB_TYPE_NCLOB`] but are being returned as string data instead of a LOB
 /// locator.
-pub use crate::db_type::DB_TYPE_LONG_NVARCHAR;
+pub const DB_TYPE_LONG_NVARCHAR: &DbType =
+    &crate::db_type::DB_TYPE_LONG_NVARCHAR;
 
 /// Describes columns, attributes or array elements in a database that are of
 /// type LONG RAW.
-pub use crate::db_type::DB_TYPE_LONG_RAW;
+pub const DB_TYPE_LONG_RAW: &DbType = &crate::db_type::DB_TYPE_LONG_RAW;
 
 /// Describes columns, attributes or array elements in a database that are of
 /// type NCHAR.
 ///
 /// Note that these are fixed length string values and behave
 /// differently from NVARCHAR2.
-pub use crate::db_type::DB_TYPE_NCHAR;
+pub const DB_TYPE_NCHAR: &DbType = &crate::db_type::DB_TYPE_NCHAR;
 
 /// Describes columns, attributes or array elements in a database that are of
 /// type NCLOB.
-pub use crate::db_type::DB_TYPE_NCLOB;
+pub const DB_TYPE_NCLOB: &DbType = &crate::db_type::DB_TYPE_NCLOB;
 
 /// Describes columns, attributes or array elements in a database that are of
 /// type NUMBER.
-pub use crate::db_type::DB_TYPE_NUMBER;
+pub const DB_TYPE_NUMBER: &DbType = &crate::db_type::DB_TYPE_NUMBER;
 
 /// Describes columns, attributes or array elements in a database that are of
 /// type NVARCHAR2.
-pub use crate::db_type::DB_TYPE_NVARCHAR;
+pub const DB_TYPE_NVARCHAR: &DbType = &crate::db_type::DB_TYPE_NVARCHAR;
 
 /// Describes columns, attributes or array elements in a database that are an
 /// instance of a named SQL or PL/SQL type.
-pub use crate::db_type::DB_TYPE_OBJECT;
+pub const DB_TYPE_OBJECT: &DbType = &crate::db_type::DB_TYPE_OBJECT;
 
 /// Describes columns, attributes or array elements in a database that are of
 /// type RAW.
-pub use crate::db_type::DB_TYPE_RAW;
+pub const DB_TYPE_RAW: &DbType = &crate::db_type::DB_TYPE_RAW;
 
 /// Describes columns, attributes or array elements in a database that are of
 /// type ROWID.
-pub use crate::db_type::DB_TYPE_ROWID;
+pub const DB_TYPE_ROWID: &DbType = &crate::db_type::DB_TYPE_ROWID;
 
 /// Describes columns, attributes or array elements in a database that are of
 /// type TIMESTAMP.
-pub use crate::db_type::DB_TYPE_TIMESTAMP;
+pub const DB_TYPE_TIMESTAMP: &DbType = &crate::db_type::DB_TYPE_TIMESTAMP;
 
 /// Describes columns, attributes or array elements in a database that are of
 /// type TIMESTAMP WITH LOCAL TIME ZONE.
-pub use crate::db_type::DB_TYPE_TIMESTAMP_LTZ;
+pub const DB_TYPE_TIMESTAMP_LTZ: &DbType =
+    &crate::db_type::DB_TYPE_TIMESTAMP_LTZ;
 
 /// Describes columns, attributes or array elements in a database that are of
 /// type TIMESTAMP WITH TIME ZONE.
-pub use crate::db_type::DB_TYPE_TIMESTAMP_TZ;
+pub const DB_TYPE_TIMESTAMP_TZ: &DbType =
+    &crate::db_type::DB_TYPE_TIMESTAMP_TZ;
 
 /// Describes columns, attributes or array elements in a database that are of
 /// an unknown type.
-pub use crate::db_type::DB_TYPE_UNKNOWN;
+pub const DB_TYPE_UNKNOWN: &DbType = &crate::db_type::DB_TYPE_UNKNOWN;
 
 /// Describes columns, attributes or array elements in a database that are of
 /// type UROWID.
-pub use crate::db_type::DB_TYPE_UROWID;
+pub const DB_TYPE_UROWID: &DbType = &crate::db_type::DB_TYPE_UROWID;
 
 /// Describes columns, attributes or array elements in a database that are of
 /// type VARCHAR2.
-pub use crate::db_type::DB_TYPE_VARCHAR;
+pub const DB_TYPE_VARCHAR: &DbType = &crate::db_type::DB_TYPE_VARCHAR;
 
 /// Describes columns, attributes or array elements in a database that are of
 /// type VECTOR (with Oracle Database 26ai or later).
-pub use crate::db_type::DB_TYPE_VECTOR;
+pub const DB_TYPE_VECTOR: &DbType = &crate::db_type::DB_TYPE_VECTOR;
 
 /// Describes columns, attributes or array elements in a database that are of
 /// type SYS.XMLTYPE.
-pub use crate::db_type::DB_TYPE_XMLTYPE;
+pub const DB_TYPE_XMLTYPE: &DbType = &crate::db_type::DB_TYPE_XMLTYPE;
 
 // authorization modes
 /// This constant is used to specify that default authentication is to take

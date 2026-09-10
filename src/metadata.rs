@@ -30,12 +30,6 @@
 
 use crate::client::Client;
 use crate::constants;
-use crate::db_type::DB_TYPE_BLOB;
-use crate::db_type::DB_TYPE_CLOB;
-use crate::db_type::DB_TYPE_LONG;
-use crate::db_type::DB_TYPE_LONG_NVARCHAR;
-use crate::db_type::DB_TYPE_LONG_RAW;
-use crate::db_type::DB_TYPE_NCLOB;
 use crate::db_type::DbType;
 use crate::error::Error;
 use crate::response::Response;
@@ -83,12 +77,12 @@ impl Metadata {
     pub(crate) fn define_metadata(&self) -> Metadata {
         let mut metadata = self.clone();
         metadata.max_size = 0;
-        match *self.db_type {
-            DB_TYPE_BLOB => metadata.db_type = &DB_TYPE_LONG_RAW,
-            DB_TYPE_CLOB => metadata.db_type = &DB_TYPE_LONG,
-            DB_TYPE_NCLOB => metadata.db_type = &DB_TYPE_LONG_NVARCHAR,
-            _ => {}
-        }
+        metadata.db_type = match self.db_type {
+            crate::DB_TYPE_BLOB => crate::DB_TYPE_LONG_RAW,
+            crate::DB_TYPE_CLOB => crate::DB_TYPE_LONG,
+            crate::DB_TYPE_NCLOB => crate::DB_TYPE_LONG_NVARCHAR,
+            _ => metadata.db_type,
+        };
         metadata
     }
 

@@ -32,13 +32,6 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 
 use crate::constants;
-use crate::db_type::DB_TYPE_BINARY_DOUBLE;
-use crate::db_type::DB_TYPE_BINARY_FLOAT;
-use crate::db_type::DB_TYPE_DATE;
-use crate::db_type::DB_TYPE_INTERVAL_DS;
-use crate::db_type::DB_TYPE_INTERVAL_YM;
-use crate::db_type::DB_TYPE_NUMBER;
-use crate::db_type::DB_TYPE_TIMESTAMP;
 use crate::db_type::DbType;
 use crate::error::Error;
 use crate::ora_type::OracleIntervalDS;
@@ -815,11 +808,11 @@ impl OsonEncoderTreeSeg {
             JsonValue::Null => self.buf.write_u8(OSON_TYPE_NULL),
             JsonValue::BinaryDouble(v) => {
                 self.buf.write_u8(OSON_TYPE_BINARY_DOUBLE);
-                v.to_buf(&mut self.buf, &DB_TYPE_BINARY_DOUBLE, false);
+                v.to_buf(&mut self.buf, crate::DB_TYPE_BINARY_DOUBLE, false);
             }
             JsonValue::BinaryFloat(v) => {
                 self.buf.write_u8(OSON_TYPE_BINARY_FLOAT);
-                v.to_buf(&mut self.buf, &DB_TYPE_BINARY_FLOAT, false);
+                v.to_buf(&mut self.buf, crate::DB_TYPE_BINARY_FLOAT, false);
             }
             JsonValue::Boolean(v) => match *v {
                 true => self.buf.write_u8(OSON_TYPE_TRUE),
@@ -827,11 +820,11 @@ impl OsonEncoderTreeSeg {
             },
             JsonValue::IntervalDS(v) => {
                 self.buf.write_u8(OSON_TYPE_INTERVAL_DS);
-                v.to_buf(&mut self.buf, &DB_TYPE_INTERVAL_DS, false);
+                v.to_buf(&mut self.buf, crate::DB_TYPE_INTERVAL_DS, false);
             }
             JsonValue::IntervalYM(v) => {
                 self.buf.write_u8(OSON_TYPE_INTERVAL_YM);
-                v.to_buf(&mut self.buf, &DB_TYPE_INTERVAL_YM, false);
+                v.to_buf(&mut self.buf, crate::DB_TYPE_INTERVAL_YM, false);
             }
             JsonValue::JsonId(v) => {
                 self.buf.write_u8(OSON_TYPE_ID);
@@ -839,7 +832,7 @@ impl OsonEncoderTreeSeg {
             }
             JsonValue::Number(v) => {
                 self.buf.write_u8(OSON_TYPE_NUMBER_LENGTH_UINT8);
-                v.to_buf(&mut self.buf, &DB_TYPE_NUMBER, true);
+                v.to_buf(&mut self.buf, crate::DB_TYPE_NUMBER, true);
             }
             JsonValue::Raw(v) => {
                 if v.len() < 65536 {
@@ -873,10 +866,10 @@ impl OsonEncoderTreeSeg {
             JsonValue::Timestamp(v) => {
                 if v.nanoseconds() == 0 {
                     self.buf.write_u8(OSON_TYPE_TIMESTAMP7);
-                    v.to_buf(&mut self.buf, &DB_TYPE_DATE, false);
+                    v.to_buf(&mut self.buf, crate::DB_TYPE_DATE, false);
                 } else {
                     self.buf.write_u8(OSON_TYPE_TIMESTAMP);
-                    v.to_buf(&mut self.buf, &DB_TYPE_TIMESTAMP, false);
+                    v.to_buf(&mut self.buf, crate::DB_TYPE_TIMESTAMP, false);
                 }
             }
             JsonValue::Vector(v) => {

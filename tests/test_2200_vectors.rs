@@ -511,7 +511,7 @@ fn test_2218(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     )?;
     let columns = cursor.columns();
     assert_eq!(columns[0].name(), "VEC_COL");
-    assert_eq!(columns[0].db_type(), &oracledb::DB_TYPE_VECTOR);
+    assert_eq!(columns[0].db_type(), oracledb::DB_TYPE_VECTOR);
     Ok(())
 }
 

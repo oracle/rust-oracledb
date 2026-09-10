@@ -309,14 +309,14 @@ fn test_1113(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
         &[],
     )?;
     let columns = cursor.columns();
-    assert_eq!(columns[0].db_type(), &oracledb::DB_TYPE_NUMBER);
+    assert_eq!(columns[0].db_type(), oracledb::DB_TYPE_NUMBER);
     assert_eq!(columns[0].precision(), 8);
     assert_eq!(columns[0].scale(), 0);
     assert_eq!(columns[1].precision(), 8);
     assert_eq!(columns[1].scale(), 2);
     assert_eq!(columns[2].precision(), 8);
     assert_eq!(columns[2].scale(), -2);
-    assert_eq!(columns[3].db_type(), &oracledb::DB_TYPE_NUMBER);
+    assert_eq!(columns[3].db_type(), oracledb::DB_TYPE_NUMBER);
     Ok(())
 }
 
@@ -346,9 +346,9 @@ fn test_1115(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
         &[],
     )?;
     let columns = cursor.columns();
-    assert_eq!(columns[0].db_type(), &oracledb::DB_TYPE_NUMBER);
-    assert_eq!(columns[1].db_type(), &oracledb::DB_TYPE_NUMBER);
-    assert_eq!(columns[2].db_type(), &oracledb::DB_TYPE_NUMBER);
+    assert_eq!(columns[0].db_type(), oracledb::DB_TYPE_NUMBER);
+    assert_eq!(columns[1].db_type(), oracledb::DB_TYPE_NUMBER);
+    assert_eq!(columns[2].db_type(), oracledb::DB_TYPE_NUMBER);
     for row in cursor {
         let row = row?;
         let float_col: oracledb::OracleNumber = row.get(0)?;

@@ -75,48 +75,48 @@ fn test_2600(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     )?;
 
     let columns = cursor.columns();
-    assert_column(&columns[0], "VARCHAR_COL", &oracledb::DB_TYPE_VARCHAR);
+    assert_column(&columns[0], "VARCHAR_COL", oracledb::DB_TYPE_VARCHAR);
     assert_eq!(columns[0].max_size(), 30);
-    assert_column(&columns[1], "CHAR_COL", &oracledb::DB_TYPE_CHAR);
+    assert_column(&columns[1], "CHAR_COL", oracledb::DB_TYPE_CHAR);
     assert_eq!(columns[1].max_size(), 5);
-    assert_column(&columns[2], "NVARCHAR_COL", &oracledb::DB_TYPE_NVARCHAR);
+    assert_column(&columns[2], "NVARCHAR_COL", oracledb::DB_TYPE_NVARCHAR);
     assert_eq!(columns[2].max_size(), 30);
-    assert_column(&columns[3], "NCHAR_COL", &oracledb::DB_TYPE_NCHAR);
+    assert_column(&columns[3], "NCHAR_COL", oracledb::DB_TYPE_NCHAR);
     assert_eq!(columns[3].max_size(), 5);
-    assert_column(&columns[4], "NUMBER_COL", &oracledb::DB_TYPE_NUMBER);
+    assert_column(&columns[4], "NUMBER_COL", oracledb::DB_TYPE_NUMBER);
     assert_column(
         &columns[5],
         "BINARY_FLOAT_COL",
-        &oracledb::DB_TYPE_BINARY_FLOAT,
+        oracledb::DB_TYPE_BINARY_FLOAT,
     );
     assert_column(
         &columns[6],
         "BINARY_DOUBLE_COL",
-        &oracledb::DB_TYPE_BINARY_DOUBLE,
+        oracledb::DB_TYPE_BINARY_DOUBLE,
     );
-    assert_column(&columns[7], "DATE_COL", &oracledb::DB_TYPE_DATE);
-    assert_column(&columns[8], "TIMESTAMP_COL", &oracledb::DB_TYPE_TIMESTAMP);
+    assert_column(&columns[7], "DATE_COL", oracledb::DB_TYPE_DATE);
+    assert_column(&columns[8], "TIMESTAMP_COL", oracledb::DB_TYPE_TIMESTAMP);
     assert_column(
         &columns[9],
         "TIMESTAMP_TZ_COL",
-        &oracledb::DB_TYPE_TIMESTAMP_TZ,
+        oracledb::DB_TYPE_TIMESTAMP_TZ,
     );
     assert_column(
         &columns[10],
         "TIMESTAMP_LTZ_COL",
-        &oracledb::DB_TYPE_TIMESTAMP_LTZ,
+        oracledb::DB_TYPE_TIMESTAMP_LTZ,
     );
     assert_column(
         &columns[11],
         "INTERVAL_DS_COL",
-        &oracledb::DB_TYPE_INTERVAL_DS,
+        oracledb::DB_TYPE_INTERVAL_DS,
     );
     assert_column(
         &columns[12],
         "INTERVAL_YM_COL",
-        &oracledb::DB_TYPE_INTERVAL_YM,
+        oracledb::DB_TYPE_INTERVAL_YM,
     );
-    assert_column(&columns[13], "RAW_COL", &oracledb::DB_TYPE_RAW);
+    assert_column(&columns[13], "RAW_COL", oracledb::DB_TYPE_RAW);
     assert_eq!(columns[13].max_size(), 4);
     Ok(())
 }
@@ -135,15 +135,15 @@ fn test_2601(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
 
     let cursor = conn.query(sql, &[])?;
     let columns = cursor.columns();
-    assert_eq!(columns[0].db_type(), &oracledb::DB_TYPE_LONG);
-    assert_eq!(columns[1].db_type(), &oracledb::DB_TYPE_LONG_NVARCHAR);
-    assert_eq!(columns[2].db_type(), &oracledb::DB_TYPE_LONG_RAW);
+    assert_eq!(columns[0].db_type(), oracledb::DB_TYPE_LONG);
+    assert_eq!(columns[1].db_type(), oracledb::DB_TYPE_LONG_NVARCHAR);
+    assert_eq!(columns[2].db_type(), oracledb::DB_TYPE_LONG_RAW);
 
     let cursor = conn.statement(sql)?.fetch_lobs().query(&[])?;
     let columns = cursor.columns();
-    assert_eq!(columns[0].db_type(), &oracledb::DB_TYPE_CLOB);
-    assert_eq!(columns[1].db_type(), &oracledb::DB_TYPE_NCLOB);
-    assert_eq!(columns[2].db_type(), &oracledb::DB_TYPE_BLOB);
+    assert_eq!(columns[0].db_type(), oracledb::DB_TYPE_CLOB);
+    assert_eq!(columns[1].db_type(), oracledb::DB_TYPE_NCLOB);
+    assert_eq!(columns[2].db_type(), oracledb::DB_TYPE_BLOB);
     Ok(())
 }
 
@@ -162,8 +162,8 @@ fn test_2602(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     )?;
 
     let columns = cursor.columns();
-    assert_column(&columns[0], "CURSOR_COL", &oracledb::DB_TYPE_CURSOR);
-    assert_column(&columns[1], "XML_COL", &oracledb::DB_TYPE_OBJECT);
+    assert_column(&columns[0], "CURSOR_COL", oracledb::DB_TYPE_CURSOR);
+    assert_column(&columns[1], "XML_COL", oracledb::DB_TYPE_OBJECT);
     Ok(())
 }
 
@@ -183,14 +183,10 @@ fn test_2603(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     )?;
 
     let columns = cursor.columns();
-    assert_column(&columns[0], "DUP_COL", &oracledb::DB_TYPE_NUMBER);
-    assert_column(&columns[1], "DUP_COL", &oracledb::DB_TYPE_NUMBER);
-    assert_column(&columns[2], "Mixed Case Alias", &oracledb::DB_TYPE_NUMBER);
-    assert_column(
-        &columns[3],
-        "alias-with-symbols",
-        &oracledb::DB_TYPE_NUMBER,
-    );
+    assert_column(&columns[0], "DUP_COL", oracledb::DB_TYPE_NUMBER);
+    assert_column(&columns[1], "DUP_COL", oracledb::DB_TYPE_NUMBER);
+    assert_column(&columns[2], "Mixed Case Alias", oracledb::DB_TYPE_NUMBER);
+    assert_column(&columns[3], "alias-with-symbols", oracledb::DB_TYPE_NUMBER);
     Ok(())
 }
 
@@ -208,9 +204,9 @@ fn test_2604(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     )?;
 
     let columns = cursor.columns();
-    assert_column(&columns[0], "REQUIRED_COL", &oracledb::DB_TYPE_NUMBER);
+    assert_column(&columns[0], "REQUIRED_COL", oracledb::DB_TYPE_NUMBER);
     assert!(!columns[0].nullable());
-    assert_column(&columns[1], "OPTIONAL_COL", &oracledb::DB_TYPE_VARCHAR);
+    assert_column(&columns[1], "OPTIONAL_COL", oracledb::DB_TYPE_VARCHAR);
     assert!(columns[1].nullable());
     Ok(())
 }
@@ -234,7 +230,7 @@ fn test_2606(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
         "select json_object('metadata' value true returning json)",
         &[],
     )?;
-    assert_eq!(cursor.columns()[0].db_type(), &oracledb::DB_TYPE_JSON);
+    assert_eq!(cursor.columns()[0].db_type(), oracledb::DB_TYPE_JSON);
     Ok(())
 }
 
@@ -246,7 +242,7 @@ fn test_2607(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
         return Ok(());
     }
     let cursor = conn.query("select to_vector('[1, 2]', 2, float32)", &[])?;
-    assert_eq!(cursor.columns()[0].db_type(), &oracledb::DB_TYPE_VECTOR);
+    assert_eq!(cursor.columns()[0].db_type(), oracledb::DB_TYPE_VECTOR);
     Ok(())
 }
 

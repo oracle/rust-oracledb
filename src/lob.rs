@@ -26,7 +26,6 @@
 // around the locator returned by the database when fetching LOB locators.
 //-----------------------------------------------------------------------------
 
-use crate::DB_TYPE_BFILE;
 use crate::client::ClientRef;
 use crate::constants;
 use crate::db_type::DbType;
@@ -135,7 +134,7 @@ impl Lob {
 
     /// Returns the TTC open mode to use for this LOB type.
     fn open_mode(&self) -> u64 {
-        if self.db_type == &DB_TYPE_BFILE {
+        if self.db_type == crate::DB_TYPE_BFILE {
             constants::TTC_LOB_OPEN_READ_ONLY
         } else {
             constants::TTC_LOB_OPEN_READ_WRITE
@@ -204,9 +203,9 @@ impl Lob {
         client_ref: ClientRef,
         db_type: &'static DbType,
     ) -> Result<Lob, Error> {
-        if db_type != &crate::DB_TYPE_BLOB
-            && db_type != &crate::DB_TYPE_CLOB
-            && db_type != &crate::DB_TYPE_NCLOB
+        if db_type != crate::DB_TYPE_BLOB
+            && db_type != crate::DB_TYPE_CLOB
+            && db_type != crate::DB_TYPE_NCLOB
         {
             return Err(Error::unsupported_db_type(db_type));
         }
@@ -381,7 +380,7 @@ impl io::Write for Lob {
         if buf.is_empty() {
             return Ok(0);
         }
-        if self.db_type == &DB_TYPE_BFILE {
+        if self.db_type == crate::DB_TYPE_BFILE {
             return Err(io::Error::new(
                 io::ErrorKind::Unsupported,
                 "writing to BFILE is not supported",

@@ -515,7 +515,7 @@ fn test_2107(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     )?;
     let columns = cursor.columns();
     assert_eq!(columns[0].name(), "JSON_COL");
-    assert_eq!(columns[0].db_type(), &oracledb::DB_TYPE_JSON);
+    assert_eq!(columns[0].db_type(), oracledb::DB_TYPE_JSON);
     Ok(())
 }
 

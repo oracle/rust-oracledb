@@ -30,7 +30,6 @@
 
 use crate::client::Client;
 use crate::constants;
-use crate::db_type::DB_TYPE_CURSOR;
 use crate::db_type::DbType;
 
 pub struct WriteBuffer {
@@ -430,7 +429,7 @@ impl ToBuf for &'static DbType {
         _write_length: bool,
     ) {
         match *self {
-            &DB_TYPE_CURSOR => {
+            crate::DB_TYPE_CURSOR => {
                 buf.write_u8(1); // length of integer
                 buf.write_u8(0); // value of integer (cursor number)
             }

@@ -2,6 +2,11 @@
 
 ## rust-oracledb 26.0.0-beta.4 (TBD)
 
+1.  All of the database type constants have been made references in order to
+    avoid the necssity of taking a reference (or a double reference when
+    binding the type directly).
+
+
 ## rust-oracledb 26.0.0-beta.3 (September 8, 2026)
 
 1.  Added methods [Row::take()](crate::Row::take()) and

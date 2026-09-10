@@ -59,7 +59,7 @@ fn test_1901(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     )?;
     let columns = cursor.columns();
     assert_eq!(columns[0].name(), "RID");
-    assert_eq!(columns[0].db_type(), &oracledb::DB_TYPE_ROWID);
+    assert_eq!(columns[0].db_type(), oracledb::DB_TYPE_ROWID);
     for row in cursor {
         let row = row?;
         let fetched_val: String = row.get(0)?;

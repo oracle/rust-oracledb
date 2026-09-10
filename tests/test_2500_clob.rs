@@ -247,7 +247,7 @@ fn test_2511(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
 #[rstest]
 /// Validates creation and use of a temporary CLOB.
 fn test_2512(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
-    let mut lob = conn.create_lob(&oracledb::DB_TYPE_CLOB)?;
+    let mut lob = conn.create_lob(oracledb::DB_TYPE_CLOB)?;
     let payload = "temporary CLOB - café";
     lob.write_all(payload.as_bytes())?;
     assert_eq!(lob.get_size()?, payload.encode_utf16().count());
@@ -257,7 +257,7 @@ fn test_2512(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
 #[rstest]
 /// Validates creation and use of a temporary NCLOB.
 fn test_2513(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
-    let mut lob = conn.create_lob(&oracledb::DB_TYPE_NCLOB)?;
+    let mut lob = conn.create_lob(oracledb::DB_TYPE_NCLOB)?;
     let payload = "temporary NCLOB - 世界𠜎";
     lob.write_all(payload.as_bytes())?;
     assert_eq!(lob.get_size()?, payload.encode_utf16().count());
@@ -268,7 +268,7 @@ fn test_2513(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
 /// Validates that a temporary CLOB is freed after its last handle is dropped.
 fn test_2514(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     assert_eq!(common::temporary_lob_count(&conn)?, 0);
-    let lob = conn.create_lob(&oracledb::DB_TYPE_CLOB)?;
+    let lob = conn.create_lob(oracledb::DB_TYPE_CLOB)?;
     assert_eq!(common::temporary_lob_count(&conn)?, 1);
     drop(lob);
     // The next query piggybacks the queued cleanup and confirms the LOB was freed.
@@ -280,7 +280,7 @@ fn test_2514(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
 /// Validates that a temporary NCLOB is freed after its last handle is dropped.
 fn test_2515(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     assert_eq!(common::temporary_lob_count(&conn)?, 0);
-    let lob = conn.create_lob(&oracledb::DB_TYPE_NCLOB)?;
+    let lob = conn.create_lob(oracledb::DB_TYPE_NCLOB)?;
     assert_eq!(common::temporary_lob_count(&conn)?, 1);
     drop(lob);
     // The next query piggybacks the queued cleanup and confirms the LOB was freed.

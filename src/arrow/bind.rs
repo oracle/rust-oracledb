@@ -38,7 +38,7 @@ use arrow_array::types::{
 use arrow_schema::DataType;
 use arrow_schema::TimeUnit;
 
-use crate::db_type;
+use crate::db_type::DbType;
 use crate::db_value::ToDbValue;
 use crate::error::Error;
 use crate::metadata::Metadata;
@@ -50,9 +50,9 @@ use crate::write_buffer::WriteBuffer;
 /// Arrow column.
 pub(crate) fn column_db_type(
     column: &std::sync::Arc<dyn arrow_array::Array>,
-) -> Result<&'static db_type::DbType, Error> {
+) -> Result<&'static DbType, Error> {
     match column.data_type() {
-        DataType::Boolean => Ok(&db_type::DB_TYPE_BOOLEAN),
+        DataType::Boolean => Ok(crate::DB_TYPE_BOOLEAN),
         DataType::Int8
         | DataType::Int16
         | DataType::Int32
@@ -61,17 +61,17 @@ pub(crate) fn column_db_type(
         | DataType::UInt16
         | DataType::UInt32
         | DataType::UInt64
-        | DataType::Decimal128(_, _) => Ok(&db_type::DB_TYPE_NUMBER),
-        DataType::Float32 => Ok(&db_type::DB_TYPE_BINARY_FLOAT),
-        DataType::Float64 => Ok(&db_type::DB_TYPE_BINARY_DOUBLE),
+        | DataType::Decimal128(_, _) => Ok(crate::DB_TYPE_NUMBER),
+        DataType::Float32 => Ok(crate::DB_TYPE_BINARY_FLOAT),
+        DataType::Float64 => Ok(crate::DB_TYPE_BINARY_DOUBLE),
         DataType::Date32 | DataType::Date64 | DataType::Timestamp(_, _) => {
-            Ok(&db_type::DB_TYPE_TIMESTAMP)
+            Ok(crate::DB_TYPE_TIMESTAMP)
         }
         DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View => {
-            Ok(&db_type::DB_TYPE_VARCHAR)
+            Ok(crate::DB_TYPE_VARCHAR)
         }
         DataType::Binary | DataType::LargeBinary | DataType::BinaryView => {
-            Ok(&db_type::DB_TYPE_RAW)
+            Ok(crate::DB_TYPE_RAW)
         }
         _ => Err(Error::unsupported_arrow_type(
             column.data_type().to_string(),

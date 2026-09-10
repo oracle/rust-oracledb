@@ -30,8 +30,6 @@
 // in Oracle databases.
 //-----------------------------------------------------------------------------
 
-use crate::db_type::DB_TYPE_BINARY_DOUBLE;
-use crate::db_type::DB_TYPE_BINARY_FLOAT;
 use crate::db_type::DbType;
 use crate::error::Error;
 use crate::read_buffer::FromBuf;
@@ -123,12 +121,12 @@ impl VectorData {
             }
             Self::Float32(values) => {
                 for value in values {
-                    value.to_buf(buf, &DB_TYPE_BINARY_FLOAT, false);
+                    value.to_buf(buf, crate::DB_TYPE_BINARY_FLOAT, false);
                 }
             }
             Self::Float64(values) => {
                 for value in values {
-                    value.to_buf(buf, &DB_TYPE_BINARY_DOUBLE, false);
+                    value.to_buf(buf, crate::DB_TYPE_BINARY_DOUBLE, false);
                 }
             }
         }

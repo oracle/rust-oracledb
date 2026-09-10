@@ -34,8 +34,6 @@ use std::fmt;
 use std::fmt::Write;
 
 use crate::constants;
-use crate::db_type::DB_TYPE_DATE;
-use crate::db_type::DB_TYPE_TIMESTAMP;
 use crate::db_type::DbType;
 use crate::error::Error;
 use crate::read_buffer::FromBuf;
@@ -265,8 +263,8 @@ impl ToBuf for OracleTimestamp {
         write_length: bool,
     ) {
         let mut actual_db_type = db_type;
-        if db_type == &DB_TYPE_TIMESTAMP && self.nanoseconds() == 0 {
-            actual_db_type = &DB_TYPE_DATE;
+        if db_type == crate::DB_TYPE_TIMESTAMP && self.nanoseconds() == 0 {
+            actual_db_type = crate::DB_TYPE_DATE;
         }
         if write_length {
             buf.write_u8(
@@ -280,7 +278,7 @@ impl ToBuf for OracleTimestamp {
         buf.write_u8(self.hour() + 1);
         buf.write_u8(self.minute() + 1);
         buf.write_u8(self.second() + 1);
-        if actual_db_type != &DB_TYPE_DATE {
+        if actual_db_type != crate::DB_TYPE_DATE {
             buf.write_u32be(self.nanoseconds());
         }
     }
