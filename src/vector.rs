@@ -49,11 +49,38 @@ const VECTOR_FLAG_NORM: u16 = 0x0002;
 const VECTOR_FLAG_NORM_RESERVED: u16 = 0x0010;
 const VECTOR_FLAG_SPARSE: u16 = 0x0020;
 
-// vector formats
-const VECTOR_FORMAT_BINARY: u8 = 0x05;
-const VECTOR_FORMAT_FLOAT32: u8 = 0x02;
-const VECTOR_FORMAT_FLOAT64: u8 = 0x03;
-const VECTOR_FORMAT_INT8: u8 = 0x04;
+/// Storage formats possible for vectors.
+#[derive(Debug, Clone)]
+pub enum VectorStorageFormat {
+    Float32 = 0x02,
+    Float64 = 0x03,
+    Int8 = 0x04,
+    Binary = 0x05,
+}
+
+impl VectorStorageFormat {
+    pub(crate) fn name(&self) -> &'static str {
+        match self {
+            Self::Float32 => "float32",
+            Self::Float64 => "float64",
+            Self::Int8 => "int8",
+            Self::Binary => "binary",
+        }
+    }
+}
+
+impl TryFrom<u8> for VectorStorageFormat {
+    type Error = Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            v if v == Self::Float32 as u8 => Ok(Self::Float32),
+            v if v == Self::Float64 as u8 => Ok(Self::Float64),
+            v if v == Self::Int8 as u8 => Ok(Self::Int8),
+            v if v == Self::Binary as u8 => Ok(Self::Binary),
+            _ => Err(Error::unsupported_vector_format(value)),
+        }
+    }
+}
 
 /// Types of data supported by vectors.
 #[derive(Debug, Clone)]
@@ -69,31 +96,31 @@ impl VectorData {
     fn decode(
         buf: &mut ReadBuffer,
         num_elements: usize,
-        vector_format: u8,
+        vector_format: VectorStorageFormat,
     ) -> Result<Self, Error> {
         match vector_format {
-            VECTOR_FORMAT_FLOAT32 => {
+            VectorStorageFormat::Float32 => {
                 let mut values = Vec::with_capacity(num_elements);
                 for _ in 0..num_elements {
                     values.push(f32::from_buf(buf.read_bytes(4)?));
                 }
                 Ok(Self::Float32(values))
             }
-            VECTOR_FORMAT_FLOAT64 => {
+            VectorStorageFormat::Float64 => {
                 let mut values = Vec::with_capacity(num_elements);
                 for _ in 0..num_elements {
                     values.push(f64::from_buf(buf.read_bytes(8)?));
                 }
                 Ok(Self::Float64(values))
             }
-            VECTOR_FORMAT_INT8 => {
+            VectorStorageFormat::Int8 => {
                 let mut values = Vec::with_capacity(num_elements);
                 for _ in 0..num_elements {
                     values.push(buf.read_i8()?);
                 }
                 Ok(Self::Int8(values))
             }
-            VECTOR_FORMAT_BINARY => {
+            VectorStorageFormat::Binary => {
                 let byte_count = num_elements / 8;
                 let mut values = Vec::with_capacity(byte_count);
                 for _ in 0..byte_count {
@@ -101,7 +128,6 @@ impl VectorData {
                 }
                 Ok(Self::Binary(values))
             }
-            _ => Err(Error::unsupported_vector_format(vector_format)),
         }
     }
 
@@ -133,12 +159,12 @@ impl VectorData {
     }
 
     /// Returns the format of the elements in the vector.
-    fn format(&self) -> u8 {
+    fn format(&self) -> VectorStorageFormat {
         match self {
-            Self::Float32(_) => VECTOR_FORMAT_FLOAT32,
-            Self::Float64(_) => VECTOR_FORMAT_FLOAT64,
-            Self::Int8(_) => VECTOR_FORMAT_INT8,
-            Self::Binary(_) => VECTOR_FORMAT_BINARY,
+            Self::Float32(_) => VectorStorageFormat::Float32,
+            Self::Float64(_) => VectorStorageFormat::Float64,
+            Self::Int8(_) => VectorStorageFormat::Int8,
+            Self::Binary(_) => VectorStorageFormat::Binary,
         }
     }
 
@@ -166,7 +192,7 @@ impl SparseVector {
     fn decode(
         buf: &mut ReadBuffer,
         num_dimensions: usize,
-        vector_format: u8,
+        vector_format: VectorStorageFormat,
     ) -> Result<Self, Error> {
         let num_sparse_elements = buf.read_u16be()? as usize;
         let mut indices = Vec::with_capacity(num_sparse_elements);
@@ -240,7 +266,7 @@ impl Vector {
             return Err(Error::unsupported_vector_version(version));
         }
         let flags = buf.read_u16be()?;
-        let vector_format = buf.read_u8()?;
+        let vector_format = VectorStorageFormat::try_from(buf.read_u8()?)?;
         let num_elements = buf.read_u32be()? as usize;
 
         // skip norm data if present (unused)
@@ -271,7 +297,7 @@ impl Vector {
     }
 
     /// Returns the format to use when encoding the vector.
-    fn format(&self) -> u8 {
+    fn format(&self) -> VectorStorageFormat {
         match self {
             Self::Dense(data) => data.format(),
             Self::Sparse(sparse) => sparse.values.format(),
@@ -289,8 +315,8 @@ impl Vector {
     /// Returns the version to use when encoding the vector.
     fn version(&self) -> u8 {
         match self {
-            Self::Dense(data) => match data.format() {
-                VECTOR_FORMAT_BINARY => VECTOR_VERSION_WITH_BINARY,
+            Self::Dense(data) => match data {
+                VectorData::Binary(_) => VECTOR_VERSION_WITH_BINARY,
                 _ => VECTOR_VERSION_BASE,
             },
             Self::Sparse(_) => VECTOR_VERSION_WITH_SPARSE,
@@ -303,7 +329,7 @@ impl Vector {
         buf.write_u8(VECTOR_MAGIC_BYTE);
         buf.write_u8(self.version());
         buf.write_u16be(self.flags());
-        buf.write_u8(self.format());
+        buf.write_u8(self.format() as u8);
         buf.write_u32be(self.num_dimensions().try_into().unwrap());
         buf.write_bytes(&[0u8; 8]); // norm (unused)
 

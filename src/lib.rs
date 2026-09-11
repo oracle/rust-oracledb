@@ -94,6 +94,7 @@ pub use crate::error::ErrorKind;
 pub use crate::json::JsonValue;
 pub use crate::vector::Vector;
 pub use crate::vector::VectorData;
+pub use crate::vector::VectorStorageFormat;
 
 // public methods
 pub use crate::utils::enquote_literal;

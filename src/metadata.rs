@@ -33,7 +33,12 @@ use crate::constants;
 use crate::db_type::DbType;
 use crate::error::Error;
 use crate::response::Response;
+use crate::vector::VectorStorageFormat;
 use crate::write_buffer::WriteBuffer;
+
+// vector metadata flags
+const VECTOR_META_FLAG_FLEXIBLE_DIM: u8 = 0x01;
+const VECTOR_META_FLAG_SPARSE_VECTOR: u8 = 0x02;
 
 /// Represents the metadata of columns fetched from the database.
 #[derive(Clone, Debug)]
@@ -46,21 +51,20 @@ pub struct Metadata {
     scale: i8,
     max_size: u32,
     is_array: bool,
+    vector_storage_format: Option<VectorStorageFormat>,
+    vector_dimensions: u32,
+    vector_flags: u8,
 }
 
 impl Metadata {
     /// Returns a new structure with the given values.
-    fn new(
-        db_type: &'static DbType,
-        max_size: usize,
-        is_array: bool,
-    ) -> Metadata {
+    fn new(db_type: &'static DbType, max_size: usize, is_array: bool) -> Self {
         let actual_max_size: u32 = if max_size == 0 {
             db_type.default_size
         } else {
             max_size.try_into().unwrap()
         };
-        Metadata {
+        Self {
             name: String::new(),
             db_type,
             nullable: false,
@@ -69,6 +73,9 @@ impl Metadata {
             scale: 0,
             max_size: actual_max_size,
             is_array,
+            vector_storage_format: None,
+            vector_dimensions: 0,
+            vector_flags: 0,
         }
     }
 
@@ -90,33 +97,47 @@ impl Metadata {
     pub(crate) fn from_response(
         resp: &mut Response,
         client: &Client,
-    ) -> Result<Metadata, Error> {
+    ) -> Result<Self, Error> {
+        let mut metadata = Self {
+            name: String::new(),
+            db_type: crate::DB_TYPE_UNKNOWN,
+            nullable: false,
+            precision: 0,
+            scale: 0,
+            null_by_describe: false,
+            max_size: 0,
+            is_array: false,
+            vector_storage_format: None,
+            vector_dimensions: 0,
+            vector_flags: 0,
+        };
         let ora_type_num: u16 = resp.read_u8()?.into();
         resp.read_u8()?; // flags
-        let precision = resp.read_u8()?;
-        let scale = resp.read_i8()?;
+        metadata.precision = resp.read_u8()?;
+        metadata.scale = resp.read_i8()?;
         let buffer_size = resp.read_ub4()?;
-        resp.read_ub4()?; // max number of array elements
-        resp.read_ub8()?; // cont flags
-        resp.read_bytes_with_double_length()?; // oid
-        resp.read_ub2()?; // version
-        resp.read_ub2()?; // character set id
+        let _max_num_array_elements = resp.read_ub4()?;
+        let _cont_flags = resp.read_ub8()?;
+        let _oid = resp.read_bytes_with_double_length()?;
+        let _version = resp.read_ub2()?;
+        let _charset_id = resp.read_ub2()?;
         let csfrm = resp.read_u8()?;
-        let db_type = DbType::from_ora_type_and_csfrm(ora_type_num, csfrm);
-        let mut max_size = resp.read_ub4()?;
+        metadata.db_type =
+            DbType::from_ora_type_and_csfrm(ora_type_num, csfrm);
+        metadata.max_size = resp.read_ub4()?;
         if ora_type_num == constants::ORA_TYPE_NUM_RAW {
-            max_size = buffer_size;
+            metadata.max_size = buffer_size;
         }
         if client.supports_ttc_field_version(constants::TTC_FIELD_VERSION_12_2)
         {
-            resp.read_ub4()?; // oaccolid
+            let _oaccolid = resp.read_ub4()?;
         }
-        let nulls_allowed = resp.read_u8()?;
-        resp.read_u8()?; // v7 length of name
-        let name = resp.read_utf8_with_double_length()?.to_string();
+        metadata.nullable = resp.read_u8()? != 0;
+        let _v7_name_length = resp.read_u8()?;
+        metadata.name = resp.read_utf8_with_double_length()?.to_string();
         let _obj_schema = resp.read_utf8_with_double_length()?;
         let _obj_name = resp.read_utf8_with_double_length()?;
-        resp.read_ub2()?; // column position
+        let _column_position = resp.read_ub2()?;
         let _uds_flags = resp.read_ub4()?;
         if client.supports_ttc_field_version(constants::TTC_FIELD_VERSION_23_1)
         {
@@ -133,28 +154,20 @@ impl Metadata {
         }
         if client.supports_ttc_field_version(constants::TTC_FIELD_VERSION_23_4)
         {
-            let _vector_dimensions = resp.read_ub4()?;
-            let _vector_format = resp.read_u8()?;
-            let _vector_flags = resp.read_u8()?;
+            metadata.vector_dimensions = resp.read_ub4()?;
+            metadata.vector_storage_format = match resp.read_u8()? {
+                0 => None,
+                v => Some(VectorStorageFormat::try_from(v)?),
+            };
+            metadata.vector_flags = resp.read_u8()?;
         }
-
-        let null_by_describe = match db_type.ora_type_num {
+        metadata.null_by_describe = match ora_type_num {
             constants::ORA_TYPE_NUM_LONG
             | constants::ORA_TYPE_NUM_LONG_RAW
             | constants::ORA_TYPE_NUM_UROWID => false,
             _ => buffer_size == 0,
         };
-
-        Ok(Metadata {
-            name,
-            db_type,
-            nullable: (nulls_allowed != 0),
-            precision,
-            scale,
-            null_by_describe,
-            max_size,
-            is_array: false,
-        })
+        Ok(metadata)
     }
 
     /// Returns true if the column is null by describe.
@@ -253,38 +266,117 @@ impl Metadata {
         }
     }
 
-    /// Returns the database type of the column.
+    /// Returns a string representation of the data type as would be found in
+    /// a create table statement.
+    pub fn data_type(&self) -> String {
+        match self.db_type.ora_type_num {
+            constants::ORA_TYPE_NUM_CHAR
+            | constants::ORA_TYPE_NUM_VARCHAR
+            | constants::ORA_TYPE_NUM_RAW => {
+                format!("{}({})", self.db_type.ora_name, self.max_size)
+            }
+            constants::ORA_TYPE_NUM_INTERVAL_DS => {
+                format!(
+                    "INTERVAL DAY({}) TO SECOND({})",
+                    self.precision, self.scale
+                )
+            }
+            constants::ORA_TYPE_NUM_INTERVAL_YM => {
+                format!("INTERVAL YEAR({}) TO MONTH", self.precision)
+            }
+            constants::ORA_TYPE_NUM_NUMBER => {
+                match (self.precision, self.scale) {
+                    (0, _) => self.db_type.ora_name.to_string(),
+                    (p, 0) => format!("NUMBER({})", p),
+                    (p, s) => format!("NUMBER({},{})", p, s),
+                }
+            }
+            constants::ORA_TYPE_NUM_TIMESTAMP => {
+                format!("TIMESTAMP({})", self.scale)
+            }
+            constants::ORA_TYPE_NUM_TIMESTAMP_LTZ => {
+                format!("TIMESTAMP({}) WITH LOCAL TIME ZONE", self.scale)
+            }
+            constants::ORA_TYPE_NUM_TIMESTAMP_TZ => {
+                format!("TIMESTAMP({}) WITH TIME ZONE", self.scale)
+            }
+            constants::ORA_TYPE_NUM_VECTOR => {
+                match (self.vector_dimensions, &self.vector_storage_format) {
+                    (0, None) => self.db_type.ora_name.to_string(),
+                    (d, None) => format!("VECTOR({})", d),
+                    (0, Some(f)) => format!("VECTOR(*,{})", f.name()),
+                    (d, Some(f)) => format!("VECTOR({},{})", d, f.name()),
+                }
+            }
+            _ => self.db_type.ora_name.to_string(),
+        }
+    }
+
+    /// Returns the database type of the data.
     pub fn db_type(&self) -> &'static DbType {
         self.db_type
     }
 
-    /// Returns whether the metadata refers to an array.
+    /// Returns whether the data refers to an array.
     pub fn is_array(&self) -> bool {
         self.is_array
     }
 
-    /// Returns the maximum size of RAW, (N)CHAR and (N)VARCHAR2 columns.
+    /// Returns whether the data refers to sparse vectors.
+    pub fn is_sparse_vector(&self) -> bool {
+        if self.db_type == crate::DB_TYPE_VECTOR {
+            self.vector_flags & VECTOR_META_FLAG_SPARSE_VECTOR != 0
+        } else {
+            false
+        }
+    }
+
+    /// Returns the maximum size of RAW, (N)CHAR and (N)VARCHAR2 data.
     pub fn max_size(&self) -> u32 {
         self.max_size
     }
 
-    /// Returns the name of the column.
+    /// Returns the name of the data.
     pub fn name(&self) -> &str {
         &self.name
     }
 
-    /// Returns whether the column allows nulls or not.
+    /// Returns whether the data allows nulls or not.
     pub fn nullable(&self) -> bool {
         self.nullable
     }
 
-    /// Returns the precision of the column.
+    /// Returns the precision of the data. This is used for the precision of
+    /// NUMBER, the precision for the number of days in INTERVAL DAY TO SECOND
+    /// and the precision of the number of years in INTERVAL YEAR TO MONTH. For
+    /// all other types this value is always zero.
     pub fn precision(&self) -> u8 {
         self.precision
     }
 
-    /// Returns the scale of the column.
+    /// Returns the scale of the data. This is used for the scale of NUMBER
+    /// and the fractional seconds precision of TIMESTAMP, TIMESTAMP WITH LOCAL
+    /// TIMEZONE, TIMESTAMP WITH TIMEZONE and INTERVAL DAY TO SECOND data. For
+    /// all other types this value is always zero.
     pub fn scale(&self) -> i8 {
         self.scale
+    }
+
+    /// Returns the number of dimensions used for vectors. If the data does not
+    /// refer to a vector or the vector data is flexible, None is returned.
+    pub fn vector_dimensions(&self) -> Option<usize> {
+        if self.db_type == crate::DB_TYPE_VECTOR
+            && self.vector_flags & VECTOR_META_FLAG_FLEXIBLE_DIM != 0
+        {
+            Some(self.vector_dimensions as usize)
+        } else {
+            None
+        }
+    }
+
+    /// Returns the storage format used for vectors. If the data does not
+    /// refer to a vector or the vector data is flexible, None is returned.
+    pub fn vector_storage_format(&self) -> Option<VectorStorageFormat> {
+        self.vector_storage_format.clone()
     }
 }
