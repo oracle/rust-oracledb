@@ -98,8 +98,9 @@ impl DbType {
     }
 
     /// Returns whether the database type contains binary (raw) data. This
-    /// method returns true for types [`DB_TYPE_RAW`], [`DB_TYPE_LONG_RAW`] and
-    /// [`DB_TYPE_BLOB`] and false for all other types.
+    /// method returns true for types [DB_TYPE_RAW](crate::DB_TYPE_RAW),
+    /// [DB_TYPE_LONG_RAW](crate::DB_TYPE_LONG_RAW) and
+    /// [DB_TYPE_BLOB](crate::DB_TYPE_BLOB) and false for all other types.
     pub fn is_binary_type(&self) -> bool {
         matches!(
             self.ora_type_num,
@@ -110,8 +111,10 @@ impl DbType {
     }
 
     /// Returns whether the database type contains date data. This method
-    /// returns true for types [`DB_TYPE_DATE`], [`DB_TYPE_TIMESTAMP`],
-    /// [`DB_TYPE_TIMESTAMP_LTZ`] and [`DB_TYPE_TIMESTAMP_TZ`] and false for
+    /// returns true for types [DB_TYPE_DATE](crate::DB_TYPE_DATE),
+    /// [DB_TYPE_TIMESTAMP](crate::DB_TYPE_TIMESTAMP),
+    /// [DB_TYPE_TIMESTAMP_LTZ](crate::DB_TYPE_TIMESTAMP_LTZ) and
+    /// [DB_TYPE_TIMESTAMP_TZ](crate::DB_TYPE_TIMESTAMP_TZ) and false for
     /// all other types.
     pub fn is_date_type(&self) -> bool {
         matches!(
@@ -124,10 +127,17 @@ impl DbType {
     }
 
     /// Returns whether the database type contains string data. This method
-    /// returns true for types [`DB_TYPE_CHAR`], [`DB_TYPE_NCHAR`],
-    /// [`DB_TYPE_VARCHAR`], [`DB_TYPE_NVARCHAR`], [`DB_TYPE_LONG`],
-    /// [`DB_TYPE_LONG_NVARCHAR`], [`DB_TYPE_ROWID`], [`DB_TYPE_UROWID`],
-    /// [`DB_TYPE_CLOB`] and [`DB_TYPE_NCLOB`] and false for all other types.
+    /// returns true for types [DB_TYPE_CHAR](crate::DB_TYPE_CHAR),
+    /// [DB_TYPE_NCHAR](crate::DB_TYPE_NCHAR),
+    /// [DB_TYPE_VARCHAR](crate::DB_TYPE_VARCHAR),
+    /// [DB_TYPE_NVARCHAR](crate::DB_TYPE_NVARCHAR),
+    /// [DB_TYPE_LONG](crate::DB_TYPE_LONG),
+    /// [DB_TYPE_LONG_NVARCHAR](crate::DB_TYPE_LONG_NVARCHAR),
+    /// [DB_TYPE_ROWID](crate::DB_TYPE_ROWID),
+    /// [DB_TYPE_UROWID](crate::DB_TYPE_UROWID),
+    /// [DB_TYPE_CLOB](crate::DB_TYPE_CLOB) and
+    /// [DB_TYPE_NCLOB](crate::DB_TYPE_NCLOB) and
+    /// false for all other types.
     pub fn is_string_type(&self) -> bool {
         matches!(
             self.ora_type_num,

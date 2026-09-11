@@ -8,9 +8,9 @@ The CLOB type is used for character data and the BLOB type is used for binary
 data. NCLOB can hold character data in the database’s alternative national
 character set.
 
-Rust-oracledb uses [oracledb::DB_TYPE_CLOB](crate::db_type::DB_TYPE_CLOB),
-[oracledb::DB_TYPE_NCLOB](crate::db_type::DB_TYPE_NCLOB), and
-[oracledb::DB_TYPE_BLOB](crate::db_type::DB_TYPE_BLOB) to represent CLOB,
+Rust-oracledb uses [oracledb::DB_TYPE_CLOB](crate::DB_TYPE_CLOB),
+[oracledb::DB_TYPE_NCLOB](crate::DB_TYPE_NCLOB), and
+[oracledb::DB_TYPE_BLOB](crate::DB_TYPE_BLOB) to represent CLOB,
 NCLOB, and BLOB database types respectively. LOB data can be fetched as
 `oracledb::Lob` locators by using
 [Statement::fetch_lobs()](crate::Statement::fetch_lobs), or as
