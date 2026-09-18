@@ -443,6 +443,60 @@ println!("PROXY_USER:   {}", proxy_user);   // PROXY_USER:   MYPROXYUSER
 println!("SESSION_USER: {}", session_user); // SESSION_USER: MYSESSIONUSER
 ```
 
+### <a name="tokenauth"></a> 2.4.3 Token-Based Authentication
+
+Token-Based Authentication allows users to connect to Oracle Database with an
+access token instead of a user name and a password. Rust-oracledb supports
+Open Authorization (OAuth 2.0) tokens and Oracle Cloud Infrastructure (OCI)
+Identity and Access Management (IAM) tokens.
+
+A token is one form of external authentication, which is selected by passing
+an [ExternalAuth](crate::ExternalAuth) to
+[Config::set_external_auth()](crate::Config::set_external_auth) for
+[standalone connections](#standaloneconnection) or to
+[PoolConfig::set_external_auth()](crate::PoolConfig::set_external_auth) for
+[pooled connections](#connpooling). A user name and a password must not be
+supplied. External authentication requires the use of the tcps protocol, so
+an error is raised if the connect string uses any other protocol.
+
+Note that rust-oracledb does not acquire or refresh tokens itself. The token
+supplied in the configuration must be valid at the time the connection is
+established.
+
+**OAuth 2.0 Token-Based Authentication**
+
+Supply the access token obtained from the identity provider:
+
+```rust
+let config = oracledb::Config::default()
+    .set_external_auth(oracledb::ExternalAuth::AccessToken(
+        String::from("eyJhbGciOi..."),
+    ))
+    .set_connect_string("tcps://mydb.example.com:1522/myservice")?;
+
+let connection = oracledb::connect(config)?;
+```
+
+**OCI IAM Token-Based Authentication**
+
+Supply the database token along with the private key that corresponds to the
+public key registered with OCI IAM. The private key must be a PEM encoded RSA
+private key, such as the `oci_api_key.pem` file created by `oci setup keys`.
+Rust-oracledb uses it to sign the request that is sent to the database:
+
+```rust
+let key_file = "/home/myuser/.oci/oci_api_key.pem";
+let private_key = std::fs::read_to_string(key_file)?;
+let config = oracledb::Config::default()
+    .set_external_auth(oracledb::ExternalAuth::IamToken {
+        token: String::from("eyJhbGciOi..."),
+        private_key,
+    })
+    .set_connect_string("tcps://mydb.example.com:1522/myservice")?;
+
+let connection = oracledb::connect(config)?;
+```
+
 ## <a name="connpooling"></a> 2.5 Connection Pooling
 
 Connection pooling can significantly improve application performance and

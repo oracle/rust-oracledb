@@ -225,3 +225,28 @@ fn test_3304() {
         )
     ));
 }
+
+#[rstest]
+#[case(oracledb::ExternalAuth::AccessToken(String::from("token_3305")))]
+#[case(oracledb::ExternalAuth::IamToken {
+    token: String::from("token_3305"),
+    private_key: String::from("private_key_3305"),
+})]
+/// Tests that external authentication supplies the credentials for a
+/// connection but that it requires the use of the tcps protocol.
+fn test_3305(
+    #[case] external_auth: oracledb::ExternalAuth,
+) -> Result<(), oracledb::Error> {
+    let config = oracledb::Config::default()
+        .set_external_auth(external_auth)
+        .set_connect_string("tcp://localhost:1521/service_3305")?;
+    let err = match oracledb::connect(config) {
+        Ok(_) => panic!("expected failure"),
+        Err(err) => err,
+    };
+    assert!(matches!(
+        err.kind(),
+        oracledb::ErrorKind::ExternalAuthRequiresTcps
+    ));
+    Ok(())
+}
