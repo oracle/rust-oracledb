@@ -43,6 +43,7 @@ use crate::constants;
 use crate::db_info::DbInfo;
 use crate::end_user_security_context::EndUserSecurityContext;
 use crate::error::Error;
+use crate::external_auth;
 use crate::messages::AuthMessage;
 use crate::messages::ConnectMessage;
 use crate::messages::DataTypesMessage;
@@ -72,6 +73,7 @@ pub struct Client {
     caps: capabilities::Capabilities,
     config: Config,
     combo_key: Option<[u8; 32]>,
+    iam_auth: Option<(String, String)>,
     charset_id: u16,
     ncharset_id: u16,
     statement_cache: StatementCache,
@@ -554,6 +556,11 @@ impl Client {
         old_password: &str,
         new_password: &str,
     ) -> Result<(), Error> {
+        // a combo key is only available when the connection was established
+        // with a password, which is required in order to change one
+        let Some(combo_key) = self.combo_key else {
+            return Err(Error::no_credentials());
+        };
         let mut temp_config = self
             .config
             .clone()
@@ -561,7 +568,7 @@ impl Client {
             .set_new_password(new_password);
         mem::swap(&mut temp_config, &mut self.config);
         let mut auth_message = AuthMessage::new();
-        auth_message.set_combo_key(&self.combo_key.unwrap());
+        auth_message.set_combo_key(&combo_key);
         let result = self.process_message(&mut auth_message);
         mem::swap(&mut temp_config, &mut self.config);
         result.map(|_| ())
@@ -613,6 +620,9 @@ impl Client {
         address: &Address,
         description: &Description,
     ) -> Result<(), Error> {
+        if self.config.uses_external_auth() && address.protocol() != "tcps" {
+            return Err(Error::external_auth_requires_tcps());
+        }
         let stream = TcpStream::connect(sock_addr)?;
         self.transport.connect(stream, address, &self.config)?;
         let mut address = address.clone();
@@ -658,6 +668,19 @@ impl Client {
             connect_message.protocol_flags,
         );
         self.transport.set_full_packet_size();
+
+        // OCI IAM token based authentication requires a header identifying
+        // the service and the address of the database, signed with the
+        // private key supplied in the configuration
+        if let Some(private_key) = self.config.get_private_key_bytes() {
+            let peer_addr = self.transport.peer_addr()?;
+            let host_info = format!("{}:{}", peer_addr.ip(), peer_addr.port());
+            self.iam_auth = Some(external_auth::get_iam_auth(
+                &private_key,
+                description.service_name(),
+                &host_info,
+            )?);
+        }
         Ok(())
     }
 
@@ -756,6 +779,14 @@ impl Client {
         Ok(info)
     }
 
+    /// Returns the header and signature required for OCI IAM token based
+    /// authentication, if a private key was supplied in the configuration.
+    pub(crate) fn iam_auth(&self) -> Option<(&str, &str)> {
+        self.iam_auth
+            .as_ref()
+            .map(|(header, signature)| (header.as_str(), signature.as_str()))
+    }
+
     /// Returns the maximum string size for the database.
     pub(crate) fn max_string_size(&self) -> u32 {
         self.caps.max_string_size()
@@ -770,6 +801,7 @@ impl Client {
             caps: Capabilities::new(),
             config,
             combo_key: None,
+            iam_auth: None,
             charset_id: 0,
             ncharset_id: 0,
             statement_cache: StatementCache::new(cache_size),

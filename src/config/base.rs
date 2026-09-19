@@ -35,6 +35,7 @@ use super::connect_string_parser;
 use super::defaults;
 
 use crate::error::Error;
+use crate::external_auth::ExternalAuth;
 use crate::secret_value::SecretValue;
 
 /// Represents configuration used to establish a standalone connection to the
@@ -44,6 +45,9 @@ pub struct Config {
     user: Option<String>,
     password: Option<SecretValue>,
     new_password: Option<SecretValue>,
+    external_auth: bool,
+    token: Option<SecretValue>,
+    private_key: Option<SecretValue>,
     config_dir: Option<String>,
     description_list: Option<DescriptionList>,
     stmtcachesize: Option<usize>,
@@ -75,6 +79,12 @@ impl Config {
         self.password.as_ref().unwrap().get_value()
     }
 
+    /// Returns the private key to use for OCI IAM token based
+    /// authentication, if one was configured.
+    pub(crate) fn get_private_key_bytes(&self) -> Option<Vec<u8>> {
+        self.private_key.as_ref().map(|s| s.get_value())
+    }
+
     /// Returns the SDU to use by examining the configuration.
     pub(crate) fn get_sdu(&self) -> usize {
         if let Some(description_list) = &self.description_list {
@@ -82,6 +92,14 @@ impl Config {
         } else {
             0
         }
+    }
+
+    /// Returns the token to use for token based authentication, if one was
+    /// configured.
+    pub(crate) fn get_token(&self) -> Option<String> {
+        self.token
+            .as_ref()
+            .map(|s| String::from_utf8_lossy(&s.get_value()).into_owned())
     }
 
     /// Returns the wallet password associated with the configuration.
@@ -92,9 +110,17 @@ impl Config {
             .unwrap_or_default()
     }
 
+    /// Returns whether external authentication is in use, in which case a
+    /// user name and password are not required.
+    pub(crate) fn uses_external_auth(&self) -> bool {
+        self.external_auth
+    }
+
     /// Validates the configuration.
     pub(crate) fn validate(&self) -> Result<(), Error> {
-        if self.user.is_none() || self.password.is_none() {
+        if !self.uses_external_auth()
+            && (self.user.is_none() || self.password.is_none())
+        {
             Err(Error::no_credentials())
         } else if self.description_list.is_none() {
             Err(Error::no_connect_string())
@@ -188,6 +214,23 @@ impl Config {
     /// Sets the user name and password to use for connecting to the database.
     pub fn set_credentials(self, user: &str, password: &str) -> Self {
         self.set_user(user).set_password(password)
+    }
+
+    /// Sets the method to use to authenticate to the database instead of a
+    /// user name and a password. Note that external authentication requires
+    /// the use of the tcps protocol.
+    pub fn set_external_auth(mut self, value: ExternalAuth) -> Self {
+        let (token, private_key) = match value {
+            ExternalAuth::AccessToken(token) => (token, None),
+            ExternalAuth::IamToken { token, private_key } => {
+                (token, Some(private_key))
+            }
+        };
+        self.external_auth = true;
+        self.token = Some(SecretValue::new(token.as_bytes()));
+        self.private_key =
+            private_key.map(|value| SecretValue::new(value.as_bytes()));
+        self
     }
 
     /// Sets the driver name to use when connecting to the database.
@@ -317,6 +360,9 @@ impl Default for Config {
             user: None,
             password: None,
             new_password: None,
+            external_auth: false,
+            token: None,
+            private_key: None,
             config_dir: defaults::default_config_dir().clone(),
             description_list: None,
             stmtcachesize: None,

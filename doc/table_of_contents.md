@@ -45,6 +45,7 @@ instead of the mouse.
    2.4 [Authenticating to Oracle Database](#authentication)
    - 2.4.1 [Database Authentication](#dbauthentication)
    - 2.4.2 [Proxy Authentication](#proxyauth)
+   - 2.4.3 [Token-Based Authentication](#tokenauth)
 
    2.5 [Connection Pooling](#connpooling)
    - 2.5.1 [Create a Basic Pool Configuration](#basicpoolconfig)

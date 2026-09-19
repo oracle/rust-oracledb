@@ -48,6 +48,8 @@ pub enum ErrorKind {
     DeadConnection,
     DifferentTypes(&'static DbType, &'static DbType),
     EndUserSecurityContextRequiresTcps,
+    ExternalAuthRequiresTcps,
+    IamPrivateKeyInvalid(String),
     IfileCycleDetected(String, String),
     IntegerTooLarge(usize, usize),
     InvalidBindName(String),
@@ -206,6 +208,14 @@ impl fmt::Display for Error {
             }
             ErrorKind::EndUserSecurityContextRequiresTcps => fmt.write_str(
                 "end_user_security_context requires use of the tcps protocol",
+            )?,
+            ErrorKind::ExternalAuthRequiresTcps => fmt.write_str(
+                "external authentication requires use of the tcps protocol",
+            )?,
+            ErrorKind::IamPrivateKeyInvalid(m) => write!(
+                fmt,
+                "private key for OCI IAM token based authentication is \
+                 invalid: {m}"
             )?,
             ErrorKind::IfileCycleDetected(
                 including_file_name,
@@ -478,6 +488,18 @@ impl Error {
     /// connection.
     pub(crate) fn end_user_security_context_requires_tcps() -> Error {
         Error::new(ErrorKind::EndUserSecurityContextRequiresTcps, None)
+    }
+
+    /// Creates an error for attempting external authentication over a
+    /// non-TCPS connection.
+    pub(crate) fn external_auth_requires_tcps() -> Error {
+        Error::new(ErrorKind::ExternalAuthRequiresTcps, None)
+    }
+
+    /// Creates an error for a private key that cannot be used for signing the
+    /// request sent for OCI IAM token based authentication.
+    pub(crate) fn iam_private_key_invalid(reason: String) -> Error {
+        Error::new(ErrorKind::IamPrivateKeyInvalid(reason), None)
     }
 
     pub(crate) fn ifile_cycle_detected(

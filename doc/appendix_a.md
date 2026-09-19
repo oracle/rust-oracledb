@@ -17,7 +17,7 @@ second column displays whether it is supported in rust-oracledb.
 | Connection pool session tagging                                 | No                   |
 | Password authentication                                         | Yes                  |
 | External authentication                                         | No                   |
-| Token-based authentication                                      | No                   |
+| Token-based authentication                                      | Yes                  |
 | Kerberos and Radius authentication                              | No                   |
 | LDAP connections                                                | No                   |
 | Oracle Deep Data Security                                       | Yes                  |

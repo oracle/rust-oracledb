@@ -48,6 +48,7 @@ use std::cmp::min;
 use std::env;
 use std::fs;
 use std::io::{Read, Write};
+use std::net::SocketAddr;
 use std::net::TcpStream;
 use std::path::Path;
 use std::sync::Arc;
@@ -111,6 +112,16 @@ impl LowLevelTransport {
         };
         let tls_stream = rustls::StreamOwned::new(conn, stream);
         Ok(Self::Tls(Box::new(tls_stream)))
+    }
+
+    /// Returns the address of the database to which the low level transport
+    /// is connected.
+    fn peer_addr(&self) -> Result<SocketAddr, Error> {
+        let stream = match self {
+            Self::Tcp(s) => s,
+            Self::Tls(s) => &s.sock,
+        };
+        Ok(stream.peer_addr()?)
     }
 
     /// Reads bytes from the low level transport and returns the number of
@@ -385,6 +396,15 @@ impl Transport {
             print_packets: env::var_os("RSO_DEBUG_PACKETS").is_some(),
             op_num: 0,
         }
+    }
+
+    /// Returns the address of the database to which the transport is
+    /// connected.
+    pub(crate) fn peer_addr(&self) -> Result<SocketAddr, Error> {
+        self.low_level_transport
+            .as_ref()
+            .ok_or_else(Error::not_connected)
+            .and_then(|t| t.peer_addr())
     }
 
     /// Reads data from the database and returns a single packet, or an error
