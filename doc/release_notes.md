@@ -21,6 +21,12 @@
 1.  Added support for fetching UROWID.
 1.  Added support for setting the session time zone from the environment
     variable `ORA_SDTZ` or the client's local time zone (#9).
+1.  Added support for token based authentication using an OAuth 2.0 token or
+    an Oracle Cloud Infrastructure IAM token via the new enumeration
+    [ExternalAuth](crate::ExternalAuth) and the methods
+    [Config::set_external_auth()](crate::Config::set_external_auth()) and
+    [PoolConfig::set_external_auth()](crate::PoolConfig::set_external_auth())
+    ([issue 3](https://github.com/oracle/rust-oracledb/issues/3)).
 1.  Eliminated hang when an error occurs during a DML returning statemnt
     ([issue 16](https://github.com/oracle/rust-oracledb/issues/16)).
 1.  Fixed encoding of Oracle NUMBER data for values with an odd number of

@@ -34,6 +34,7 @@ use std::time::Duration;
 use super::Config;
 
 use crate::error::Error;
+use crate::external_auth::ExternalAuth;
 
 /// Represents configuration used to create a connection pool using
 /// [create_pool()](`crate::create_pool`).
@@ -198,6 +199,15 @@ impl PoolConfig {
     /// Sets the user name and password to use for connecting to the database.
     pub fn set_credentials(self, user: &str, password: &str) -> Self {
         self.set_user(user).set_password(password)
+    }
+
+    /// Sets the method to use to authenticate to the database instead of a
+    /// user name and a password. Note that external authentication requires
+    /// the use of the tcps protocol.
+    pub fn set_external_auth(mut self, value: ExternalAuth) -> Self {
+        self.connection_config =
+            self.connection_config.set_external_auth(value);
+        self
     }
 
     /// Sets the driver name to use when connecting to the database.
