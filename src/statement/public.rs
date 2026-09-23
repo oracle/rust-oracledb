@@ -57,8 +57,11 @@ impl Statement {
         &self,
         last_row: Option<DbRow>,
     ) -> Result<Response, Error> {
-        let mut client = self.client_ref.lock().unwrap();
-        client.fetch(&self.statement, &self.client_ref, last_row)
+        self.client_ref.lock()?.fetch(
+            &self.statement,
+            &self.client_ref,
+            last_row,
+        )
     }
 
     /// Gets the response to the execution of a statement. At this point binds
@@ -69,8 +72,7 @@ impl Statement {
         params: BindParameters,
         parse_only: bool,
     ) -> Result<Response, Error> {
-        let mut client = self.client_ref.lock().unwrap();
-        client.execute(
+        self.client_ref.lock()?.execute(
             &mut self.statement,
             &self.client_ref,
             params,
@@ -215,7 +217,7 @@ impl Statement {
         params: BindParameters,
     ) -> Result<arrow_array::RecordBatch, Error> {
         self.statement.check_binds(&params)?;
-        let mut client = self.client_ref.lock().unwrap();
+        let mut client = self.client_ref.lock()?;
         arrow::query_single_batch(
             &mut client,
             &mut self.statement,
@@ -274,7 +276,8 @@ impl Statement {
 
 impl Drop for Statement {
     fn drop(&mut self) {
-        let mut client = self.client_ref.lock().unwrap();
-        client.return_statement(&self.statement);
+        if let Ok(mut client) = self.client_ref.lock() {
+            client.return_statement(&self.statement);
+        }
     }
 }

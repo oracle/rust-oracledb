@@ -148,10 +148,7 @@ impl Lob {
         op: LobOp<'a>,
     ) -> Result<LobOpMessage<'a>, Error> {
         let mut message = LobOpMessage::new(&self.locator, op);
-        self.client_ref
-            .lock()
-            .unwrap()
-            .process_message(&mut message)?;
+        self.client_ref.lock()?.process_message(&mut message)?;
         if let Some(locator) = message.take_returned_locator() {
             self.locator = locator;
         }
@@ -211,7 +208,6 @@ impl Lob {
         }
         let locator = vec![0; 40];
         let mut message = {
-            let mut client = client_ref.lock().unwrap();
             let mut message = LobOpMessage::new(
                 &locator,
                 LobOp::CreateTemp {
@@ -219,8 +215,7 @@ impl Lob {
                     csfrm: db_type.csfrm,
                 },
             );
-
-            client.process_message(&mut message)?;
+            client_ref.lock()?.process_message(&mut message)?;
             message
         };
 
@@ -305,7 +300,9 @@ impl Lob {
 impl Drop for Lob {
     fn drop(&mut self) {
         let locator = std::mem::take(&mut self.locator);
-        self.client_ref.lock().unwrap().add_lob_to_close(locator);
+        if let Ok(mut client) = self.client_ref.lock() {
+            client.add_lob_to_close(locator);
+        }
     }
 }
 

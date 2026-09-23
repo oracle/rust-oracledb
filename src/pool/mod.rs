@@ -84,7 +84,7 @@ impl Pool {
     /// Returns a connection from the pool.
     pub fn acquire(&self) -> Result<Connection, Error> {
         self.check_open()?;
-        let resp = self.contents_ref.lock().unwrap().acquire();
+        let resp = self.contents_ref.lock()?.acquire();
         let conn_impl_result = match resp {
             PoolAcquireResponse::Connection(result) => result,
             PoolAcquireResponse::Wait(channel) => channel.recv().unwrap(),
@@ -98,14 +98,14 @@ impl Pool {
     /// pool has been closed.
     pub fn busy_count(&self) -> Result<usize, Error> {
         self.check_open()?;
-        Ok(self.contents_ref.lock().unwrap().busy_count())
+        Ok(self.contents_ref.lock()?.busy_count())
     }
 
     /// Closes the pool and makes it unusable now instead of when the
     /// pool is dropped.
     pub fn close(&mut self) -> Result<(), Error> {
         self.check_open()?;
-        self.contents_ref.lock().unwrap().close()?;
+        self.contents_ref.lock()?.close()?;
         if let Some(handle) = self.bg_task.take() {
             let _ = handle.join();
         }
@@ -116,7 +116,7 @@ impl Pool {
     /// pool has been closed.
     pub fn open_count(&self) -> Result<usize, Error> {
         self.check_open()?;
-        Ok(self.contents_ref.lock().unwrap().open_count())
+        Ok(self.contents_ref.lock()?.open_count())
     }
 }
 

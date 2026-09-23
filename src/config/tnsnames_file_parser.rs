@@ -213,7 +213,7 @@ pub(crate) fn lookup_tns_alias(
 ) -> Result<DescriptionList, Error> {
     let file_name_buf = Path::new(config_dir).join("tnsnames.ora");
     let file_name = file_name_buf.to_str().unwrap().to_owned();
-    let mut cache = TNSNAMES_FILE_CACHE.lock().unwrap();
+    let mut cache = TNSNAMES_FILE_CACHE.lock()?;
     let mut files_in_progress = Vec::<String>::new();
     ensure_file_in_cache(
         &mut cache,

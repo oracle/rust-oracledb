@@ -22,6 +22,8 @@
 1.  Added support for setting the session time zone from the environment
     variable `ORA_SDTZ` or the client's local time zone
     ([issue 9](https://github.com/oracle/rust-oracledb/issues/9)).
+1.  Avoid panicing when a lock is poisoned
+    ([issue 22](https://github.com/oracle/rust-oracledb/issues/22)).
 1.  Avoid building errors unless they are needed
     ([issue 28](https://github.com/oracle/rust-oracledb/issues/28)).
 1.  Added support for using the configured

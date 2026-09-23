@@ -71,23 +71,21 @@ impl ConnImpl {
         old_password: &str,
         new_password: &str,
     ) -> Result<(), Error> {
-        let mut client = self.client_ref.lock().unwrap();
-        client.change_password(old_password, new_password)
+        self.client_ref
+            .lock()?
+            .change_password(old_password, new_password)
     }
 
     /// Clears Deep Data Security state from the underlying client/session.
     pub(crate) fn clear_end_user_security_context(&self) -> Result<(), Error> {
-        self.client_ref
-            .lock()
-            .unwrap()
-            .clear_end_user_security_context();
+        self.client_ref.lock()?.clear_end_user_security_context();
         Ok(())
     }
 
     /// Closes the connection and makes it unsable now instead of when the
     /// connection is dropped.
     pub(crate) fn close(&mut self) -> Result<(), Error> {
-        self.client_ref.lock().unwrap().close()
+        self.client_ref.lock()?.close()
     }
 
     /// Establishes a connection to the database and returns it.
@@ -119,7 +117,9 @@ impl ConnImpl {
         &self,
         ping_interval_opt: Option<Duration>,
     ) -> ConnImplStatus {
-        if self.client_ref.lock().unwrap().requires_close() {
+        if let Ok(client) = self.client_ref.lock()
+            && client.requires_close()
+        {
             ConnImplStatus::RequiresClose
         } else if let Some(ping_interval) = ping_interval_opt
             && self.returned_to_pool.elapsed() >= ping_interval
@@ -136,23 +136,22 @@ impl ConnImpl {
         context: EndUserSecurityContext,
     ) -> Result<(), Error> {
         self.client_ref
-            .lock()
-            .unwrap()
+            .lock()?
             .set_end_user_security_context(context)
     }
 
     /// Sets the returned to pool instant which is used in pool management.
     pub(crate) fn set_returned_to_pool(&mut self) -> Result<(), Error> {
-        self.client_ref.lock().unwrap().end_request()?;
+        self.client_ref.lock()?.end_request()?;
         self.returned_to_pool = Instant::now();
         Ok(())
     }
 
     /// Commits any pending transactions.
     pub fn commit(&self) -> Result<(), Error> {
-        let mut message = CommitMessage::new();
-        let mut client = self.client_ref.lock().unwrap();
-        client.process_message(&mut message)?;
+        self.client_ref
+            .lock()?
+            .process_message(&mut CommitMessage::new())?;
         Ok(())
     }
 
@@ -186,7 +185,7 @@ impl ConnImpl {
 
     /// Returns the call timeout configured on the connection.
     pub fn get_call_timeout(&self) -> Result<Option<Duration>, Error> {
-        self.client_ref.lock().unwrap().get_call_timeout()
+        self.client_ref.lock()?.get_call_timeout()
     }
 
     /// Returns the domain of the database.
@@ -206,7 +205,11 @@ impl ConnImpl {
 
     /// Returns the last warning returned by the database.
     pub fn get_last_warning(&self) -> Option<String> {
-        self.client_ref.lock().unwrap().get_last_warning()
+        if let Ok(client) = self.client_ref.lock() {
+            client.get_last_warning()
+        } else {
+            None
+        }
     }
 
     /// Returns the maximum number of bytes allowed to be used in identifiers.
@@ -241,9 +244,9 @@ impl ConnImpl {
 
     /// Pings the database.
     pub fn ping(&self) -> Result<(), Error> {
-        let mut message = PingMessage::new();
-        let mut client = self.client_ref.lock().unwrap();
-        client.process_message(&mut message)?;
+        self.client_ref
+            .lock()?
+            .process_message(&mut PingMessage::new())?;
         Ok(())
     }
 
@@ -304,9 +307,9 @@ impl ConnImpl {
 
     /// Rolls back any pending transactions.
     pub fn rollback(&self) -> Result<(), Error> {
-        let mut message = RollbackMessage::new();
-        let mut client = self.client_ref.lock().unwrap();
-        client.process_message(&mut message)?;
+        self.client_ref
+            .lock()?
+            .process_message(&mut RollbackMessage::new())?;
         Ok(())
     }
 
@@ -315,52 +318,60 @@ impl ConnImpl {
         &self,
         duration: Option<Duration>,
     ) -> Result<(), Error> {
-        self.client_ref.lock().unwrap().set_call_timeout(duration)
+        self.client_ref.lock()?.set_call_timeout(duration)
     }
 
     /// Sets the action associated with the connection. This is the same as
     /// calling dbms_application_info.set_action() but without executing a
     /// statement. The value is piggybacked to the database with the next
     /// network round trip.
-    pub fn set_pending_action(&self, action: &str) {
-        let mut client = self.client_ref.lock().unwrap();
-        client.set_pending_action(action);
+    pub fn set_pending_action(&self, action: &str) -> Result<(), Error> {
+        self.client_ref.lock()?.set_pending_action(action);
+        Ok(())
     }
 
     /// Sets the client identifier associated with the connection. This is the
     /// same as calling dbms_application_info.set_client_identifier() but
     /// without executing a statement. The value is piggybacked to the database
     /// with the next network round trip.
-    pub fn set_pending_client_identifier(&self, client_identifier: &str) {
-        let mut client = self.client_ref.lock().unwrap();
-        client.set_pending_client_identifier(client_identifier);
+    pub fn set_pending_client_identifier(
+        &self,
+        client_identifier: &str,
+    ) -> Result<(), Error> {
+        self.client_ref
+            .lock()?
+            .set_pending_client_identifier(client_identifier);
+        Ok(())
     }
 
     /// Sets the client info associated with the connection. This is the same
     /// as calling dbms_application_info.set_client_info() but without
     /// executing a statement. The value is piggybacked to the database with
     /// the next network round trip.
-    pub fn set_pending_client_info(&self, client_info: &str) {
-        let mut client = self.client_ref.lock().unwrap();
-        client.set_pending_client_info(client_info);
+    pub fn set_pending_client_info(
+        &self,
+        client_info: &str,
+    ) -> Result<(), Error> {
+        self.client_ref.lock()?.set_pending_client_info(client_info);
+        Ok(())
     }
 
     /// Sets the database operation to be monitored in the database. This is
     /// the same as calling dbms_sql_monitor.begin_operation() but without
     /// executing a statement. The value is piggybacked to the database with
     /// the next network round trip.
-    pub fn set_pending_db_op(&self, db_op: &str) {
-        let mut client = self.client_ref.lock().unwrap();
-        client.set_pending_db_op(db_op);
+    pub fn set_pending_db_op(&self, db_op: &str) -> Result<(), Error> {
+        self.client_ref.lock()?.set_pending_db_op(db_op);
+        Ok(())
     }
 
     /// Sets the module associated with the connection. This is the same as
     /// calling dbms_application_info.set_module() but without executing a
     /// statement. The value is piggybacked to the database with the next
     /// network round trip.
-    pub fn set_pending_module(&self, db_op: &str) {
-        let mut client = self.client_ref.lock().unwrap();
-        client.set_pending_module(db_op);
+    pub fn set_pending_module(&self, db_op: &str) -> Result<(), Error> {
+        self.client_ref.lock()?.set_pending_module(db_op);
+        Ok(())
     }
 
     /// Creates a StatementBuilder structure which can be used to specify

@@ -71,7 +71,7 @@ impl Connection {
     /// connection is dropped.
     pub fn close(&mut self) -> Result<(), Error> {
         if let Some(pool_contents_ref) = self.pool_contents_ref.take() {
-            let mut pool_contents = pool_contents_ref.lock().unwrap();
+            let mut pool_contents = pool_contents_ref.lock()?;
             let conn_impl = self.conn_impl.take().unwrap();
             pool_contents.return_connection(conn_impl)
         } else if let Some(mut conn_impl) = self.conn_impl.take() {
@@ -269,8 +269,7 @@ impl Connection {
     /// statement. The value is piggybacked to the database with the next
     /// network round trip.
     pub fn set_action(&self, action: &str) -> Result<(), Error> {
-        self.get_impl()?.set_pending_action(action);
-        Ok(())
+        self.get_impl()?.set_pending_action(action)
     }
 
     /// Sets the "call timeout" value which is the length of time that is
@@ -293,8 +292,7 @@ impl Connection {
         client_identifier: &str,
     ) -> Result<(), Error> {
         self.get_impl()?
-            .set_pending_client_identifier(client_identifier);
-        Ok(())
+            .set_pending_client_identifier(client_identifier)
     }
 
     /// Sets the client info associated with the connection. This is the same
@@ -302,8 +300,7 @@ impl Connection {
     /// executing a statement. The value is piggybacked to the database with
     /// the next network round trip.
     pub fn set_client_info(&self, client_info: &str) -> Result<(), Error> {
-        self.get_impl()?.set_pending_client_info(client_info);
-        Ok(())
+        self.get_impl()?.set_pending_client_info(client_info)
     }
 
     /// Sets the Deep Data Security context for subsequent round trips on this
@@ -320,8 +317,7 @@ impl Connection {
     /// executing a statement. The value is piggybacked to the database with
     /// the next network round trip.
     pub fn set_db_op(&self, db_op: &str) -> Result<(), Error> {
-        self.get_impl()?.set_pending_db_op(db_op);
-        Ok(())
+        self.get_impl()?.set_pending_db_op(db_op)
     }
 
     /// Sets the module associated with the connection. This is the same as
@@ -329,8 +325,7 @@ impl Connection {
     /// statement. The value is piggybacked to the database with the next
     /// network round trip.
     pub fn set_module(&self, db_op: &str) -> Result<(), Error> {
-        self.get_impl()?.set_pending_module(db_op);
-        Ok(())
+        self.get_impl()?.set_pending_module(db_op)
     }
 
     /// Creates a Statement structure which can be used to specify various

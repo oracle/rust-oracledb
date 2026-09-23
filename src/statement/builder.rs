@@ -55,8 +55,7 @@ impl<'sql> StatementBuilder<'sql> {
     /// Builds the statement from the SQL and the options.
     pub fn build(self) -> Result<Statement, Error> {
         let statement = {
-            let mut client = self.client_ref.lock().unwrap();
-            client.get_statement(
+            self.client_ref.lock()?.get_statement(
                 self.sql,
                 self.cache_statement,
                 &self.options,
