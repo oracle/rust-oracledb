@@ -208,13 +208,47 @@ connection.execute(
 ## <a name="bindrowid"></a> 5.6 Binding ROWID Values
 
 The pseudo-column ROWID uniquely identifies a row in a table. In rust-oracledb,
-ROWID values are represented as strings.
+ROWID values are fetched as strings and can be bound as strings.
+
+For example:
+
+```rust
+let row = connection.query_row(
+    "select rowid from my_table where id = :1",
+    &[&1],
+)?;
+
+let rowid: String = row.get(0)?;
+
+connection.execute(
+    "update my_table set name = :1 where rowid = :2",
+    &[&"new name", &rowid],
+)?;
+```
 
 ## <a name="bindurowid"></a> 5.7 Binding UROWID Values
 
-Universal rowids (UROWID) are used to uniquely identify rows in index
-organized tables. In rust-oracledb, UROWID values are represented as
-strings.
+Universal rowids (UROWID) can represent both physical rowids and logical
+rowids, such as those used by index-organized tables. In rust-oracledb, UROWID
+values are fetched as strings and can be bound as strings.
+
+For example:
+
+```rust
+let row = connection.query_row(
+    "select rowid from my_index_organized_table where id = :1",
+    &[&1],
+)?;
+
+let urowid: String = row.get(0)?;
+
+let row = connection.query_row(
+    "select name from my_index_organized_table where rowid = :1",
+    &[&urowid],
+)?;
+
+let name: String = row.get(0)?;
+```
 
 ## <a name="dml-returning-bind"></a> 5.8 DML RETURNING Bind Variables
 

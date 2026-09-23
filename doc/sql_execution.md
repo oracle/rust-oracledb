@@ -220,6 +220,8 @@ is fetched.
 | LONG RAW                       | DB_TYPE_LONG_RAW       | `Vec<u8>`                   |
 | JSON                           | DB_TYPE_JSON           | [JsonValue](crate::JsonValue)        |
 | VECTOR                         | DB_TYPE_VECTOR         | [Vector](crate::Vector)          |
+| ROWID                          | DB_TYPE_ROWID          | `String`                     |
+| UROWID                         | DB_TYPE_UROWID         | `String`                     |
 
 When fetching NUMBER values as Rust integer types, the value must be in range
 for the requested Rust type. Binary types are represented as byte arrays

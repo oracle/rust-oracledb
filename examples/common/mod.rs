@@ -70,10 +70,32 @@ pub struct TableGuard<'a> {
 
 // Helper used to drop the table explicitly before creating it.
 impl TableGuard<'_> {
+    /// Creates the table with the given definition.
+    fn create_table(
+        &self,
+        definition: &str,
+        options: &str,
+    ) -> Result<(), oracledb::Error> {
+        let sql = format!(
+            "create table {} ({}) {}",
+            self.table_name, definition, options
+        );
+        self.conn.execute(&sql, &[])?;
+        Ok(())
+    }
+
     /// Drops the table from the database but ignores the error if the table
     /// does not exist.
     fn drop_table(&self) -> Result<(), oracledb::Error> {
-        drop_table(self.conn, self.table_name)
+        let sql = format!("drop table {} purge", self.table_name);
+        let result = self.conn.execute(&sql, &[]);
+        if let Err(err) = result
+            && let oracledb::ErrorKind::DbError(db_error) = err.kind()
+            && db_error.code() != 942
+        {
+            return Err(err);
+        }
+        Ok(())
     }
 }
 
@@ -85,33 +107,24 @@ impl Drop for TableGuard<'_> {
 }
 
 #[allow(dead_code)]
-/// Drops the table from the database but ignores the error if the table does
-/// not exist.
-pub fn drop_table(
-    conn: &oracledb::Connection,
-    table_name: &str,
-) -> Result<(), oracledb::Error> {
-    let sql = format!("drop table {table_name} purge");
-    let result = conn.execute(&sql, &[]);
-    if let Err(err) = result
-        && let oracledb::ErrorKind::DbError(db_error) = err.kind()
-        && db_error.code() != 942
-    {
-        return Err(err);
-    }
-    Ok(())
-}
-
-#[allow(dead_code)]
 /// Creates the table with the given name and definition.
 pub fn create_table<'a>(
     conn: &'a oracledb::Connection,
     table_name: &'a str,
     definition: &str,
 ) -> Result<TableGuard<'a>, oracledb::Error> {
+    create_table_with_options(conn, table_name, definition, "")
+}
+
+/// Creates the table with the given name and definition and options.
+pub fn create_table_with_options<'a>(
+    conn: &'a oracledb::Connection,
+    table_name: &'a str,
+    definition: &str,
+    options: &str,
+) -> Result<TableGuard<'a>, oracledb::Error> {
     let guard = TableGuard { conn, table_name };
     guard.drop_table()?;
-    let sql = format!("create table {table_name} ({definition})");
-    conn.execute(&sql, &[])?;
+    guard.create_table(definition, options)?;
     Ok(guard)
 }

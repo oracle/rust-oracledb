@@ -99,10 +99,7 @@ pub fn create_table<'a>(
     table_name: &'a str,
     definition: &str,
 ) -> Result<TableGuard<'a>, oracledb::Error> {
-    let guard = TableGuard { conn, table_name };
-    guard.drop_table()?;
-    guard.create_table(definition, "")?;
-    Ok(guard)
+    create_table_with_options(conn, table_name, definition, "")
 }
 
 #[allow(dead_code)]
