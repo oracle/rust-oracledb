@@ -46,8 +46,8 @@ pub struct ProtocolMessage {
 }
 
 impl ProtocolMessage {
-    pub fn new() -> ProtocolMessage {
-        ProtocolMessage {
+    pub fn new() -> Self {
+        Self {
             charset_id: 0,
             ncharset_id: 0,
             server_compile_caps: Vec::<u8>::new(),
@@ -89,9 +89,9 @@ impl Message for ProtocolMessage {
         resp.advance(5)?; // skip first part of FDO
         let offset1 = resp.read_u8()? as usize;
         let offset2 = resp.read_u8()? as usize;
-        resp.advance(offset1 + offset2)?;
+        resp.advance(offset1 + offset2 + 2)?;
         self.ncharset_id = resp.read_u16be()?;
-        resp.advance(fdo_len - offset1 - offset2 - 9)?;
+        resp.advance(fdo_len - offset1 - offset2 - 11)?;
         self.server_compile_caps = resp.read_bytes_with_length()?.into();
         self.server_runtime_caps = resp.read_bytes_with_length()?.into();
         Ok(())

@@ -42,6 +42,8 @@
     the bind variable name and not just the position in the list of out binds.
 1.  Ensure that connections returned from a pool always start with a call
     timeout of None.
+1.  Corrected calculation of national character set ID used when creating
+    temporary LOBs.
 
 
 ## rust-oracledb 26.0.0-beta.3 (September 8, 2026)
