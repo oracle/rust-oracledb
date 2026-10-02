@@ -200,6 +200,9 @@ impl SqlParser<'_> {
                 if !initial_keyword_found {
                     initial_keyword_found = true;
                     statement.determine_statement_type(keyword);
+                    if statement.is_ddl() {
+                        break;
+                    }
                 } else if statement.is_dml && !self.returning_keyword_found {
                     if keyword.to_uppercase() == "RETURNING" {
                         self.returning_keyword_found = true;

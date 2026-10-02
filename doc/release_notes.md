@@ -2,6 +2,9 @@
 
 ## rust-oracledb 26.0.0-beta.5 (TBD)
 
+1.  Fixed bug causing bind variables to be detected within DDL statements
+    ([issue 33](https://github.com/oracle/rust-oracledb/issues/33)).
+
 
 ## rust-oracledb 26.0.0-beta.4 (September 23, 2026)
 

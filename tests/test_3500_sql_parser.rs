@@ -297,3 +297,22 @@ fn test_3518(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     assert!(matches!(err.kind(), oracledb::ErrorKind::ParseError(_, _)));
     Ok(())
 }
+
+#[rstest]
+/// DDL does not allow bind variables
+fn test_3519(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    verify_bind_names(
+        conn,
+        r#"
+        create or replace trigger test_3519_tg
+        after update of updated_column on test_3519
+        for each row
+        begin
+            update test_3519 set
+                some_other_column = :new.updated_column
+            where some_other_column = :old.updated_column;
+        end;
+        "#,
+        &[],
+    )
+}
