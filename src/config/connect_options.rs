@@ -262,7 +262,7 @@ pub(crate) struct Description {
     retry_count: Option<u32>,
     retry_delay: Option<Duration>,
     sdu: Option<u32>,
-    tcp_connect_timeout: Option<Duration>,
+    transport_connect_timeout: Option<Duration>,
     service_name: Option<String>,
     instance_name: Option<String>,
     server_type: Option<String>,
@@ -365,6 +365,17 @@ impl Description {
         }
         if let Some(sdu) = self.sdu {
             parts.push(format!("(SDU={})", sdu));
+        }
+        if let Some(duration) = self.transport_connect_timeout {
+            let seconds = duration.as_secs_f64();
+            let value = if seconds.fract() != 0.0 {
+                format!("{} ms", duration.as_millis())
+            } else if duration.as_secs().is_multiple_of(60) {
+                format!("{} min", duration.as_secs() / 60)
+            } else {
+                format!("{}", duration.as_secs())
+            };
+            parts.push(format!("(TRANSPORT_CONNECT_TIMEOUT={})", value));
         }
         let mut uses_tcps = false;
         for address_list in self.address_lists.iter() {
@@ -488,6 +499,9 @@ impl Description {
             "source_route" => {
                 self.source_route = Some(node.as_bool()?);
             }
+            "transport_connect_timeout" => {
+                self.transport_connect_timeout = Some(node.as_duration()?);
+            }
             "use_sni" => {
                 self.use_sni = Some(node.as_bool()?);
             }
@@ -570,7 +584,7 @@ impl Description {
             retry_count: None,
             retry_delay: None,
             sdu: None,
-            tcp_connect_timeout: None,
+            transport_connect_timeout: None,
             service_name: None,
             instance_name: None,
             server_type: None,

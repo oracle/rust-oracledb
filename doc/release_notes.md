@@ -2,6 +2,9 @@
 
 ## rust-oracledb 26.0.0-beta.5 (TBD)
 
+1.  Added support for specifying the transport connect timeout and ensure it is
+    actually used when establishing a connection to the database
+    ([issue 35](https://github.com/oracle/rust-oracledb/issues/35)).
 1.  Fixed bug causing bind variables to be detected within DDL statements
     ([issue 33](https://github.com/oracle/rust-oracledb/issues/33)).
 1.  Fixed bug that would cause the maximum SDU specified in all descriptions to

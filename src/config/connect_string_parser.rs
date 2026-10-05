@@ -28,6 +28,8 @@
 // Defines the structure used for parsing a connect string.
 //-----------------------------------------------------------------------------
 
+use std::time::Duration;
+
 use super::connect_options::Address;
 use super::connect_options::AddressList;
 use super::connect_options::Description;
@@ -422,6 +424,26 @@ impl Node {
             text_value.trim().to_lowercase().as_str(),
             "on" | "yes" | "true"
         ))
+    }
+
+    /// Returns the node as a Duration, or an error if the node refers to a
+    /// container or does not contain a valid Duration.
+    pub(crate) fn as_duration(&self) -> Result<Duration, Error> {
+        let text_value = self.as_simple_value("duration")?.to_lowercase();
+        let (seconds_text, multiplier) =
+            if let Some(s) = text_value.strip_suffix("sec") {
+                (s, 1.0)
+            } else if let Some(s) = text_value.strip_suffix("ms") {
+                (s, 0.001)
+            } else if let Some(s) = text_value.strip_suffix("min") {
+                (s, 60.0)
+            } else {
+                (text_value.as_str(), 1.0)
+            };
+        match seconds_text.trim_end().parse::<f64>() {
+            Ok(value) => Ok(Duration::from_secs_f64(value * multiplier)),
+            Err(_) => Err(self.invalid_value("duration")),
+        }
     }
 
     /// Returns the node as a pool purity value, or an error if the node refers

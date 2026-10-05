@@ -26,6 +26,8 @@
 // test_3300_config()
 //-----------------------------------------------------------------------------
 
+use std::time::Duration;
+
 use rstest::*;
 
 #[rstest]
@@ -37,6 +39,7 @@ fn test_3300() -> Result<(), oracledb::Error> {
     assert!(default_config.get_connect_descriptor().is_empty());
     assert!(default_config.user().is_none());
     assert!(default_config.wallet_location().is_none());
+    assert!(default_config.transport_connect_timeout().is_none());
     let config = default_config
         .set_auth_mode(oracledb::AUTH_MODE_SYSDBA)
         .set_cclass("cclass_3300")
@@ -47,7 +50,8 @@ fn test_3300() -> Result<(), oracledb::Error> {
         .set_program("program_3300")?
         .set_stmtcachesize(50)
         .set_terminal("terminal_3300")
-        .set_wallet_location("wallet_location_3300");
+        .set_wallet_location("wallet_location_3300")
+        .set_transport_connect_timeout(Some(Duration::from_secs(5)));
     assert_eq!(config.auth_mode(), oracledb::AUTH_MODE_SYSDBA);
     assert_eq!(config.cclass(), Some("cclass_3300"));
     assert_eq!(config.driver_name(), "driver_name_3300");
@@ -58,6 +62,10 @@ fn test_3300() -> Result<(), oracledb::Error> {
     assert_eq!(config.terminal(), "terminal_3300");
     assert_eq!(config.user(), Some("user_3300"));
     assert_eq!(config.wallet_location(), Some("wallet_location_3300"));
+    assert_eq!(
+        config.transport_connect_timeout(),
+        Some(Duration::from_secs(5))
+    );
     Ok(())
 }
 
@@ -163,6 +171,35 @@ fn test_3301(
         (ADDRESS=(PROTOCOL=tcps)(HOST=host_3302)(PORT=3302))\
         (CONNECT_DATA=(SERVICE_NAME=service_name_3302))\
         (SECURITY=(SSL_SERVER_DN_MATCH=ON)))"
+)]
+// full descriptor with transport connect timeouts
+#[case(
+    "(DESCRIPTION_LIST=\
+        (DESCRIPTION=(TRANSPORT_CONNECT_TIMEOUT=10)\
+        (ADDRESS=(PROTOCOL=TCP)(HOST=host_3302)(PORT=3302))\
+        (CONNECT_DATA=(SERVICE_NAME=service_name_3302)))\
+        (DESCRIPTION=(TRANSPORT_CONNECT_TIMEOUT=5 sec)\
+        (ADDRESS=(PROTOCOL=TCP)(HOST=host_3302)(PORT=3302))\
+        (CONNECT_DATA=(SERVICE_NAME=service_name_3302)))\
+        (DESCRIPTION=(TRANSPORT_CONNECT_TIMEOUT=5250 ms)\
+        (ADDRESS=(PROTOCOL=TCP)(HOST=host_3302)(PORT=3302))\
+        (CONNECT_DATA=(SERVICE_NAME=service_name_3302)))\
+        (DESCRIPTION=(TRANSPORT_CONNECT_TIMEOUT=1.5 min)\
+        (ADDRESS=(PROTOCOL=TCP)(HOST=host_3302)(PORT=3302))\
+        (CONNECT_DATA=(SERVICE_NAME=service_name_3302))))",
+    "(DESCRIPTION_LIST=\
+        (DESCRIPTION=(TRANSPORT_CONNECT_TIMEOUT=10)\
+        (ADDRESS=(PROTOCOL=tcp)(HOST=host_3302)(PORT=3302))\
+        (CONNECT_DATA=(SERVICE_NAME=service_name_3302)))\
+        (DESCRIPTION=(TRANSPORT_CONNECT_TIMEOUT=5)\
+        (ADDRESS=(PROTOCOL=tcp)(HOST=host_3302)(PORT=3302))\
+        (CONNECT_DATA=(SERVICE_NAME=service_name_3302)))\
+        (DESCRIPTION=(TRANSPORT_CONNECT_TIMEOUT=5250 ms)\
+        (ADDRESS=(PROTOCOL=tcp)(HOST=host_3302)(PORT=3302))\
+        (CONNECT_DATA=(SERVICE_NAME=service_name_3302)))\
+        (DESCRIPTION=(TRANSPORT_CONNECT_TIMEOUT=90)\
+        (ADDRESS=(PROTOCOL=tcp)(HOST=host_3302)(PORT=3302))\
+        (CONNECT_DATA=(SERVICE_NAME=service_name_3302))))"
 )]
 fn test_3302(
     #[case] in_value: &str,

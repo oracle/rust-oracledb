@@ -29,6 +29,8 @@
 // establishing a connection to the database.
 //-----------------------------------------------------------------------------
 
+use std::time::Duration;
+
 use super::connect_options::DescriptionList;
 use super::connect_options::DescriptionOption;
 use super::connect_string_parser;
@@ -56,6 +58,7 @@ pub struct Config {
     cclass: Option<String>,
     wallet_location: Option<String>,
     wallet_password: Option<SecretValue>,
+    transport_connect_timeout: Option<Duration>,
 }
 
 impl Config {
@@ -253,6 +256,17 @@ impl Config {
         self
     }
 
+    /// Sets the default transport connect timeout to use when establishing a
+    /// connection to the database. If a value is specified in the description
+    /// portion of a connect string, that value takes precedence.
+    pub fn set_transport_connect_timeout(
+        mut self,
+        value: Option<Duration>,
+    ) -> Self {
+        self.transport_connect_timeout = value;
+        self
+    }
+
     /// Sets the user to use when connecting to the database.
     pub fn set_user(mut self, value: &str) -> Self {
         if value.is_empty() {
@@ -291,6 +305,14 @@ impl Config {
         self.terminal.as_deref().unwrap_or("unknown")
     }
 
+    /// Returns the default transport connect timeout that will be used when
+    /// establishing a connection to the database. If a value is specified in
+    /// the description portion of a connect string, that value takes
+    /// precedence.
+    pub fn transport_connect_timeout(&self) -> Option<Duration> {
+        self.transport_connect_timeout
+    }
+
     /// Returns the user associated with the configuration.
     pub fn user(&self) -> Option<&str> {
         self.user.as_deref()
@@ -320,6 +342,7 @@ impl Default for Config {
             cclass: None,
             wallet_location: None,
             wallet_password: None,
+            transport_connect_timeout: None,
         }
     }
 }
