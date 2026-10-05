@@ -752,15 +752,6 @@ impl DescriptionList {
         Ok(description_list)
     }
 
-    /// Returns the maximum SDU defined for all descriptions.
-    pub(crate) fn sdu(&self) -> usize {
-        let mut sdu: usize = 0;
-        for description in &self.descriptions {
-            sdu = sdu.max(description.sdu() as usize);
-        }
-        sdu
-    }
-
     /// Validates the description list.
     pub(crate) fn validate(&self, connect_string: &str) -> Result<(), Error> {
         if self.descriptions.is_empty() {

@@ -619,6 +619,8 @@ impl Client {
     ) -> Result<(), Error> {
         let stream = TcpStream::connect(sock_addr)?;
         self.transport.connect(stream, address, &self.config)?;
+        self.transport
+            .set_max_packet_size(description.sdu() as usize);
         let mut address = address.clone();
         let mut connect_data = connect_data.to_string();
         let mut connect_message =
@@ -820,9 +822,8 @@ impl Client {
     /// Creates a new client and returns it.
     pub(crate) fn new(config: Config, pool_id: String) -> Self {
         let cache_size = config.stmtcachesize();
-        let sdu = config.get_sdu();
         Self {
-            transport: Transport::new(sdu),
+            transport: Transport::new(),
             caps: Capabilities::new(),
             config,
             combo_key: None,

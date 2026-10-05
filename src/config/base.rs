@@ -75,15 +75,6 @@ impl Config {
         self.password.as_ref().unwrap().get_value()
     }
 
-    /// Returns the SDU to use by examining the configuration.
-    pub(crate) fn get_sdu(&self) -> usize {
-        if let Some(description_list) = &self.description_list {
-            description_list.sdu()
-        } else {
-            0
-        }
-    }
-
     /// Returns the wallet password associated with the configuration.
     pub(crate) fn get_wallet_password_bytes(&self) -> Vec<u8> {
         self.wallet_password

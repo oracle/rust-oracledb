@@ -372,13 +372,13 @@ impl Transport {
     }
 
     /// Creates a new empty transport.
-    pub(crate) fn new(max_packet_size: usize) -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             low_level_transport: None,
             socket_num: String::new(),
-            max_packet_size,
-            read_buf: vec![0; max_packet_size],
-            write_buf: Vec::<u8>::with_capacity(max_packet_size),
+            max_packet_size: 0,
+            read_buf: Vec::new(),
+            write_buf: Vec::new(),
             residual_bytes: 0,
             last_packet_bytes: 0,
             full_packet_size: false,
@@ -454,6 +454,15 @@ impl Transport {
             .as_mut()
             .ok_or_else(Error::not_connected)
             .and_then(|t| t.flush())
+    }
+
+    /// Sets the maximum packet size for the transport since it may vary for
+    /// each description that is specified in the connect string.
+    pub(crate) fn set_max_packet_size(&mut self, size: usize) {
+        self.read_buf.resize(size, 0);
+        self.write_buf.clear();
+        self.write_buf.reserve_exact(size);
+        self.max_packet_size = size;
     }
 
     /// Sets the read timeout for the transport.

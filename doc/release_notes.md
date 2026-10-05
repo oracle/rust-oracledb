@@ -4,6 +4,8 @@
 
 1.  Fixed bug causing bind variables to be detected within DDL statements
     ([issue 33](https://github.com/oracle/rust-oracledb/issues/33)).
+1.  Fixed bug that would cause the maximum SDU specified in all descriptions to
+    be used instead of the one specified for each individual description.
 
 
 ## rust-oracledb 26.0.0-beta.4 (September 23, 2026)
