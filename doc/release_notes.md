@@ -7,6 +7,8 @@
     ([issue 35](https://github.com/oracle/rust-oracledb/issues/35)).
 1.  Fixed bug causing bind variables to be detected within DDL statements
     ([issue 33](https://github.com/oracle/rust-oracledb/issues/33)).
+1.  Fixed issue with encoding integers with trailing zeros
+    ([issue 37](https://github.com/oracle/rust-oracledb/issues/37)).
 1.  Fixed bug that would cause the maximum SDU specified in all descriptions to
     be used instead of the one specified for each individual description.
 

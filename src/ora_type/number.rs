@@ -278,8 +278,8 @@ impl FromStr for OracleNumber {
             if num_digits == 0 {
                 decimal_point_index = 0;
             } else if !decimal_point_detected {
-                num_digits += num_zeros;
-                decimal_point_index = num_digits.try_into().unwrap();
+                decimal_point_index =
+                    (num_digits + num_zeros).try_into().unwrap();
             }
             Ok(Self {
                 is_positive,

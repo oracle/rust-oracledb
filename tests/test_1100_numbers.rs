@@ -85,6 +85,10 @@ fn test_1101() {
 #[case("0.0005", "0.0005")]
 #[case("0.0123", "0.0123")]
 #[case("0.0001", "0.0001")]
+#[case("500", "500")]
+#[case("-600", "-600")]
+#[case("5000", "5000")]
+#[case("-30", "-30")]
 fn test_1102(
     conn: oracledb::Connection,
     #[case] in_val: &str,
@@ -92,9 +96,15 @@ fn test_1102(
 ) -> Result<(), oracledb::Error> {
     let num: oracledb::OracleNumber = in_val.parse().unwrap();
     assert_eq!(num.to_string(), out_val);
-    let row = conn.query_row("select :1 from dual", &[&num])?;
+    let row = conn.query_row(
+        "select :1, dump(:2), dump(to_number(:3)) from dual",
+        &[&num, &num, &in_val],
+    )?;
     let fetched_num: oracledb::OracleNumber = row.get(0)?;
     assert_eq!(fetched_num.to_string(), out_val);
+    let dump_value: String = row.get(1)?;
+    let native_dump_value: String = row.get(2)?;
+    assert_eq!(dump_value, native_dump_value);
     Ok(())
 }
 
