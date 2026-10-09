@@ -70,16 +70,17 @@ impl ErrorInfo {
             let _logical_rowid = resp.read_bytes_with_length()?;
         }
         if resp.read_ub2()? > 0 {
-            // batch errors
-            todo!();
+            return Err(Error::not_implemented("batch errors".to_string()));
         }
         if resp.read_ub4()? > 0 {
-            // batch error offsets
-            todo!();
+            return Err(Error::not_implemented(
+                "batch error offsets".to_string(),
+            ));
         }
         if resp.read_ub2()? > 0 {
-            // batch error messages
-            todo!();
+            return Err(Error::not_implemented(
+                "batch error messages".to_string(),
+            ));
         }
         let error_num = resp.read_ub4()?;
         let rowcount = resp.read_ub8()?;
@@ -163,5 +164,108 @@ impl DbError {
     /// Returns the offset associated with the database error.
     pub fn offset(&self) -> usize {
         self.offset
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::client::Client;
+    use crate::config::Config;
+    use crate::error::Error;
+    use crate::error::ErrorKind;
+    use crate::read_buffer::ReadBuffer;
+    use crate::response::Response;
+
+    /// Appends a length-encoded unsigned integer to the buffer.
+    fn push_ub(buf: &mut Vec<u8>, value: u64) {
+        let bytes = value.to_be_bytes();
+        let mut first = bytes.iter().position(|&b| b != 0).unwrap_or(7);
+        if first > 0 && bytes[first] & 0x80 != 0 {
+            first -= 1;
+        }
+        let len = 8 - first;
+        buf.push(len as u8);
+        buf.extend_from_slice(&bytes[first..]);
+    }
+
+    /// Builds a buffer containing an error info payload up to and including
+    /// the three batch error counts.
+    fn make_buf(
+        batch_errors: u64,
+        batch_error_offsets: u64,
+        batch_error_messages: u64,
+    ) -> Vec<u8> {
+        let mut buf = Vec::new();
+        push_ub(&mut buf, 0); // call status
+        push_ub(&mut buf, 0); // sequence number
+        push_ub(&mut buf, 0); // current row num
+        push_ub(&mut buf, 0); // error num (short)
+        push_ub(&mut buf, 0); // array elem error 1
+        push_ub(&mut buf, 0); // array elem error 2
+        push_ub(&mut buf, 0); // cursor id
+        push_ub(&mut buf, 0); // error position
+        buf.extend_from_slice(&[0, 0, 0, 0, 0, 0]); // remaining u8 fields
+        push_ub(&mut buf, 0); // rowid rba
+        push_ub(&mut buf, 0); // rowid partition id
+        buf.push(0); // rowid unused byte
+        push_ub(&mut buf, 0); // rowid block num
+        push_ub(&mut buf, 0); // rowid slot num
+        push_ub(&mut buf, 0); // os error
+        buf.extend_from_slice(&[0, 0]); // statement num, call num
+        push_ub(&mut buf, 0); // padding
+        push_ub(&mut buf, 0); // success iterations
+        push_ub(&mut buf, 0); // logical rowid count
+        push_ub(&mut buf, batch_errors);
+        push_ub(&mut buf, batch_error_offsets);
+        push_ub(&mut buf, batch_error_messages);
+        buf
+    }
+
+    /// Deserializes the error info from the given buffer and returns the
+    /// result.
+    fn deserialize(buf: &[u8]) -> Result<super::ErrorInfo, Error> {
+        let mut resp = Response::new();
+        resp.buf = ReadBuffer::from_bytes(buf);
+        let client = Client::new(Config::default(), String::new());
+        super::ErrorInfo::deserialize(&mut resp, &client)
+    }
+
+    #[test]
+    fn batch_errors_return_an_error() {
+        let error = match deserialize(&make_buf(1, 0, 0)) {
+            Err(error) => error,
+            Ok(_) => panic!("expected an error"),
+        };
+        assert!(matches!(
+            error.kind(),
+            ErrorKind::NotImplemented(feature)
+                if feature.as_str() == "batch errors"
+        ));
+    }
+
+    #[test]
+    fn batch_error_offsets_return_an_error() {
+        let error = match deserialize(&make_buf(0, 1, 0)) {
+            Err(error) => error,
+            Ok(_) => panic!("expected an error"),
+        };
+        assert!(matches!(
+            error.kind(),
+            ErrorKind::NotImplemented(feature)
+                if feature.as_str() == "batch error offsets"
+        ));
+    }
+
+    #[test]
+    fn batch_error_messages_return_an_error() {
+        let error = match deserialize(&make_buf(0, 0, 1)) {
+            Err(error) => error,
+            Ok(_) => panic!("expected an error"),
+        };
+        assert!(matches!(
+            error.kind(),
+            ErrorKind::NotImplemented(feature)
+                if feature.as_str() == "batch error messages"
+        ));
     }
 }
