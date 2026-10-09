@@ -89,6 +89,9 @@ fn test_1101() {
 #[case("-600", "-600")]
 #[case("5000", "5000")]
 #[case("-30", "-30")]
+#[case("-500.00", "-500")]
+#[case("800.00", "800")]
+#[case("000.00", "0")]
 fn test_1102(
     conn: oracledb::Connection,
     #[case] in_val: &str,

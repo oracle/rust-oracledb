@@ -245,10 +245,11 @@ impl FromStr for OracleNumber {
             if ch == '.' && !decimal_point_detected {
                 decimal_point_detected = true;
                 if num_digits > 0 {
-                    num_digits += num_zeros;
-                    decimal_point_index = num_digits.try_into().unwrap();
+                    decimal_point_index =
+                        (num_digits + num_zeros).try_into().unwrap();
+                } else {
+                    num_zeros = 0;
                 }
-                num_zeros = 0;
             } else if let Some(digit) = ch.to_digit(10) {
                 if digit == 0 {
                     num_zeros += 1;
