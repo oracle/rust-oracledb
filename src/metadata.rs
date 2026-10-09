@@ -40,6 +40,27 @@ use crate::write_buffer::WriteBuffer;
 const VECTOR_META_FLAG_FLEXIBLE_DIM: u8 = 0x01;
 const VECTOR_META_FLAG_SPARSE_VECTOR: u8 = 0x02;
 
+/// Reads the annotations of a column from the response. An annotation
+/// without a value is returned with an empty value.
+fn read_annotations(
+    resp: &mut Response,
+) -> Result<Vec<(String, String)>, Error> {
+    let mut annotations = Vec::new();
+    if resp.read_ub4()? > 0 {
+        resp.read_u8()?;
+        let count = resp.read_ub4()?;
+        resp.read_u8()?;
+        for _ in 0..count {
+            let name = resp.read_utf8_with_double_length()?.to_string();
+            let value = resp.read_utf8_with_double_length()?.to_string();
+            annotations.push((name, value));
+            resp.read_ub4()?; // flags
+        }
+        resp.read_ub4()?; // flags
+    }
+    Ok(annotations)
+}
+
 /// Represents the metadata of columns fetched from the database.
 #[derive(Clone, Debug)]
 pub struct Metadata {
@@ -51,6 +72,7 @@ pub struct Metadata {
     scale: i8,
     max_size: u32,
     is_array: bool,
+    annotations: Vec<(String, String)>,
     vector_storage_format: Option<VectorStorageFormat>,
     vector_dimensions: u32,
     vector_flags: u8,
@@ -78,6 +100,7 @@ impl Metadata {
             scale: 0,
             max_size: actual_max_size,
             is_array,
+            annotations: Vec::new(),
             vector_storage_format: None,
             vector_dimensions: 0,
             vector_flags: 0,
@@ -112,6 +135,7 @@ impl Metadata {
             null_by_describe: false,
             max_size: 0,
             is_array: false,
+            annotations: Vec::new(),
             vector_storage_format: None,
             vector_dimensions: 0,
             vector_flags: 0,
@@ -152,10 +176,7 @@ impl Metadata {
         if client.supports_ttc_field_version(
             constants::TTC_FIELD_VERSION_23_1_EXT_3,
         ) {
-            let num_annotations = resp.read_ub4()?;
-            if num_annotations > 0 {
-                todo!();
-            }
+            metadata.annotations = read_annotations(resp)?;
         }
         if client.supports_ttc_field_version(constants::TTC_FIELD_VERSION_23_4)
         {
@@ -259,6 +280,13 @@ impl Metadata {
         {
             buf.write_ub4(0); // oaccolid
         }
+    }
+
+    /// Returns the annotations of the column as name and value pairs, in the
+    /// order the database sent them. The slice is empty if the column has no
+    /// annotations.
+    pub fn annotations(&self) -> &[(String, String)] {
+        &self.annotations
     }
 
     /// Returns the buffer size.
@@ -384,5 +412,73 @@ impl Metadata {
     /// refer to a vector or the vector data is flexible, None is returned.
     pub fn vector_storage_format(&self) -> Option<VectorStorageFormat> {
         self.vector_storage_format.clone()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::read_annotations;
+    use crate::constants;
+    use crate::packet::Packet;
+    use crate::response::Response;
+
+    fn response(buf: Vec<u8>) -> Response {
+        let mut resp = Response::new();
+        resp.add_packets(vec![Packet {
+            packet_type: constants::PACKET_TYPE_DATA,
+            packet_flags: 0,
+            data_flags: 0,
+            buf,
+        }]);
+        resp
+    }
+
+    /// Encodes a string as the database sends it: an unsigned integer length
+    /// followed by length-prefixed bytes.
+    fn string(text: &str) -> Vec<u8> {
+        let mut out = match text.len() {
+            0 => return vec![0],
+            n => vec![1, n as u8, n as u8],
+        };
+        out.extend_from_slice(text.as_bytes());
+        out
+    }
+
+    #[test]
+    fn annotations_are_read_in_server_order() {
+        let mut buf = vec![1, 2, 1, 1, 2, 1];
+        for (name, value) in [("Display", "x"), ("Hidden", "")] {
+            buf.extend(string(name));
+            buf.extend(string(value));
+            buf.push(0); // flags
+        }
+        buf.push(0); // flags
+        buf.push(0xaa); // the next field must be left unread
+        let mut resp = response(buf);
+        assert_eq!(
+            read_annotations(&mut resp).unwrap(),
+            [("Display".into(), "x".into()), ("Hidden".into(), "".into())]
+        );
+        assert_eq!(resp.read_u8().unwrap(), 0xaa);
+    }
+
+    #[test]
+    fn a_column_without_annotations_reads_one_integer() {
+        let mut resp = response(vec![0, 0xaa]);
+        assert!(read_annotations(&mut resp).unwrap().is_empty());
+        assert_eq!(resp.read_u8().unwrap(), 0xaa);
+    }
+
+    #[test]
+    fn truncated_annotations_return_an_error() {
+        let mut buf = vec![1, 1, 1, 1, 1, 1];
+        buf.extend(string("Display"));
+        for len in 0..buf.len() {
+            let mut resp = response(buf[..len].to_vec());
+            assert!(
+                read_annotations(&mut resp).is_err(),
+                "no error for {len} bytes"
+            );
+        }
     }
 }

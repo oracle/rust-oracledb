@@ -297,3 +297,33 @@ fn test_2609() {
         assert!(db_type.is_string_type(), "{}", db_type.name());
     }
 }
+
+#[rstest]
+/// test annotations of table columns
+fn test_2610(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    if conn.version()?.0 < 23 {
+        return Ok(());
+    }
+    let _guard = common::create_table(
+        &conn,
+        "test_2610",
+        "annotated_col number annotations (Display 'x', Hidden), \
+         plain_col number",
+    )?;
+    conn.execute("insert into test_2610 values (1, 2)", &[])?;
+    let cursor =
+        conn.query("select annotated_col, plain_col from test_2610", &[])?;
+
+    let columns = cursor.columns();
+    assert_eq!(
+        columns[0].annotations(),
+        [
+            ("DISPLAY".to_string(), "x".to_string()),
+            ("HIDDEN".to_string(), String::new())
+        ]
+    );
+    assert!(columns[1].annotations().is_empty());
+    let rows = cursor.collect::<Result<Vec<_>, _>>()?;
+    assert_eq!(rows.len(), 1);
+    Ok(())
+}

@@ -11,6 +11,8 @@
     ([issue 37](https://github.com/oracle/rust-oracledb/issues/37)).
 1.  Fixed bug that would cause the maximum SDU specified in all descriptions to
     be used instead of the one specified for each individual description.
+1.  Added support for reading the annotations of a column and the method
+    [Metadata::annotations()](crate::Metadata::annotations()).
 
 
 ## rust-oracledb 26.0.0-beta.4 (September 23, 2026)
