@@ -65,6 +65,7 @@ pub enum ErrorKind {
     InvalidRedirect(String),
     InvalidServiceName(String, String, String, u16),
     InvalidSid(String, String, String, u16),
+    InvalidTrustAnchors(String),
     ListenerRefusedConnection(String, String, u16, usize),
     LockPoisoned,
     MissingBindValue(String),
@@ -290,6 +291,9 @@ impl fmt::Display for Error {
                  host \"{host}\" port {port}. (Similar to ORA-12505) \
                  (CONNECTION_ID={connection_id})"
             )?,
+            ErrorKind::InvalidTrustAnchors(m) => {
+                write!(fmt, "invalid trust anchors: {m}")?
+            }
             ErrorKind::ListenerRefusedConnection(
                 connection_id,
                 host,
@@ -605,6 +609,10 @@ impl Error {
         port: u16,
     ) -> Error {
         Error::new(ErrorKind::InvalidSid(connection_id, sid, host, port), None)
+    }
+
+    pub(crate) fn invalid_trust_anchors(reason: String) -> Error {
+        Error::new(ErrorKind::InvalidTrustAnchors(reason), None)
     }
 
     /// Returns a boolean indicating if the error is a call timeout exceeded

@@ -2,6 +2,13 @@
 
 ## rust-oracledb 26.0.0-beta.5 (TBD)
 
+1.  Added methods
+    [Config::set_trust_anchors_pem()](crate::Config::set_trust_anchors_pem) and
+    [Config::trust_anchors_count()](crate::Config::trust_anchors_count) (and the
+    same methods on [PoolConfig](crate::PoolConfig)) to replace the public
+    certificate roots used to verify the database server in TCPS connections
+    and the error
+    [ErrorKind::InvalidTrustAnchors](crate::ErrorKind::InvalidTrustAnchors).
 1.  Added support for specifying the transport connect timeout and ensure it is
     actually used when establishing a connection to the database
     ([issue 35](https://github.com/oracle/rust-oracledb/issues/35)).

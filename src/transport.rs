@@ -41,6 +41,7 @@ use rustls::ClientConnection as TlsClientConnection;
 use rustls::StreamOwned as TlsStream;
 use rustls::pki_types::CertificateDer;
 use rustls::pki_types::PrivateKeyDer;
+use rustls::pki_types::TrustAnchor;
 use rustls::pki_types::pem::PemObject;
 use rustls::sign::CertifiedKey;
 
@@ -88,7 +89,7 @@ impl LowLevelTransport {
         server_name: &str,
         config: &Config,
     ) -> Result<Self, Error> {
-        let mut resolver = CustomClientCertResolver::new();
+        let mut resolver = CustomClientCertResolver::new(config);
         if let Some(wallet_location) = config.wallet_location() {
             resolver.populate(
                 wallet_location,
@@ -489,13 +490,17 @@ impl Transport {
 }
 
 impl CustomClientCertResolver {
-    /// Creates a new empty structure and returns it.
-    fn new() -> Self {
+    /// Creates a new structure and returns it. The certificate roots are the
+    /// trust anchors in the configuration, if any, and otherwise the public
+    /// certificate roots.
+    fn new(config: &Config) -> Self {
+        let roots = match config.trust_anchors() {
+            Some(anchors) => anchors.to_vec(),
+            None => webpki_roots::TLS_SERVER_ROOTS.to_vec(),
+        };
         Self {
             key: None,
-            root_store: Some(rustls::RootCertStore {
-                roots: webpki_roots::TLS_SERVER_ROOTS.into(),
-            }),
+            root_store: Some(rustls::RootCertStore { roots }),
         }
     }
 
@@ -596,5 +601,52 @@ impl rustls::client::ResolvesClientCert for CustomClientCertResolver {
 
     fn has_certs(&self) -> bool {
         self.key.is_some()
+    }
+}
+
+/// Parses the PEM encoded certificates and returns the trust anchors they
+/// define. An error is returned if there are no certificates or if one of them
+/// cannot be used as a trust anchor.
+pub(crate) fn parse_trust_anchors(
+    pem: &str,
+) -> Result<Vec<TrustAnchor<'static>>, Error> {
+    let mut root_store = rustls::RootCertStore::empty();
+    for result in CertificateDer::pem_slice_iter(pem.as_bytes()) {
+        let cert =
+            result.map_err(|e| Error::invalid_trust_anchors(e.to_string()))?;
+        root_store
+            .add(cert)
+            .map_err(|e| Error::invalid_trust_anchors(e.to_string()))?;
+    }
+    if root_store.is_empty() {
+        return Err(Error::invalid_trust_anchors(
+            "no certificates found".to_string(),
+        ));
+    }
+    Ok(root_store.roots)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const CA_PEM: &str = include_str!("../tests/data/ca.pem");
+
+    #[test]
+    fn public_roots_are_used_without_trust_anchors() {
+        let resolver = CustomClientCertResolver::new(&Config::default());
+        let root_store = resolver.root_store.unwrap();
+        assert_eq!(
+            root_store.roots.len(),
+            webpki_roots::TLS_SERVER_ROOTS.len()
+        );
+    }
+
+    #[test]
+    fn trust_anchors_replace_the_public_roots() {
+        let config = Config::default().set_trust_anchors_pem(CA_PEM).unwrap();
+        let resolver = CustomClientCertResolver::new(&config);
+        let root_store = resolver.root_store.unwrap();
+        assert_eq!(root_store.roots.len(), 1);
     }
 }
