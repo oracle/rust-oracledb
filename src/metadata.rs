@@ -152,9 +152,19 @@ impl Metadata {
         if client.supports_ttc_field_version(
             constants::TTC_FIELD_VERSION_23_1_EXT_3,
         ) {
+            // Column annotations (23ai+). Read and discard — same wire
+            // layout as python-oracledb's _process_column_info().
             let num_annotations = resp.read_ub4()?;
             if num_annotations > 0 {
-                todo!();
+                resp.read_u8()?;
+                let num_annotations = resp.read_ub4()?;
+                resp.read_u8()?;
+                for _ in 0..num_annotations {
+                    let _key = resp.read_utf8_with_double_length()?;
+                    let _value = resp.read_utf8_with_double_length()?;
+                    resp.read_ub4()?; // flags
+                }
+                resp.read_ub4()?; // flags
             }
         }
         if client.supports_ttc_field_version(constants::TTC_FIELD_VERSION_23_4)
