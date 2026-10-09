@@ -11,6 +11,9 @@
     ([issue 37](https://github.com/oracle/rust-oracledb/issues/37)).
 1.  Fixed bug that would cause the maximum SDU specified in all descriptions to
     be used instead of the one specified for each individual description.
+1.  Return errors instead of panicking for unexpected listener packets during
+    connection: unknown packet types, non-numeric error codes in refuse packets,
+    and requests for native network encryption and data integrity.
 
 
 ## rust-oracledb 26.0.0-beta.4 (September 23, 2026)
