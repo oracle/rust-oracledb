@@ -30,6 +30,8 @@ use std::time::Duration;
 
 use rstest::*;
 
+const CA_PEM: &str = include_str!("data/ca.pem");
+
 #[rstest]
 /// Tests configuration setters and getters.
 fn test_3300() -> Result<(), oracledb::Error> {
@@ -40,6 +42,7 @@ fn test_3300() -> Result<(), oracledb::Error> {
     assert!(default_config.user().is_none());
     assert!(default_config.wallet_location().is_none());
     assert!(default_config.transport_connect_timeout().is_none());
+    assert_eq!(default_config.trust_anchors_count(), 0);
     let config = default_config
         .set_auth_mode(oracledb::AUTH_MODE_SYSDBA)
         .set_cclass("cclass_3300")
@@ -51,7 +54,8 @@ fn test_3300() -> Result<(), oracledb::Error> {
         .set_stmtcachesize(50)
         .set_terminal("terminal_3300")
         .set_wallet_location("wallet_location_3300")
-        .set_transport_connect_timeout(Some(Duration::from_secs(5)));
+        .set_transport_connect_timeout(Some(Duration::from_secs(5)))
+        .set_trust_anchors_pem(CA_PEM)?;
     assert_eq!(config.auth_mode(), oracledb::AUTH_MODE_SYSDBA);
     assert_eq!(config.cclass(), Some("cclass_3300"));
     assert_eq!(config.driver_name(), "driver_name_3300");
@@ -66,6 +70,7 @@ fn test_3300() -> Result<(), oracledb::Error> {
         config.transport_connect_timeout(),
         Some(Duration::from_secs(5))
     );
+    assert_eq!(config.trust_anchors_count(), 1);
     Ok(())
 }
 

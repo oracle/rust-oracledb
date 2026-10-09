@@ -38,6 +38,9 @@ use super::defaults;
 
 use crate::error::Error;
 use crate::secret_value::SecretValue;
+use crate::transport;
+
+use rustls::pki_types::TrustAnchor;
 
 /// Represents configuration used to establish a standalone connection to the
 /// database using [connect()](`crate::connect`).
@@ -59,6 +62,7 @@ pub struct Config {
     wallet_location: Option<String>,
     wallet_password: Option<SecretValue>,
     transport_connect_timeout: Option<Duration>,
+    trust_anchors: Option<Vec<TrustAnchor<'static>>>,
 }
 
 impl Config {
@@ -84,6 +88,12 @@ impl Config {
             .as_ref()
             .map(|value| value.get_value())
             .unwrap_or_default()
+    }
+
+    /// Returns the trust anchors that replace the public certificate roots, if
+    /// they were set.
+    pub(crate) fn trust_anchors(&self) -> Option<&[TrustAnchor<'static>]> {
+        self.trust_anchors.as_deref()
     }
 
     /// Validates the configuration.
@@ -267,6 +277,21 @@ impl Config {
         self
     }
 
+    /// Sets the certificates, in PEM format, that the certificate presented
+    /// by the database server is verified against when a TCPS connection is
+    /// established. They replace the public certificate roots, which are then
+    /// not trusted. A wallet without a private key still adds its
+    /// certificates to the ones set here. An error is returned if the value
+    /// contains no certificates or contains one that cannot be used as a
+    /// trust anchor.
+    pub fn set_trust_anchors_pem(
+        mut self,
+        value: &str,
+    ) -> Result<Self, Error> {
+        self.trust_anchors = Some(transport::parse_trust_anchors(value)?);
+        Ok(self)
+    }
+
     /// Sets the user to use when connecting to the database.
     pub fn set_user(mut self, value: &str) -> Self {
         if value.is_empty() {
@@ -313,6 +338,14 @@ impl Config {
         self.transport_connect_timeout
     }
 
+    /// Returns the number of certificates set with
+    /// [set_trust_anchors_pem()](`Config::set_trust_anchors_pem`). Zero
+    /// indicates that none were set and that the public certificate roots are
+    /// trusted.
+    pub fn trust_anchors_count(&self) -> usize {
+        self.trust_anchors.as_ref().map_or(0, Vec::len)
+    }
+
     /// Returns the user associated with the configuration.
     pub fn user(&self) -> Option<&str> {
         self.user.as_deref()
@@ -343,6 +376,7 @@ impl Default for Config {
             wallet_location: None,
             wallet_password: None,
             transport_connect_timeout: None,
+            trust_anchors: None,
         }
     }
 }

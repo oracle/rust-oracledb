@@ -282,6 +282,22 @@ impl PoolConfig {
         self
     }
 
+    /// Sets the certificates, in PEM format, that the certificate presented
+    /// by the database server is verified against when a TCPS connection is
+    /// established. They replace the public certificate roots, which are then
+    /// not trusted. A wallet without a private key still adds its
+    /// certificates to the ones set here. An error is returned if the value
+    /// contains no certificates or contains one that cannot be used as a
+    /// trust anchor.
+    pub fn set_trust_anchors_pem(
+        mut self,
+        value: &str,
+    ) -> Result<Self, Error> {
+        self.connection_config =
+            self.connection_config.set_trust_anchors_pem(value)?;
+        Ok(self)
+    }
+
     /// Sets the user to use when connecting to the database.
     pub fn set_user(mut self, value: &str) -> Self {
         self.connection_config = self.connection_config.set_user(value);
@@ -312,6 +328,14 @@ impl PoolConfig {
     /// "unknown".
     pub fn terminal(&self) -> &str {
         self.connection_config.terminal()
+    }
+
+    /// Returns the number of certificates set with
+    /// [set_trust_anchors_pem()](`PoolConfig::set_trust_anchors_pem`). Zero
+    /// indicates that none were set and that the public certificate roots are
+    /// trusted.
+    pub fn trust_anchors_count(&self) -> usize {
+        self.connection_config.trust_anchors_count()
     }
 
     /// Returns the user associated with the configuration.

@@ -847,6 +847,23 @@ Rust-oracledb supports TLS connections when using TCPS-style connection strings
 or descriptors. For encrypted traffic, use TCPS/TLS configuration where
 supported.
 
+By default, the certificate presented by the database server is verified
+against the public certificate roots. To trust only the certificates of your own
+certificate authority, pass them in PEM format to
+[Config::set_trust_anchors_pem()](crate::Config::set_trust_anchors_pem). The
+certificates replace the public certificate roots, which are then not trusted:
+
+```rust
+let ca_pem = std::fs::read_to_string("/opt/certs/ca.pem")?;
+let config = oracledb::Config::default()
+    .set_credentials("hr", "password")
+    .set_trust_anchors_pem(&ca_pem)?
+    .set_connect_string("tcps://dbhost.example.com:1522/service_name")?;
+```
+
+An error is returned if the PEM text contains no certificates. A wallet that
+contains no private key still adds its certificates to the ones that were set.
+
 See the [Oracle Database Security Guide][oracle-db-security-guide] for more
 configuration information.
 
