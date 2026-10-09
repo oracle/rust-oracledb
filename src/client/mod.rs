@@ -748,6 +748,9 @@ impl Client {
             final_resp.transfer_info(&mut initial_resp);
             Ok(final_resp)
         } else {
+            if statement.sql().is_empty() && !statement.has_cursor() {
+                return Err(Error::empty_statement());
+            }
             let mut message =
                 ExecuteMessage::new(statement, params, parse_only);
             let mut response = self.process_message(&mut message)?;
@@ -989,6 +992,41 @@ impl Client {
             self.override_ttc_field_version >= version
         } else {
             self.caps.supports_ttc_field_version(version)
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::BindParameters;
+    use super::CachedStatement;
+    use super::Client;
+    use super::ClientRef;
+    use super::Config;
+    use crate::error::ErrorKind;
+    use crate::statement::StatementOptions;
+
+    /// Tests that a statement with no SQL and no cursor returns
+    /// ErrorKind::EmptyStatement before an execute message is sent.
+    #[test]
+    fn test_empty_statement() {
+        let client_ref: ClientRef = ClientRef::new(
+            Client::new(Config::default(), String::from("")).into(),
+        );
+        let mut client = client_ref.lock().unwrap();
+        let mut statement =
+            CachedStatement::new("", &StatementOptions::new()).unwrap();
+        let result = client.execute(
+            &mut statement,
+            &client_ref,
+            BindParameters::default(),
+            false,
+        );
+        match result {
+            Err(err) => assert_eq!(err.kind(), &ErrorKind::EmptyStatement),
+            Ok(_) => {
+                panic!("empty statement must return ErrorKind::EmptyStatement")
+            }
         }
     }
 }
