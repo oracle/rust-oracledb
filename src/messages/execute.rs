@@ -360,7 +360,7 @@ impl Message for ExecuteMessage<'_, '_> {
             resp.advance(num_bytes.into())?; // registration
         }
         if self.array_dml_row_counts {
-            todo!();
+            return Err(Error::not_implemented("array DML row counts".to_string()));
         }
         Ok(())
     }
