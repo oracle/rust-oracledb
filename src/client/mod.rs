@@ -640,6 +640,11 @@ impl Client {
                     redirect_data.split_once('\u{0}')
                 {
                     address = parse_redirect_data(before)?;
+                    if self.config.uses_external_auth()
+                        && address.protocol() != "tcps"
+                    {
+                        return Err(Error::external_auth_requires_tcps());
+                    }
                     connect_data = after.to_string();
                     let new_stream =
                         TcpStream::connect((address.host(), address.port()))?;
@@ -960,5 +965,99 @@ impl Client {
         } else {
             self.caps.supports_ttc_field_version(version)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+    use std::net::TcpListener;
+    use std::sync::Arc;
+    use std::sync::mpsc;
+    use std::thread;
+
+    use rustls::pki_types::PrivateKeyDer;
+
+    use crate::ExternalAuth;
+
+    /// Returns a packet of the given type containing the given payload.
+    fn packet(packet_type: u8, payload: &[u8]) -> Vec<u8> {
+        let mut buf = ((payload.len() + 8) as u16).to_be_bytes().to_vec();
+        buf.extend([0, 0, packet_type, 0, 0, 0]);
+        buf.extend(payload);
+        buf
+    }
+
+    /// Verifies that when external authentication is used, a redirect to an
+    /// address that does not use the tcps protocol is refused before that
+    /// address is connected to.
+    #[test]
+    fn external_auth_redirect_requires_tcps() {
+        let target = TcpListener::bind("127.0.0.1:0").unwrap();
+        let target_port = target.local_addr().unwrap().port();
+        let (connected_tx, connected_rx) = mpsc::channel();
+        thread::spawn(move || {
+            if let Ok(_stream) = target.accept() {
+                let _ = connected_tx.send(());
+            }
+        });
+
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+        // self-signed certificate used by the listener, which the client
+        // trusts through the wallet
+        let rcgen::CertifiedKey { cert, signing_key } =
+            rcgen::generate_simple_self_signed(vec!["127.0.0.1".into()])
+                .unwrap();
+        let cert_der = cert.der().clone();
+        let key = PrivateKeyDer::Pkcs8(signing_key.serialize_der().into());
+        thread::spawn(move || {
+            let tls_config = rustls::ServerConfig::builder()
+                .with_no_client_auth()
+                .with_single_cert(vec![cert_der], key)
+                .unwrap();
+            let (stream, _) = listener.accept().unwrap();
+            let conn =
+                rustls::ServerConnection::new(Arc::new(tls_config)).unwrap();
+            let mut tls = rustls::StreamOwned::new(conn, stream);
+            let redirect_data = format!(
+                "(ADDRESS=(PROTOCOL=tcp)(HOST=127.0.0.1)(PORT={target_port}))\
+                 \0(DESCRIPTION=)"
+            );
+            let mut data = vec![0, 0]; // data flags
+            data.extend(redirect_data.as_bytes());
+            let mut response = packet(
+                constants::PACKET_TYPE_REDIRECT,
+                &(redirect_data.len() as u16).to_be_bytes(),
+            );
+            response.extend(packet(constants::PACKET_TYPE_DATA, &data));
+            tls.write_all(&response).unwrap();
+            tls.flush().unwrap();
+            let _ = std::io::copy(&mut tls, &mut std::io::sink());
+        });
+
+        let wallet_dir =
+            std::env::temp_dir().join(format!("oracledb-redirect-{port}"));
+        std::fs::create_dir_all(&wallet_dir).unwrap();
+        std::fs::write(wallet_dir.join("ewallet.pem"), cert.pem()).unwrap();
+        let config = Config::default()
+            .set_connect_string(&format!("tcps://127.0.0.1:{port}/svc"))
+            .unwrap()
+            .set_external_auth(ExternalAuth::AccessToken("token".into()))
+            .set_wallet_location(wallet_dir.to_str().unwrap());
+        let result = Client::new(config, String::new()).connect();
+        std::fs::remove_dir_all(&wallet_dir).unwrap();
+        let Err(err) = result else {
+            panic!("expected failure");
+        };
+        assert!(
+            connected_rx.try_recv().is_err(),
+            "redirect address was connected to"
+        );
+        assert!(
+            matches!(err.kind(), crate::ErrorKind::ExternalAuthRequiresTcps),
+            "{err}"
+        );
     }
 }

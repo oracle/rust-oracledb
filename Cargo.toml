@@ -54,6 +54,7 @@ webpki-roots = "1.0.8"
 whoami = "2.1.2"
 
 [dev-dependencies]
+rcgen = { version = "0.14.10", default-features = false, features = ["aws_lc_rs", "pem"] }
 rstest = "0.26.1"
 
 [lib]

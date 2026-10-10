@@ -61,13 +61,16 @@ impl FastAuthMessage {
         }
     }
 
-    /// Processes the second phase of authorization and performs post connect
+    /// Processes the second phase of authorization, unless the fast
+    /// authentication message already carried it, and performs post connect
     /// processing.
     pub(crate) fn process_auth_phase_two(
         &mut self,
         client: &mut Client,
     ) -> Result<DbInfo, Error> {
-        client.process_message(&mut self.auth_message)?;
+        if self.auth_message.resend_needed() {
+            client.process_message(&mut self.auth_message)?;
+        }
         client.post_connect(&mut self.auth_message)
     }
 }
