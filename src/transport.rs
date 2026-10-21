@@ -95,7 +95,7 @@ impl LowLevelTransport {
                 config.get_wallet_password_bytes(),
             )?;
         }
-        let tls_config = resolver.get_tls_config();
+        let tls_config = resolver.get_tls_config()?;
         let tls_server_name: rustls::pki_types::ServerName =
             server_name.to_string().try_into().unwrap();
         let conn = rustls::ClientConnection::new(
@@ -500,11 +500,12 @@ impl CustomClientCertResolver {
     }
 
     /// Returns the TLS configuration to use when connecting to the database.
-    fn get_tls_config(mut self) -> TlsClientConfig {
+    fn get_tls_config(mut self) -> Result<TlsClientConfig, Error> {
         let root_store = self.root_store.take().unwrap();
-        TlsClientConfig::builder()
+        Ok(TlsClientConfig::builder_with_provider(crypto_provider())
+            .with_safe_default_protocol_versions()?
             .with_root_certificates(root_store)
-            .with_client_cert_resolver(Arc::new(self))
+            .with_client_cert_resolver(Arc::new(self)))
     }
 
     /// Populates the certified key with the contents of the wallet defined in
@@ -569,9 +570,8 @@ impl CustomClientCertResolver {
         // if a private key was found, setup the certified key to pass to the
         // server
         if let Some(key) = private_key {
-            let builder = TlsClientConfig::builder();
-            let provider = builder.crypto_provider();
-            let signing_key = provider.key_provider.load_private_key(key)?;
+            let signing_key =
+                crypto_provider().key_provider.load_private_key(key)?;
             self.key = Some(Arc::new(CertifiedKey::new(certs, signing_key)));
         } else {
             let root_store: &mut rustls::RootCertStore =
@@ -597,4 +597,13 @@ impl rustls::client::ResolvesClientCert for CustomClientCertResolver {
     fn has_certs(&self) -> bool {
         self.key.is_some()
     }
+}
+
+/// Returns the cryptography provider for TLS connections. It is named
+/// explicitly because a program that enables more than one rustls provider
+/// cannot build a configuration from the crate features alone.
+fn crypto_provider() -> Arc<rustls::crypto::CryptoProvider> {
+    rustls::crypto::CryptoProvider::get_default()
+        .cloned()
+        .unwrap_or_else(|| Arc::new(rustls::crypto::aws_lc_rs::default_provider()))
 }
