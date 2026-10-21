@@ -98,6 +98,7 @@ pub enum ErrorKind {
     UnexpectedResult,
     UnknownServerSidePiggyback(u8),
     UnknownTtcMessageType(u8, ResponseLocation),
+    UnknownPacketType(u8),
     UnsupportedArrowType(String),
     UnsupportedConversion(String, String),
     UnsupportedDbType(&'static DbType),
@@ -404,6 +405,11 @@ impl fmt::Display for Error {
                 fmt,
                 "internal error: unknown TTC message type {} at {}",
                 ttc_message_type, location
+            )?,
+            ErrorKind::UnknownPacketType(packet_type) => write!(
+                fmt,
+                "internal error: unknown packet type {} in connect phase",
+                packet_type
             )?,
             ErrorKind::UnsupportedArrowType(arrow_type) => {
                 write!(fmt, "binding Arow type {}", arrow_type)?
@@ -776,6 +782,10 @@ impl Error {
 
     pub(crate) fn unknown_server_side_piggyback(opcode: u8) -> Error {
         Error::new(ErrorKind::UnknownServerSidePiggyback(opcode), None)
+    }
+
+    pub(crate) fn unknown_packet_type(packet_type: u8) -> Error {
+        Error::new(ErrorKind::UnknownPacketType(packet_type), None)
     }
 
     pub(crate) fn unknown_ttc_message_type(

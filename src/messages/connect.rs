@@ -97,7 +97,9 @@ impl ConnectMessage<'_> {
         resp.advance(12)?;
         let flags1: u8 = resp.read_u8()?;
         if flags1 & NSI_NA_REQUIRED != 0 {
-            todo!();
+            return Err(Error::not_implemented(
+                "native network encryption and data integrity".to_string(),
+            ));
         }
         resp.advance(9)?;
         self.sdu = resp.read_u32be()?;
@@ -124,7 +126,7 @@ impl ConnectMessage<'_> {
             {
                 let error_num_str =
                     &message[start_pos + 5..start_pos + end_pos];
-                error_num = error_num_str.parse::<usize>().unwrap();
+                error_num = error_num_str.parse::<usize>().unwrap_or(0);
             }
         }
         let connection_id = self.description.connection_id().to_string();
@@ -184,8 +186,8 @@ impl Message for ConnectMessage<'_> {
                         .to_string(),
                 );
             }
-            _ => {
-                todo!()
+            packet_type => {
+                return Err(Error::unknown_packet_type(packet_type));
             }
         }
         Ok(())
