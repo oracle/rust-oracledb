@@ -126,6 +126,7 @@ impl BindParameters<'_> {
                 for (column, bind_info) in
                     batch.columns().iter().zip(binds.iter_mut())
                 {
+                    arrow::validate_column(column)?;
                     let db_type = arrow::column_db_type(column)?;
                     let max_size = arrow::column_max_size(column);
                     bind_info.check_and_set_metadata(

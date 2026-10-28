@@ -29,6 +29,8 @@
     be used instead of the one specified for each individual description.
 1.  Fixed the error `NUMBER has scale 0 but requested scale is -38`
     when fetching zero into an Arrow Decimal128 array with a negative scale.
+1.  Fixed panics when binding out-of-range Arrow timestamps. Invalid values
+    now return the error `timestamp is outside Oracle range`.
 
 
 ## rust-oracledb 26.0.0-beta.4 (September 23, 2026)

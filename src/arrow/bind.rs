@@ -28,6 +28,7 @@
 // Defines support for binding Arrow record batches to SQL statements.
 //-----------------------------------------------------------------------------
 
+use arrow_array::Array;
 use arrow_array::cast::AsArray;
 use arrow_array::types::{
     Date32Type, Date64Type, Decimal128Type, Float16Type, Float32Type,
@@ -38,6 +39,7 @@ use arrow_array::types::{
 };
 use arrow_schema::DataType;
 use arrow_schema::TimeUnit;
+use chrono::Datelike;
 
 use crate::db_type::DbType;
 use crate::db_value::ToDbValue;
@@ -106,6 +108,74 @@ pub(crate) fn column_max_size(
         }
         _ => 0,
     }
+}
+
+/// Validates values in an Arrow column before they are bound to Oracle.
+/// Timestamp conversion must be checked here because writing a bind value to
+/// the buffer is infallible.
+pub(crate) fn validate_column(
+    column: &std::sync::Arc<dyn arrow_array::Array>,
+) -> Result<(), Error> {
+    let invalid_timestamp = match column.data_type() {
+        DataType::Timestamp(TimeUnit::Second, _) => {
+            let values = column.as_primitive::<TimestampSecondType>();
+            (0..values.len()).any(|row_index| {
+                !values.is_null(row_index)
+                    && is_timestamp_out_of_oracle_range(
+                        values.value_as_datetime(row_index),
+                    )
+            })
+        }
+        DataType::Timestamp(TimeUnit::Millisecond, _) => {
+            let values = column.as_primitive::<TimestampMillisecondType>();
+            (0..values.len()).any(|row_index| {
+                !values.is_null(row_index)
+                    && is_timestamp_out_of_oracle_range(
+                        values.value_as_datetime(row_index),
+                    )
+            })
+        }
+        DataType::Timestamp(TimeUnit::Microsecond, _) => {
+            let values = column.as_primitive::<TimestampMicrosecondType>();
+            (0..values.len()).any(|row_index| {
+                !values.is_null(row_index)
+                    && is_timestamp_out_of_oracle_range(
+                        values.value_as_datetime(row_index),
+                    )
+            })
+        }
+        DataType::Timestamp(TimeUnit::Nanosecond, _) => {
+            let values = column.as_primitive::<TimestampNanosecondType>();
+            (0..values.len()).any(|row_index| {
+                !values.is_null(row_index)
+                    && is_timestamp_out_of_oracle_range(
+                        values.value_as_datetime(row_index),
+                    )
+            })
+        }
+        _ => false,
+    };
+
+    if invalid_timestamp {
+        Err(Error::out_of_range("timestamp is outside Oracle range"))
+    } else {
+        Ok(())
+    }
+}
+
+/// Chrono uses ISO 8601 year numbering: year 0 is 1 BC, so Oracle's
+/// minimum year of 4712 BC corresponds to Chrono year -4711.
+/// This range check accepts Chrono year 0. Oracle has no year 0, so it
+/// must be converted to Oracle year -1 when binding; that conversion
+/// is currently missing.
+/// https://docs.rs/chrono/latest/chrono/struct.NaiveDate.html#calendar-date
+fn is_timestamp_out_of_oracle_range(
+    value: Option<chrono::NaiveDateTime>,
+) -> bool {
+    value.is_none_or(|value| {
+        let year = value.year();
+        year < -4711 || year > 9999
+    })
 }
 
 /// Utility function that writes the value found at the specified row index in

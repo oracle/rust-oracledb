@@ -37,7 +37,8 @@ use arrow_array::{
     Array, BinaryArray, BooleanArray, Date32Array, Decimal128Array,
     FixedSizeBinaryArray, Float16Array, Float32Array, Float64Array, Int8Array,
     Int16Array, Int32Array, Int64Array, NullArray, RecordBatch, StringArray,
-    TimestampMicrosecondArray, TimestampSecondArray, UInt8Array, UInt16Array,
+    TimestampMicrosecondArray, TimestampMillisecondArray,
+    TimestampNanosecondArray, TimestampSecondArray, UInt8Array, UInt16Array,
     UInt32Array, UInt64Array,
 };
 use arrow_schema::{DataType, Field, Schema, TimeUnit};
@@ -523,6 +524,45 @@ fn test_3110(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
             (None, None, None),
             (Some(-2.25), Some(last_bytes.to_vec()), None),
         ]
+    );
+    Ok(())
+}
+
+#[rstest]
+#[case::seconds_max(TimeUnit::Second, i64::MAX)]
+#[case::seconds_min(TimeUnit::Second, i64::MIN)]
+#[case::milliseconds_max(TimeUnit::Millisecond, i64::MAX)]
+#[case::milliseconds_min(TimeUnit::Millisecond, i64::MIN)]
+#[case::microseconds_max(TimeUnit::Microsecond, i64::MAX)]
+#[case::microseconds_min(TimeUnit::Microsecond, i64::MIN)]
+/// test out-of-range Arrow timestamp binds return an error instead of panicking
+fn test_3111(
+    conn: oracledb::Connection,
+    #[case] unit: TimeUnit,
+    #[case] value: i64,
+) -> Result<(), oracledb::Error> {
+    let values = vec![Some(value)];
+    let array: Arc<dyn Array> = match unit {
+        TimeUnit::Second => Arc::new(TimestampSecondArray::from(values)),
+        TimeUnit::Millisecond => {
+            Arc::new(TimestampMillisecondArray::from(values))
+        }
+        TimeUnit::Microsecond => {
+            Arc::new(TimestampMicrosecondArray::from(values))
+        }
+        TimeUnit::Nanosecond => {
+            Arc::new(TimestampNanosecondArray::from(values))
+        }
+    };
+    let batch = RecordBatch::try_from_iter([("VALUE", array)]).unwrap();
+    let error = conn
+        .query_arrow("select :1 from dual", batch)
+        .expect_err("out-of-range timestamps must be rejected");
+    assert_eq!(
+        error.kind(),
+        &oracledb::ErrorKind::OutOfRange(
+            "timestamp is outside Oracle range".into()
+        )
     );
     Ok(())
 }
