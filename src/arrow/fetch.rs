@@ -36,7 +36,8 @@ use arrow_array::builder::make_builder;
 use arrow_array::builder::{
     BinaryBuilder, BooleanBuilder, Decimal128Builder, Float32Builder,
     Float64Builder, Int8Builder, Int16Builder, Int32Builder, Int64Builder,
-    StringBuilder, TimestampMicrosecondBuilder, TimestampMillisecondBuilder,
+    LargeBinaryBuilder, LargeStringBuilder, StringBuilder,
+    TimestampMicrosecondBuilder, TimestampMillisecondBuilder,
     TimestampNanosecondBuilder, TimestampSecondBuilder, UInt8Builder,
     UInt16Builder, UInt32Builder, UInt64Builder,
 };
@@ -66,9 +67,16 @@ fn default_schema(columns: &[Metadata]) -> Result<Schema, Error> {
 
 /// Returns the default type to use for fetching data in the Arrow format.
 fn default_type(col: &Metadata) -> Result<DataType, Error> {
-    if col.db_type().is_string_type() {
+    let db_type = col.db_type();
+    if db_type == crate::DB_TYPE_LONG
+        || db_type == crate::DB_TYPE_LONG_NVARCHAR
+    {
+        Ok(DataType::LargeUtf8)
+    } else if db_type == crate::DB_TYPE_LONG_RAW {
+        Ok(DataType::LargeBinary)
+    } else if db_type.is_string_type() {
         Ok(DataType::Utf8)
-    } else if col.db_type().is_binary_type() {
+    } else if db_type.is_binary_type() {
         Ok(DataType::Binary)
     } else if col.db_type().is_date_type() {
         let unit = match col.scale() {
@@ -179,13 +187,16 @@ impl RecordBatchCreator {
         column_index: usize,
     ) -> Result<(), Error> {
         match field.data_type() {
-            DataType::Binary | DataType::LargeBinary => {
-                builder
-                    .as_any_mut()
-                    .downcast_mut::<BinaryBuilder>()
-                    .unwrap()
-                    .append_option(row.get::<Option<Vec<u8>>>(column_index)?);
-            }
+            DataType::Binary => builder
+                .as_any_mut()
+                .downcast_mut::<BinaryBuilder>()
+                .unwrap()
+                .append_option(row.get::<Option<Vec<u8>>>(column_index)?),
+            DataType::LargeBinary => builder
+                .as_any_mut()
+                .downcast_mut::<LargeBinaryBuilder>()
+                .unwrap()
+                .append_option(row.get::<Option<Vec<u8>>>(column_index)?),
             DataType::Boolean => {
                 builder
                     .as_any_mut()
@@ -302,13 +313,16 @@ impl RecordBatchCreator {
                     .unwrap()
                     .append_option(row.get::<Option<u64>>(column_index)?);
             }
-            DataType::Utf8 | DataType::LargeUtf8 => {
-                builder
-                    .as_any_mut()
-                    .downcast_mut::<StringBuilder>()
-                    .unwrap()
-                    .append_option(row.get::<Option<String>>(column_index)?);
-            }
+            DataType::Utf8 => builder
+                .as_any_mut()
+                .downcast_mut::<StringBuilder>()
+                .unwrap()
+                .append_option(row.get::<Option<String>>(column_index)?),
+            DataType::LargeUtf8 => builder
+                .as_any_mut()
+                .downcast_mut::<LargeStringBuilder>()
+                .unwrap()
+                .append_option(row.get::<Option<String>>(column_index)?),
             _ => {
                 return Err(Error::unsupported_arrow_type(
                     field.data_type().to_string(),

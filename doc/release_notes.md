@@ -9,6 +9,9 @@
     ([issue 35](https://github.com/oracle/rust-oracledb/issues/35)).
 1.  Added support for getting the domain and any annotations from columns that
     support them
+1.  Added support for fetching CLOB, NCLOB, and LONG columns as Arrow
+    `LargeUtf8` instead of `Utf8`, and BLOB and LONG RAW as `LargeBinary`
+    instead of `Binary`.
 1.  Added support for fetching Arrow timestamps in seconds, milliseconds,
     microseconds, and nanoseconds as determined by Oracle column precision.
     ([issue 48](https://github.com/oracle/rust-oracledb/issues/48)).

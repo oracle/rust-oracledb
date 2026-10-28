@@ -31,9 +31,10 @@
 mod common;
 
 use arrow_array::{
-    Array, BinaryArray, Decimal128Array, Float64Array, Int8Array, Int16Array,
-    Int32Array, Int64Array, StringArray, TimestampMicrosecondArray,
-    TimestampMillisecondArray, TimestampNanosecondArray, TimestampSecondArray,
+    Array, Decimal128Array, Float64Array, Int8Array, Int16Array, Int32Array,
+    Int64Array, LargeBinaryArray, LargeStringArray, StringArray,
+    TimestampMicrosecondArray, TimestampMillisecondArray,
+    TimestampNanosecondArray, TimestampSecondArray,
 };
 use arrow_schema::{DataType, TimeUnit};
 use rstest::*;
@@ -81,32 +82,36 @@ fn test_3200(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
 }
 
 #[rstest]
-/// test fetching Oracle LOB values as Arrow string and binary arrays
+/// test fetching CLOB, BLOB, and NCLOB values and nulls as large Arrow arrays
 fn test_3201(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     let _guard = common::create_table(
         &conn,
         "test_3201",
-        "id number(10), c_text clob, c_bytes blob",
+        "id number(10), c_text clob, c_bytes blob, c_ntext nclob",
     )?;
     let text = "arrow clob value".to_string();
     let bytes = b"arrow blob value".to_vec();
+    let nclob_text = "NCLOB Unicode: 日本語 🦀";
     conn.execute(
-        "insert into test_3201 values (:1, :2, :3)",
-        &[&1, &text, &bytes],
+        "insert into test_3201 values (:1, :2, :3, :4)",
+        &[&1, &text, &bytes, &nclob_text],
     )?;
+    conn.execute("insert into test_3201 (id) values (2)", &[])?;
 
     let batch = conn.query_arrow(
-        "select id, c_text, c_bytes from test_3201",
+        "select id, c_text, c_bytes, c_ntext from test_3201 order by id",
         oracledb::BindParameters::default(),
     )?;
 
-    assert_eq!(batch.schema().field(1).data_type(), &DataType::Utf8);
-    assert_eq!(batch.schema().field(2).data_type(), &DataType::Binary);
+    assert_eq!(batch.num_rows(), 2);
+    assert_eq!(batch.schema().field(1).data_type(), &DataType::LargeUtf8);
+    assert_eq!(batch.schema().field(2).data_type(), &DataType::LargeBinary);
+    assert_eq!(batch.schema().field(3).data_type(), &DataType::LargeUtf8);
     assert_eq!(
         batch
             .column(1)
             .as_any()
-            .downcast_ref::<StringArray>()
+            .downcast_ref::<LargeStringArray>()
             .unwrap()
             .value(0),
         text
@@ -115,11 +120,17 @@ fn test_3201(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
         batch
             .column(2)
             .as_any()
-            .downcast_ref::<BinaryArray>()
+            .downcast_ref::<LargeBinaryArray>()
             .unwrap()
             .value(0),
         bytes.as_slice()
     );
+    let nclob_values =
+        batch.column(3).as_any().downcast_ref::<LargeStringArray>().unwrap();
+    assert_eq!(nclob_values.value(0), nclob_text);
+    assert!(batch.column(1).is_null(1));
+    assert!(batch.column(2).is_null(1));
+    assert!(nclob_values.is_null(1));
     Ok(())
 }
 
@@ -241,6 +252,51 @@ fn test_3204(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
         oracledb::ErrorKind::UnsupportedDbType(_)
             | oracledb::ErrorKind::ArrowOperation
     ));
+    Ok(())
+}
+
+#[rstest]
+/// test fetching LONG and LONG RAW columns as LargeUtf8 and LargeBinary
+fn test_3205(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let _text_guard =
+        common::create_table(&conn, "test_3205_long", "id number, c long")?;
+    let _bytes_guard =
+        common::create_table(&conn, "test_3205_raw", "id number, c long raw")?;
+    let text = "arrow long value".to_string();
+    let bytes = b"arrow long raw value".to_vec();
+    conn.execute("insert into test_3205_long values (:1, :2)", &[&1, &text])?;
+    conn.execute("insert into test_3205_raw values (:1, :2)", &[&1, &bytes])?;
+    let text_batch = conn.query_arrow(
+        "select c from test_3205_long",
+        oracledb::BindParameters::default(),
+    )?;
+    assert_eq!(text_batch.schema().field(0).data_type(), &DataType::LargeUtf8);
+    assert_eq!(
+        text_batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<LargeStringArray>()
+            .unwrap()
+            .value(0),
+        text
+    );
+    let bytes_batch = conn.query_arrow(
+        "select c from test_3205_raw",
+        oracledb::BindParameters::default(),
+    )?;
+    assert_eq!(
+        bytes_batch.schema().field(0).data_type(),
+        &DataType::LargeBinary
+    );
+    assert_eq!(
+        bytes_batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<LargeBinaryArray>()
+            .unwrap()
+            .value(0),
+        bytes.as_slice()
+    );
     Ok(())
 }
 

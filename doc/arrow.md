@@ -145,7 +145,9 @@ second column displays the Arrow type.
 | oracledb Database Type | Arrow Type |
 | ---------------------- | ---------- |
 | `DB_TYPE_CHAR`, `DB_TYPE_VARCHAR`, `DB_TYPE_NCHAR`, and `DB_TYPE_NVARCHAR` | `Utf8` |
-| `DB_TYPE_RAW`, `DB_TYPE_LONG_RAW`, and `DB_TYPE_BLOB` | `Binary` |
+| `DB_TYPE_CLOB`, `DB_TYPE_NCLOB` and `DB_TYPE_LONG` | `LargeUtf8` |
+| `DB_TYPE_RAW` | `Binary` |
+| `DB_TYPE_BLOB` and `DB_TYPE_LONG_RAW` | `LargeBinary` |
 | `DB_TYPE_DATE`, `DB_TYPE_TIMESTAMP`, `DB_TYPE_TIMESTAMP_TZ`, and `DB_TYPE_TIMESTAMP_LTZ` | `Timestamp(unit, None)` |
 | `DB_TYPE_BINARY_FLOAT` | `Float32` |
 | `DB_TYPE_BINARY_DOUBLE` | `Float64` |
