@@ -30,6 +30,7 @@
 
 use std::sync::Arc;
 
+use crate::client::Client;
 use crate::client::ClientRef;
 use crate::column_index::ColumnIndex;
 use crate::db_value::{DbValue, FromDbValue, PendingDbValue};
@@ -41,9 +42,8 @@ pub struct DbRow {
 }
 
 impl DbRow {
-    /// Clones a column in the row. All values except Cursors and Lobs are
-    /// cloned. Cursors and Lobs become null in the cloned row because they may
-    /// not be cloned.
+    /// Clones a column in the row. Objects, collections, cursors and LOBs
+    /// become null in the cloned row because they may not be cloned.
     fn clone_value(value: &Option<DbValue>) -> Option<DbValue> {
         match value {
             Some(DbValue::Array(v)) => Some(DbValue::Array(v.clone())),
@@ -61,13 +61,6 @@ impl DbRow {
             Some(DbValue::Vector(v)) => Some(DbValue::Vector(v.clone())),
             _ => None,
         }
-    }
-
-    /// Returns the element at the given index, or an error.
-    fn get(&self, index: usize) -> Result<&Option<DbValue>, Error> {
-        self.column_values
-            .get(index)
-            .ok_or_else(|| Error::invalid_column_index(index))
     }
 
     /// Returns the element at the given index, or an error. The value is
@@ -90,10 +83,21 @@ impl DbRow {
     pub(crate) fn finalize_column(
         &mut self,
         index: usize,
+        client: &Client,
         client_ref: &ClientRef,
         value: PendingDbValue,
-    ) {
-        self.column_values[index] = Some(value.into_db_value(client_ref));
+        metadata: &Metadata,
+    ) -> Result<(), Error> {
+        self.column_values[index] =
+            Some(value.try_into_db_value(client, client_ref, metadata)?);
+        Ok(())
+    }
+
+    /// Returns the element at the given index, or an error.
+    pub(crate) fn get(&self, index: usize) -> Result<&Option<DbValue>, Error> {
+        self.column_values
+            .get(index)
+            .ok_or_else(|| Error::invalid_column_index(index))
     }
 
     /// Creates a new database value row from a set of column values

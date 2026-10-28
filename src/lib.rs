@@ -75,6 +75,8 @@ pub use crate::config::PoolConfig;
 pub use crate::connection::Connection;
 pub use crate::cursor::Cursor;
 pub use crate::db_type::DbType;
+pub use crate::dbobject::DbCollection;
+pub use crate::dbobject::DbObject;
 pub use crate::dbobject::DbObjectType;
 pub use crate::end_user_security_context::EndUserSecurityContext;
 pub use crate::end_user_security_context::EndUserSecurityContextBuilder;

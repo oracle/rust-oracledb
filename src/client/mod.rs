@@ -787,10 +787,7 @@ impl Client {
             let mut message =
                 ExecuteMessage::new(statement, params, parse_only);
             let mut response = self.process_message(&mut message)?;
-            response
-                .resolve_object_types(self, client_ref, Some(statement))
-                .inspect_err(|_| response.cleanup_pending_values(self))?;
-            response.finalize_rows(client_ref, statement.out_metadata());
+            response.complete_values(self, client_ref, statement)?;
             if statement.requires_define() {
                 statement.clear_requires_define();
             }
@@ -807,10 +804,7 @@ impl Client {
     ) -> Result<Response, Error> {
         let mut message = FetchMessage::new(statement, last_row);
         let mut response = self.process_message(&mut message)?;
-        response
-            .resolve_object_types(self, client_ref, None)
-            .inspect_err(|_| response.cleanup_pending_values(self))?;
-        response.finalize_rows(client_ref, statement.out_metadata());
+        response.complete_values(self, client_ref, statement)?;
         Ok(response)
     }
 
@@ -858,6 +852,11 @@ impl Client {
     /// Returns the database character set id used for NCHAR data.
     pub(crate) fn get_ncharset_id(&self) -> u16 {
         self.ncharset_id
+    }
+
+    /// Returns the database character set used by object images.
+    pub(crate) fn get_charset_id(&self) -> u16 {
+        self.charset_id
     }
 
     /// Returns the runtime capabilities.

@@ -330,6 +330,7 @@ impl Metadata {
                     | constants::ORA_TYPE_NUM_BLOB
                     | constants::ORA_TYPE_NUM_BFILE
                     | constants::ORA_TYPE_NUM_CURSOR
+                    | constants::ORA_TYPE_NUM_OBJECT
             )
     }
 

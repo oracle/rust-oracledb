@@ -181,6 +181,7 @@ struct DbObjectTypeLookup {
 struct DbObjectParsedTds {
     attrs: Vec<DbObjectParsedTdsAttr>,
     element: Option<DbObjectParsedTdsAttr>,
+    collection_type: Option<u8>,
 }
 
 /// Datatype details read from a TDS field description.
@@ -518,11 +519,15 @@ fn parse_tds(
     if is_collection {
         let element_pos = input.read_u32be()? as usize;
         let _max_num_elements = input.read_u32be()?;
-        let _collection_type = input.read_u8()?;
+        let collection_type = input.read_u8()?;
         input.set_pos(element_pos);
         let element = parse_tds_attr(&mut input)?
             .ok_or_else(Error::unexpected_result)?;
-        Ok(DbObjectParsedTds { attrs: Vec::new(), element: Some(element) })
+        Ok(DbObjectParsedTds {
+            attrs: Vec::new(),
+            element: Some(element),
+            collection_type: Some(collection_type),
+        })
     } else {
         input.set_pos(pos);
         let mut attrs = Vec::with_capacity(num_expected_attrs);
@@ -532,7 +537,7 @@ fn parse_tds(
                     .ok_or_else(Error::unexpected_result)?,
             );
         }
-        Ok(DbObjectParsedTds { attrs, element: None })
+        Ok(DbObjectParsedTds { attrs, element: None, collection_type: None })
     }
 }
 
@@ -722,16 +727,17 @@ impl DbObjectTypeCache {
         } else {
             Some(parse_tds(&lookup.tds, lookup.attrs.len())?)
         };
-        let mut attrs = Vec::with_capacity(lookup.attrs.len());
-        for (index, mut metadata) in lookup.attrs.into_iter().enumerate() {
+        let mut attrs = lookup.attrs;
+        for (index, metadata) in attrs.iter_mut().enumerate() {
             if let Some(parsed) = &parsed {
-                merge_attribute_metadata(&mut metadata, &parsed.attrs[index]);
+                merge_attribute_metadata(metadata, &parsed.attrs[index]);
             }
             metadata.resolve_object_type(|identity| {
                 Ok(self.get_or_create_partial(identity))
             })?;
-            attrs.push(metadata);
         }
+        let collection_type =
+            parsed.as_ref().and_then(|parsed| parsed.collection_type);
         let element = if let Some(mut field) =
             parsed.and_then(|parsed| parsed.element)
         {
@@ -771,6 +777,7 @@ impl DbObjectTypeCache {
             element,
             oid: lookup.oid,
             version: lookup.version,
+            collection_type,
         })?;
         Ok(())
     }

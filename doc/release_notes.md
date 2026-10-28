@@ -3,7 +3,7 @@
 ## rust-oracledb 26.0.0-beta.5 (TBD)
 
 1.  Added support for fetching BFILE LOBs.
-1.  Added support for getting metadata about database object types.
+1.  Added support for fetching database objects and collections.
 1.  Added support for specifying the transport connect timeout and ensure it is
     actually used when establishing a connection to the database
     ([issue 35](https://github.com/oracle/rust-oracledb/issues/35)).

@@ -438,3 +438,328 @@ fn test_3706(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     assert!(metadata.object_type()?.is_none());
     Ok(())
 }
+
+#[rstest]
+/// Takes an object and reads its decoded nested values through shared
+/// references.
+fn test_3707(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let address_type_name = "TEST_3707_ADDRESS";
+    let _address_type_guard = common::create_type(
+        &conn,
+        address_type_name,
+        "object (street varchar2(100), zip number)",
+    )?;
+    let addresses_type_name = "TEST_3707_ADDRESSES";
+    let _addresses_type_guard = common::create_type(
+        &conn,
+        addresses_type_name,
+        &format!("table of {address_type_name}"),
+    )?;
+    let person_type_name = "TEST_3707_PERSON";
+    let _person_type_guard = common::create_type(
+        &conn,
+        person_type_name,
+        &format!(
+            r#"
+            object (
+                id number,
+                address {address_type_name},
+                addresses {addresses_type_name}
+            )
+            "#,
+        ),
+    )?;
+    let sql = format!(
+        r#"
+        select {person_type_name}(
+            7,
+            {address_type_name}('Main', 42),
+            {addresses_type_name}({address_type_name}('Other', 43), null)
+        ) from dual
+        "#,
+    );
+    let mut row = conn.query_row(&sql, &[])?;
+    let mut person: oracledb::DbObject = row.take(0)?;
+    assert_eq!(person.get::<i32>("ID")?, 7);
+    let address: oracledb::DbObject = person.take("ADDRESS")?;
+    assert_eq!(address.get::<&str>("STREET")?, "Main");
+    assert_eq!(address.get::<i32>("ZIP")?, 42);
+    let addresses: oracledb::DbCollection = person.take("ADDRESSES")?;
+    let mut elements: Vec<Option<oracledb::DbObject>> =
+        addresses.try_into()?;
+    //    let mut elements = addresses.to_vec::<Option<oracledb::DbObject>>()?;
+    assert_eq!(elements.len(), 2);
+    assert_eq!(elements[0].take().unwrap().get::<i32>("ZIP")?, 43);
+    assert!(elements[1].is_none());
+    assert_eq!(person.object_type(), &conn.get_type(person_type_name)?);
+    Ok(())
+}
+
+#[rstest]
+/// Distinguishes null objects, null attributes, and empty collections.
+fn test_3708(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let obj_type_name = "TEST_3708_OBJ";
+    let _obj_type_guard =
+        common::create_type(&conn, obj_type_name, "object (value number)")?;
+    let array_type_name = "TEST_3708_ARRAY";
+    let _array_type_guard =
+        common::create_type(&conn, array_type_name, "varray(10) of number")?;
+    let sql = format!(
+        r#"
+        select
+            cast(null as {obj_type_name}),
+            {obj_type_name}(null),
+            {array_type_name}(),
+            {array_type_name}(1, null, 3)
+        from dual
+        "#,
+    );
+    let mut row = conn.query_row(&sql, &[])?;
+    assert!(row.take::<Option<oracledb::DbObject>>(0)?.is_none());
+    assert!(
+        row.take::<oracledb::DbObject>(1)?.get::<Option<i32>>(0)?.is_none()
+    );
+    let empty_array: oracledb::DbCollection = row.take(2)?;
+    assert!(TryInto::<Vec<i32>>::try_into(empty_array)?.is_empty());
+    let array: oracledb::DbCollection = row.take(3)?;
+    let values: Vec<Option<i32>> = array.try_into()?;
+    assert_eq!(values, vec![Some(1), None, Some(3)]);
+    Ok(())
+}
+
+#[rstest]
+/// Fetches identical object values over several batches.
+fn test_3709(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let obj_type_name = "TEST_3709_OBJ";
+    let _obj_type_guard = common::create_type(
+        &conn,
+        obj_type_name,
+        "object (value number, text varchar2(20))",
+    )?;
+    let sql = format!(
+        "select {}(7, 'same') from dual connect by level <= 9",
+        obj_type_name
+    );
+    let cursor = conn
+        .statement(&sql)?
+        .prefetch_rows(0)
+        .fetch_array_size(2)
+        .build()?
+        .query(&[])?;
+    let mut count = 0;
+    for row in cursor {
+        let mut row = row?;
+        let value: oracledb::DbObject = row.take(0)?;
+        assert_eq!(value.get::<i32>(0)?, 7);
+        assert_eq!(value.get::<String>(1)?, "same");
+        count += 1;
+    }
+    assert_eq!(count, 9);
+    Ok(())
+}
+
+#[rstest]
+/// Reads LOB attributes after their object image has been decoded.
+fn test_3710(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    use std::io::Read;
+    let obj_type_name = "TEST_3710_OBJ";
+    let _obj_type_guard = common::create_type(
+        &conn,
+        obj_type_name,
+        "object (text clob, national_text nclob, data blob)",
+    )?;
+    let sql = format!(
+        r#"
+        select
+            {}(
+                to_clob('hello'),
+                to_nclob('world'),
+                to_blob(hextoraw('010203'))
+            )
+        from dual connect by level <= 2
+        "#,
+        obj_type_name,
+    );
+    let cursor = conn
+        .statement(&sql)?
+        .prefetch_rows(0)
+        .fetch_array_size(1)
+        .build()?
+        .query(&[])?;
+    for row_result in cursor {
+        let mut row = row_result?;
+        let mut value: oracledb::DbObject = row.take(0)?;
+        let mut text: oracledb::Lob = value.take("TEXT")?;
+        let mut result = String::new();
+        text.read_to_string(&mut result).unwrap();
+        assert_eq!(result, "hello");
+        let mut national: oracledb::Lob = value.take("NATIONAL_TEXT")?;
+        result.clear();
+        national.read_to_string(&mut result).unwrap();
+        assert_eq!(result, "world");
+        let mut binary: oracledb::Lob = value.take("DATA")?;
+        let mut bytes = Vec::new();
+        binary.read_to_end(&mut bytes).unwrap();
+        assert_eq!(bytes, [1, 2, 3]);
+    }
+    Ok(())
+}
+
+#[rstest]
+/// Fetches the supported scalar attribute encodings.
+fn test_3711(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let obj_type_name = "TEST_3711_OBJ";
+    let _obj_type_guard = common::create_type(
+        &conn,
+        obj_type_name,
+        r#"
+        object (
+            n number,
+            s varchar2(60),
+            c char(10),
+            ns nvarchar2(60),
+            nc nchar(10),
+            r raw(16),
+            bf binary_float,
+            bd binary_double,
+            d date,
+            ts timestamp,
+            tz timestamp with time zone,
+            ltz timestamp with local time zone
+        )"#,
+    )?;
+    let mut row = conn.query_row(
+        &format!(
+            r#"
+        select {}(
+            12.5,
+            'hello',
+            'fixed',
+            N'national',
+            N'fixed',
+            hextoraw('010203'),
+            to_binary_float(1.25),
+            to_binary_double(2.5),
+            date '2020-01-02',
+            timestamp '2021-01-02 03:04:05.123456',
+            to_timestamp_tz('2022-01-02 03:04:05 +02:00',
+                            'YYYY-MM-DD HH24:MI:SS TZH:TZM'),
+            timestamp '2023-01-02 03:04:05'
+        )
+        from dual
+        "#,
+            obj_type_name,
+        ),
+        &[],
+    )?;
+    let value: oracledb::DbObject = row.take(0)?;
+    assert_eq!(value.get::<f64>("N")?, 12.5);
+    assert_eq!(value.get::<String>("S")?, "hello");
+    assert_eq!(value.get::<String>("C")?, "fixed     ");
+    assert_eq!(value.get::<String>("NS")?, "national");
+    assert_eq!(value.get::<String>("NC")?, "fixed     ");
+    assert_eq!(value.get::<Vec<u8>>("R")?, [1, 2, 3]);
+    assert_eq!(value.get::<f32>("BF")?, 1.25);
+    assert_eq!(value.get::<f64>("BD")?, 2.5);
+    assert_eq!(value.get::<oracledb::OracleTimestamp>("D")?.year(), 2020);
+    assert_eq!(
+        value.get::<oracledb::OracleTimestamp>("TS")?.nanoseconds(),
+        123456000
+    );
+    assert_eq!(value.get::<oracledb::OracleTimestamp>("TZ")?.year(), 2022);
+    assert_eq!(value.get::<oracledb::OracleTimestamp>("LTZ")?.year(), 2023);
+    Ok(())
+}
+
+#[rstest]
+/// Discovers and decodes object and collection columns returned by a REF
+/// CURSOR.
+fn test_3712(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let obj_type_name = "TEST_3712_OBJ";
+    let _obj_type_guard =
+        common::create_type(&conn, obj_type_name, "object (value number)")?;
+    let array_type_name = "TEST_3712_ARRAY";
+    let _array_type_guard =
+        common::create_type(&conn, array_type_name, "varray(10) of number")?;
+    let mut result = conn.execute_named(
+        &format!(
+            "begin open :cursor for select {}(7), {}(1, 2) from dual; end;",
+            obj_type_name, array_type_name
+        ),
+        &[("cursor", &oracledb::DB_TYPE_CURSOR)],
+    )?;
+    let mut cursor: oracledb::Cursor =
+        result.out_bind_data().take("cursor")?;
+    let mut row = cursor.next().unwrap()?;
+    let obj: oracledb::DbObject = row.take(0)?;
+    assert_eq!(obj.get::<i32>("VALUE")?, 7);
+    let array: oracledb::DbCollection = row.take(1)?;
+    let values: Vec<i32> = array.try_into()?;
+    assert_eq!(values, [1, 2]);
+    assert!(cursor.next().is_none());
+    Ok(())
+}
+
+#[rstest]
+/// Fetches short and long string attributes using object-image lengths.
+fn test_3713(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let obj_type_name = "TEST_3713_OBJ";
+    let _obj_type_guard = common::create_type(
+        &conn,
+        obj_type_name,
+        "object (text_value varchar2(1000), trailing_value number)",
+    )?;
+    let sql = format!("select {}(:1, 42) from dual", obj_type_name);
+    for length in [100, 256, 512] {
+        let expected = "x".repeat(length);
+        let mut row = conn.query_row(&sql, &[&expected])?;
+        let value: oracledb::DbObject = row.take(0)?;
+        assert_eq!(value.get::<String>("TEXT_VALUE")?, expected);
+        assert_eq!(value.get::<i32>("TRAILING_VALUE")?, 42);
+    }
+    Ok(())
+}
+
+#[rstest]
+/// Fetches nested images exceeding 255 bytes with only short scalar payloads.
+fn test_3714(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let obj_type_name = "TEST_3714_OBJ";
+    let _obj_type_guard = common::create_type(
+        &conn,
+        obj_type_name,
+        "object (first_value varchar2(100), second_value varchar2(100),
+                 third_value varchar2(100), trailing_value number)",
+    )?;
+    let array_type_name = "TEST_3714_ARRAY";
+    let _array_type_guard = common::create_type(
+        &conn,
+        array_type_name,
+        &format!("table of {}", obj_type_name),
+    )?;
+    let sql = format!(
+        "select {}({}(:1, :2, :3, 42), {}('after', 'nested', 'image', 99))
+         from dual",
+        array_type_name, obj_type_name, obj_type_name,
+    );
+    // Object elements in a collection have their own length-prefixed image.
+    // Three 100-byte attributes make that image longer than 255 bytes without
+    // requiring a long length prefix for any individual scalar attribute.
+    for length in [10, 100] {
+        let first = "a".repeat(length);
+        let second = "b".repeat(length);
+        let third = "c".repeat(length);
+        let mut row = conn.query_row(&sql, &[&first, &second, &third])?;
+        let collection: oracledb::DbCollection = row.take(0)?;
+        let values: Vec<oracledb::DbObject> = collection.try_into()?;
+        assert_eq!(values.len(), 2);
+        assert_eq!(values[0].get::<String>("FIRST_VALUE")?, first);
+        assert_eq!(values[0].get::<String>("SECOND_VALUE")?, second);
+        assert_eq!(values[0].get::<String>("THIRD_VALUE")?, third);
+        assert_eq!(values[0].get::<i32>("TRAILING_VALUE")?, 42);
+        assert_eq!(values[1].get::<String>("FIRST_VALUE")?, "after");
+        assert_eq!(values[1].get::<String>("SECOND_VALUE")?, "nested");
+        assert_eq!(values[1].get::<String>("THIRD_VALUE")?, "image");
+        assert_eq!(values[1].get::<i32>("TRAILING_VALUE")?, 99);
+    }
+    Ok(())
+}

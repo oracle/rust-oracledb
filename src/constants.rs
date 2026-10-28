@@ -75,6 +75,7 @@ pub const ORA_TYPE_NUM_VECTOR: u16 = 127;
 // Oracle type buffer sizes
 pub const ORA_TYPE_SIZE_BINARY_DOUBLE: usize = 8;
 pub const ORA_TYPE_SIZE_BINARY_FLOAT: usize = 4;
+pub const ORA_TYPE_SIZE_BINARY_INTEGER: usize = 4;
 pub const ORA_TYPE_SIZE_BOOLEAN: usize = 4;
 pub const ORA_TYPE_SIZE_DATE: usize = 7;
 pub const ORA_TYPE_SIZE_INTERVAL_DS: usize = 11;
@@ -349,6 +350,7 @@ pub const TTC_SESSION_STATE_EXPLICIT_BOUNDARY: u8 = 0x40;
 
 // character sets
 pub const CHARSET_ID_UTF8: u16 = 873;
+pub const CHARSET_ID_UTF16: u16 = 2000;
 
 // verifier types
 pub const _VERIFIER_TYPE_11G_1: u16 = 0xb152;

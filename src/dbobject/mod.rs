@@ -29,8 +29,11 @@
 //-----------------------------------------------------------------------------
 
 mod cache;
+mod object;
 mod type_impl;
 
 pub(crate) use cache::DbObjectTypeCache;
+pub(crate) use object::PendingDbObject;
+pub use object::{DbCollection, DbObject};
 pub use type_impl::DbObjectType;
 pub(crate) use type_impl::DbObjectTypeIdentity;

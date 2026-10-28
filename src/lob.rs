@@ -66,6 +66,14 @@ pub(crate) struct PendingLobData {
 }
 
 impl PendingLobData {
+    /// Creates pending LOB data from an object attribute's locator.
+    pub(crate) fn from_locator(
+        db_type: &'static DbType,
+        locator: Vec<u8>,
+    ) -> Self {
+        Self { chunk_size: None, db_type, locator, size: None }
+    }
+
     /// Deserializes LOB data from a database response.
     pub(crate) fn from_resp(
         resp: &mut Response,

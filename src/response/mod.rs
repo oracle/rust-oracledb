@@ -70,6 +70,28 @@ pub(crate) struct Response {
 }
 
 impl Response {
+    /// Resolves object types in the supplied statement and pending REF cursors.
+    fn resolve_object_types(
+        &mut self,
+        client: &mut Client,
+        client_ref: &ClientRef,
+        statement: &mut CachedStatement,
+    ) -> Result<(), Error> {
+        let cursors =
+            self.pending_values.iter_mut().filter_map(|value| match value {
+                Some(PendingDbValue::Cursor(statement)) => Some(statement),
+                _ => None,
+            });
+        for statement in std::iter::once(statement).chain(cursors) {
+            for metadata in statement.out_metadata_mut() {
+                metadata.resolve_object_type(|identity| {
+                    client.get_type(client_ref, &identity.lookup_name())
+                })?;
+            }
+        }
+        Ok(())
+    }
+
     /// Takes database error information associated with the response and
     /// transfers ownership of it to the caller.
     fn take_db_error(&mut self) -> Option<DbError> {
@@ -313,12 +335,31 @@ impl Response {
         Ok(())
     }
 
-    /// Finalizes pending LOB and cursor values after deserialization.
-    pub(crate) fn finalize_rows(
+    /// Attaches resolved object metadata and finalizes LOB and cursor handles.
+    pub(crate) fn complete_values(
         &mut self,
+        client: &mut Client,
+        client_ref: &ClientRef,
+        statement: &mut CachedStatement,
+    ) -> Result<(), Error> {
+        self.resolve_object_types(client, client_ref, statement)
+            .and_then(|_| {
+                self.finalize_rows(
+                    client,
+                    client_ref,
+                    statement.out_metadata(),
+                )
+            })
+            .inspect_err(|_| self.cleanup_pending_values(client))
+    }
+
+    /// Finalizes pending objects, LOBs and cursors after type discovery.
+    fn finalize_rows(
+        &mut self,
+        client: &Client,
         client_ref: &ClientRef,
         metadata: &[Metadata],
-    ) {
+    ) -> Result<(), Error> {
         let values = std::mem::take(&mut self.pending_values);
         if !values.is_empty() {
             let column_nums: Vec<usize> = metadata
@@ -332,11 +373,18 @@ impl Response {
             for row in self.rows.as_mut().unwrap() {
                 for column_num in &column_nums {
                     if let Some(data) = values.next().unwrap() {
-                        row.finalize_column(*column_num, client_ref, data);
+                        row.finalize_column(
+                            *column_num,
+                            client,
+                            client_ref,
+                            data,
+                            &metadata[*column_num],
+                        )?;
                     }
                 }
             }
         }
+        Ok(())
     }
 
     /// Returns the cursor id returned by the error response.
@@ -562,28 +610,6 @@ impl Response {
         self.buf.read_utf8_with_length()
     }
 
-    /// Resolves object types in the supplied statement and pending REF cursors.
-    pub(crate) fn resolve_object_types(
-        &mut self,
-        client: &mut Client,
-        client_ref: &ClientRef,
-        statement: Option<&mut CachedStatement>,
-    ) -> Result<(), Error> {
-        let cursors =
-            self.pending_values.iter_mut().filter_map(|value| match value {
-                Some(PendingDbValue::Cursor(statement)) => Some(statement),
-                _ => None,
-            });
-        for statement in statement.into_iter().chain(cursors) {
-            for metadata in statement.out_metadata_mut() {
-                metadata.resolve_object_type(|identity| {
-                    client.get_type(client_ref, &identity.lookup_name())
-                })?;
-            }
-        }
-        Ok(())
-    }
-
     /// Specifies that the response requires out binds to be flushed. The
     /// packet data is cleared as well since the real response comes after the
     /// flush out binds packet is sent!
@@ -611,8 +637,7 @@ impl Response {
     }
 
     /// Transfers information from another response that was received earlier.
-    /// This is intended for use when a batch of statements is being executed
-    /// and a single response is being returned.
+    /// Preserves row and pending-value order when combining executions or fetches.
     pub(crate) fn transfer_info(&mut self, other_resp: &mut Response) {
         if self.rows.is_none() {
             self.rows = other_resp.take_rows();
@@ -621,6 +646,10 @@ impl Response {
             other_rows.append(&mut final_rows);
             self.rows = Some(other_rows);
         }
+        let mut pending_values =
+            std::mem::take(&mut other_resp.pending_values);
+        pending_values.append(&mut self.pending_values);
+        self.pending_values = pending_values;
         if let Some(error_info) = self.error_info.as_mut()
             && let Some(other_error_info) = other_resp.error_info.as_mut()
         {

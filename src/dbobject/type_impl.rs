@@ -94,6 +94,7 @@ pub(super) struct DbObjectTypeBody {
     pub(super) element: Option<Metadata>,
     pub(super) oid: Vec<u8>,
     pub(super) version: u16,
+    pub(super) collection_type: Option<u8>,
 }
 
 impl fmt::Debug for DbObjectType {
@@ -112,6 +113,11 @@ impl DbObjectType {
     /// Reports whether discovery has populated this type's own metadata.
     pub(crate) fn is_fully_populated(&self) -> bool {
         self.body.get().is_some()
+    }
+
+    /// Returns the collection kind supplied by the type descriptor.
+    pub(super) fn collection_type(&self) -> Option<u8> {
+        self.body().collection_type
     }
 
     /// Returns the quoted name used to discover this type.
