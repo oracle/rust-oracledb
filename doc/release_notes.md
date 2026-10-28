@@ -16,6 +16,8 @@
 1.  Added `oracle.type-name` metadata to generated Arrow fields.
 1.  Added support for fetching Arrow timestamps in seconds, milliseconds,
     microseconds, and nanoseconds as determined by Oracle column precision.
+1.  Added Arrow batch binding support for `Float16`, `FixedSizeBinary`, and
+    `Null` arrays.
 1.  Fixed bug causing bind variables to be detected within DDL statements
     ([issue 33](https://github.com/oracle/rust-oracledb/issues/33)).
 1.  Fixed issue with encoding integers with trailing zeros

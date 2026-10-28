@@ -32,11 +32,13 @@ mod common;
 
 use std::sync::Arc;
 
+use arrow_array::types::{ArrowPrimitiveType, Float16Type};
 use arrow_array::{
     Array, BinaryArray, BooleanArray, Date32Array, Decimal128Array,
-    Float32Array, Float64Array, Int8Array, Int16Array, Int32Array, Int64Array,
-    RecordBatch, StringArray, TimestampMicrosecondArray, TimestampSecondArray,
-    UInt8Array, UInt16Array, UInt32Array, UInt64Array,
+    FixedSizeBinaryArray, Float16Array, Float32Array, Float64Array, Int8Array,
+    Int16Array, Int32Array, Int64Array, NullArray, RecordBatch, StringArray,
+    TimestampMicrosecondArray, TimestampSecondArray, UInt8Array, UInt16Array,
+    UInt32Array, UInt64Array,
 };
 use arrow_schema::{DataType, Field, Schema, TimeUnit};
 use rstest::*;
@@ -454,6 +456,73 @@ fn test_3106(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     assert_eq!(
         conn.query_row("select id from test_3106", &[],)?.get::<i32>(0)?,
         2
+    );
+    Ok(())
+}
+
+#[rstest]
+/// test binding Float16, FixedSizeBinary, and Null arrays
+fn test_3110(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let _guard = common::create_table(
+        &conn,
+        "test_3110",
+        "id number, c_float binary_float, c_raw raw(4), c_null number",
+    )?;
+    let first_bytes = [0x00, 0xFF, 0x80, 0x01];
+    let last_bytes = [0x01, 0x00, 0x00, 0xFF];
+    let bytes = FixedSizeBinaryArray::try_from_sparse_iter_with_size(
+        [Some(first_bytes.as_slice()), None, Some(last_bytes.as_slice())]
+            .into_iter(),
+        4,
+    )
+    .unwrap();
+    let floats = Float16Array::from(vec![
+        Some(<Float16Type as ArrowPrimitiveType>::Native::from_f32(1.5)),
+        None,
+        Some(<Float16Type as ArrowPrimitiveType>::Native::from_f32(-2.25)),
+    ]);
+    let batch = RecordBatch::try_new(
+        Arc::new(Schema::new(vec![
+            Field::new("ID", DataType::Int32, false),
+            Field::new("C_FLOAT", DataType::Float16, true),
+            Field::new("C_RAW", DataType::FixedSizeBinary(4), true),
+            Field::new("C_NULL", DataType::Null, true),
+        ])),
+        vec![
+            Arc::new(Int32Array::from(vec![1, 2, 3])),
+            Arc::new(floats),
+            Arc::new(bytes),
+            Arc::new(NullArray::new(3)),
+        ],
+    )
+    .unwrap();
+    assert_eq!(
+        conn.execute_batch(
+            "insert into test_3110 values (:1, :2, :3, :4)",
+            batch,
+        )?
+        .rows_affected(),
+        3
+    );
+    let mut values = Vec::new();
+    for row in conn.query(
+        "select c_float, c_raw, c_null from test_3110 order by id",
+        &[],
+    )? {
+        let row = row?;
+        values.push((
+            row.get::<Option<f32>>(0)?,
+            row.get::<Option<Vec<u8>>>(1)?,
+            row.get::<Option<i32>>(2)?,
+        ));
+    }
+    assert_eq!(
+        values,
+        vec![
+            (Some(1.5), Some(first_bytes.to_vec()), None),
+            (None, None, None),
+            (Some(-2.25), Some(last_bytes.to_vec()), None),
+        ]
     );
     Ok(())
 }

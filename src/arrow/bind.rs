@@ -30,10 +30,11 @@
 
 use arrow_array::cast::AsArray;
 use arrow_array::types::{
-    Date32Type, Date64Type, Decimal128Type, Float32Type, Float64Type,
-    Int8Type, Int16Type, Int32Type, Int64Type, TimestampMicrosecondType,
-    TimestampMillisecondType, TimestampNanosecondType, TimestampSecondType,
-    UInt8Type, UInt16Type, UInt32Type, UInt64Type,
+    Date32Type, Date64Type, Decimal128Type, Float16Type, Float32Type,
+    Float64Type, Int8Type, Int16Type, Int32Type, Int64Type,
+    TimestampMicrosecondType, TimestampMillisecondType,
+    TimestampNanosecondType, TimestampSecondType, UInt8Type, UInt16Type,
+    UInt32Type, UInt64Type,
 };
 use arrow_schema::DataType;
 use arrow_schema::TimeUnit;
@@ -62,7 +63,9 @@ pub(crate) fn column_db_type(
         | DataType::UInt32
         | DataType::UInt64
         | DataType::Decimal128(_, _) => Ok(crate::DB_TYPE_NUMBER),
-        DataType::Float32 => Ok(crate::DB_TYPE_BINARY_FLOAT),
+        DataType::Float16 | DataType::Float32 => {
+            Ok(crate::DB_TYPE_BINARY_FLOAT)
+        }
         DataType::Float64 => Ok(crate::DB_TYPE_BINARY_DOUBLE),
         DataType::Date32 | DataType::Date64 | DataType::Timestamp(_, _) => {
             Ok(crate::DB_TYPE_TIMESTAMP)
@@ -70,9 +73,11 @@ pub(crate) fn column_db_type(
         DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View => {
             Ok(crate::DB_TYPE_VARCHAR)
         }
-        DataType::Binary | DataType::LargeBinary | DataType::BinaryView => {
-            Ok(crate::DB_TYPE_RAW)
-        }
+        DataType::Binary
+        | DataType::LargeBinary
+        | DataType::FixedSizeBinary(_)
+        | DataType::BinaryView => Ok(crate::DB_TYPE_RAW),
+        DataType::Null => Ok(crate::DB_TYPE_NUMBER),
         _ => {
             Err(Error::unsupported_arrow_type(column.data_type().to_string()))
         }
@@ -96,6 +101,9 @@ pub(crate) fn column_max_size(
         DataType::Binary => max_size!(column.as_binary::<i32>()),
         DataType::LargeBinary => max_size!(column.as_binary::<i64>()),
         DataType::BinaryView => max_size!(column.as_binary_view()),
+        DataType::FixedSizeBinary(_) => {
+            column.as_fixed_size_binary().value_length() as usize
+        }
         _ => 0,
     }
 }
@@ -129,6 +137,9 @@ pub(crate) fn write_to_buf(
             .then(|| column.as_primitive::<UInt32Type>().value(row_index)),
         DataType::UInt64 => &(!is_null)
             .then(|| column.as_primitive::<UInt64Type>().value(row_index)),
+        DataType::Float16 => &(!is_null).then(|| {
+            column.as_primitive::<Float16Type>().value(row_index).to_f32()
+        }),
         DataType::Float32 => &(!is_null)
             .then(|| column.as_primitive::<Float32Type>().value(row_index)),
         DataType::Float64 => &(!is_null)
@@ -186,12 +197,16 @@ pub(crate) fn write_to_buf(
         DataType::Binary => {
             &(!is_null).then(|| column.as_binary::<i32>().value(row_index))
         }
+        DataType::FixedSizeBinary(_) => {
+            &(!is_null).then(|| column.as_fixed_size_binary().value(row_index))
+        }
         DataType::BinaryView => {
             &(!is_null).then(|| column.as_binary_view().value(row_index))
         }
         DataType::LargeBinary => {
             &(!is_null).then(|| column.as_binary::<i64>().value(row_index))
         }
+        DataType::Null => &None::<OracleNumber>,
         _ => unreachable!("should be handled in column_db_type()"),
     };
     value.to_buf(buf, metadata.db_type(), true);

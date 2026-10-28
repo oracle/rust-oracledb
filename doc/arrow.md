@@ -71,11 +71,12 @@ Database bind type.
 | `Int8`, `Int16`, `Int32`, `Int64` | `DB_TYPE_NUMBER` |
 | `UInt8`, `UInt16`, `UInt32`, `UInt64` | `DB_TYPE_NUMBER` |
 | `Decimal128` | `DB_TYPE_NUMBER` |
-| `Float32` | `DB_TYPE_BINARY_FLOAT` |
+| `Null` | `DB_TYPE_NUMBER` |
+| `Float16`, `Float32` | `DB_TYPE_BINARY_FLOAT` |
 | `Float64` | `DB_TYPE_BINARY_DOUBLE` |
 | `Date32`, `Date64`, `Timestamp` | `DB_TYPE_TIMESTAMP` |
 | `Utf8`, `LargeUtf8` | `DB_TYPE_VARCHAR` |
-| `Binary`, `LargeBinary` | `DB_TYPE_RAW` |
+| `Binary`, `LargeBinary`, `FixedSizeBinary` | `DB_TYPE_RAW` |
 
 Null values in Arrow arrays are bound as database nulls. If an Arrow type is
 not supported, [Connection.execute_batch()](crate::Connection::execute_batch)
