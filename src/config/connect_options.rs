@@ -847,11 +847,7 @@ impl DescriptionOption {
                 }
             }
         }
-        Ok(DescriptionOption {
-            description,
-            connect_data,
-            address_options,
-        })
+        Ok(DescriptionOption { description, connect_data, address_options })
     }
 
     /// Attempts to establish a connection to the database using the

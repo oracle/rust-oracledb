@@ -66,11 +66,7 @@ impl Packet {
     /// Returns the size of the header. Data packets are 10 bytes (because they
     /// include the data flags, unlike other packets).
     pub(crate) fn header_size(&self) -> usize {
-        if self.packet_type == constants::PACKET_TYPE_DATA {
-            10
-        } else {
-            8
-        }
+        if self.packet_type == constants::PACKET_TYPE_DATA { 10 } else { 8 }
     }
 
     /// Creates a new packet from the supplied buffer.
@@ -83,11 +79,6 @@ impl Packet {
             data_flags = u16::from_be_bytes(data[8..10].try_into().unwrap());
             buf = &data[10..];
         }
-        Packet {
-            packet_type,
-            packet_flags,
-            data_flags,
-            buf: buf.into(),
-        }
+        Packet { packet_type, packet_flags, data_flags, buf: buf.into() }
     }
 }

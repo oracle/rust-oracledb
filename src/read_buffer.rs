@@ -47,11 +47,8 @@ impl ReadBuffer {
     ) -> Result<(&[u8], bool), Error> {
         let length_byte = self.read_u8()?;
         let is_negative = length_byte & 0x80 != 0;
-        let length = if is_negative {
-            length_byte & 0x7f
-        } else {
-            length_byte
-        };
+        let length =
+            if is_negative { length_byte & 0x7f } else { length_byte };
         let buf = self.read_bytes(length as usize)?;
         if buf.len() > max_size {
             Err(Error::integer_too_large(max_size, buf.len()))
@@ -82,10 +79,7 @@ impl ReadBuffer {
     /// Creates and returns a new ReadBuffer struct given a slice. The slice is
     /// copied so that the original source need not be retained.
     pub(crate) fn from_bytes(bytes: &[u8]) -> ReadBuffer {
-        ReadBuffer {
-            buf: bytes.to_vec(),
-            pos: 0,
-        }
+        ReadBuffer { buf: bytes.to_vec(), pos: 0 }
     }
 
     /// Creates and returns a new ReadBuffer struct given a series of packets.

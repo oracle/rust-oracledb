@@ -30,10 +30,8 @@ use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 fn make_config_dir() -> PathBuf {
-    let suffix = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_nanos();
+    let suffix =
+        SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
     let path = std::env::temp_dir().join(format!(
         "oracledb-tnsnames-test-{}-{suffix}",
         std::process::id()
@@ -63,11 +61,8 @@ fn test_3400() {
         ),
     )
     .unwrap();
-    fs::write(
-        dir.join("child.ora"),
-        format!("CHILD = {child_descriptor}\n"),
-    )
-    .unwrap();
+    fs::write(dir.join("child.ora"), format!("CHILD = {child_descriptor}\n"))
+        .unwrap();
 
     let dir_str = dir.to_str().unwrap();
     let main = oracledb::Config::default()

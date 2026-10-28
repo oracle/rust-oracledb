@@ -56,11 +56,7 @@ struct Pair {
 
 impl Pair {
     fn new(key: &str, value: &str, flags: u32) -> Pair {
-        Pair {
-            key: String::from(key),
-            value: String::from(value),
-            flags,
-        }
+        Pair { key: String::from(key), value: String::from(value), flags }
     }
 }
 

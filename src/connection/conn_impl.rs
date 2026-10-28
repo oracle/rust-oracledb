@@ -47,9 +47,6 @@ use crate::error::Error;
 use crate::exec_result::ExecBatchResult;
 use crate::exec_result::ExecResult;
 use crate::lob::Lob;
-use crate::messages::CommitMessage;
-use crate::messages::PingMessage;
-use crate::messages::RollbackMessage;
 use crate::ora_version::OracleVersion;
 use crate::row::Row;
 use crate::statement::StatementBuilder;
@@ -73,9 +70,7 @@ impl ConnImpl {
         old_password: &str,
         new_password: &str,
     ) -> Result<(), Error> {
-        self.client_ref
-            .lock()?
-            .change_password(old_password, new_password)
+        self.client_ref.lock()?.change_password(old_password, new_password)
     }
 
     /// Clears Deep Data Security state from the underlying client/session.
@@ -99,11 +94,7 @@ impl ConnImpl {
         let mut client = Client::new(config, pool_id);
         let db_info = client.connect()?;
         let client_ref = std::sync::Arc::new(std::sync::Mutex::new(client));
-        Ok(ConnImpl {
-            client_ref,
-            db_info,
-            returned_to_pool: Instant::now(),
-        })
+        Ok(ConnImpl { client_ref, db_info, returned_to_pool: Instant::now() })
     }
 
     /// Creates an empty temporary BLOB, CLOB, or NCLOB.
@@ -145,9 +136,7 @@ impl ConnImpl {
         &self,
         context: EndUserSecurityContext,
     ) -> Result<(), Error> {
-        self.client_ref
-            .lock()?
-            .set_end_user_security_context(context)
+        self.client_ref.lock()?.set_end_user_security_context(context)
     }
 
     /// Sets the returned to pool instant which is used in pool management.
@@ -159,10 +148,7 @@ impl ConnImpl {
 
     /// Commits any pending transactions.
     pub fn commit(&self) -> Result<(), Error> {
-        self.client_ref
-            .lock()?
-            .process_message(&mut CommitMessage::new())?;
-        Ok(())
+        self.client_ref.lock()?.commit()
     }
 
     /// Executes a SQL statement against the database.
@@ -254,10 +240,7 @@ impl ConnImpl {
 
     /// Pings the database.
     pub fn ping(&self) -> Result<(), Error> {
-        self.client_ref
-            .lock()?
-            .process_message(&mut PingMessage::new())?;
-        Ok(())
+        self.client_ref.lock()?.ping()
     }
 
     /// Executes a query against the database.
@@ -317,10 +300,7 @@ impl ConnImpl {
 
     /// Rolls back any pending transactions.
     pub fn rollback(&self) -> Result<(), Error> {
-        self.client_ref
-            .lock()?
-            .process_message(&mut RollbackMessage::new())?;
-        Ok(())
+        self.client_ref.lock()?.rollback()
     }
 
     /// Sets the call timeout configured on the connection.

@@ -54,13 +54,9 @@ fn test_2301() -> Result<(), oracledb::Error> {
 fn test_2302() -> Result<(), oracledb::Error> {
     assert!(oracledb::is_qualified_sql_name("test_2302"));
     assert!(oracledb::is_qualified_sql_name("test_2302.subvalue"));
-    assert!(oracledb::is_qualified_sql_name(
-        "test_2302.subvalue.tertiary"
-    ));
+    assert!(oracledb::is_qualified_sql_name("test_2302.subvalue.tertiary"));
     assert!(oracledb::is_qualified_sql_name("    test_2302   "));
-    assert!(oracledb::is_qualified_sql_name(
-        "    test_2302  .  subvalue  "
-    ));
+    assert!(oracledb::is_qualified_sql_name("    test_2302  .  subvalue  "));
     assert!(oracledb::is_qualified_sql_name(
         "    \"test_2302\"  .  subvalue  "
     ));

@@ -118,8 +118,7 @@ impl Response {
 
     /// Checks to see if any error has taken place and, if so, returns it.
     pub(crate) fn check_for_error(&mut self) -> Result<(), Error> {
-        self.take_db_error()
-            .map_or(Ok(()), |e| Err(Error::db_error(e)))
+        self.take_db_error().map_or(Ok(()), |e| Err(Error::db_error(e)))
     }
 
     /// Checks to see if any error has taken place after executing a statement
@@ -148,18 +147,12 @@ impl Response {
         }
     }
 
-    /// Queues resources created before response deserialization failed.
+    /// Cleans up any pending values. This method is called when an error takes
+    /// place during deserialization and the response cannot be returned for
+    /// further processing.
     pub(crate) fn cleanup_pending_values(&mut self, client: &mut Client) {
-        for value in std::mem::take(&mut self.pending_values) {
-            match value {
-                Some(PendingDbValue::Cursor(statement)) => {
-                    client.return_statement(&statement);
-                }
-                Some(PendingDbValue::Lob(mut data)) => {
-                    client.add_lob_to_close(data.take_locator());
-                }
-                None => {}
-            }
+        for value in self.pending_values.drain(..).flatten() {
+            value.cleanup(client);
         }
     }
 
@@ -577,12 +570,10 @@ impl Response {
         statement: Option<&mut CachedStatement>,
     ) -> Result<(), Error> {
         let cursors =
-            self.pending_values
-                .iter_mut()
-                .filter_map(|value| match value {
-                    Some(PendingDbValue::Cursor(statement)) => Some(statement),
-                    _ => None,
-                });
+            self.pending_values.iter_mut().filter_map(|value| match value {
+                Some(PendingDbValue::Cursor(statement)) => Some(statement),
+                _ => None,
+            });
         for statement in statement.into_iter().chain(cursors) {
             for metadata in statement.out_metadata_mut() {
                 metadata.resolve_object_type(|identity| {

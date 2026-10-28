@@ -99,12 +99,7 @@ impl ErrorInfo {
             })
         };
 
-        Ok(ErrorInfo {
-            cursor_id,
-            flags,
-            rowcount,
-            db_error,
-        })
+        Ok(ErrorInfo { cursor_id, flags, rowcount, db_error })
     }
 
     /// Returns the cursor id.

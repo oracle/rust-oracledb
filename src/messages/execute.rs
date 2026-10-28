@@ -332,11 +332,7 @@ impl Message for ExecuteMessage<'_, '_> {
         resp.read_bit_vector()?;
         let _rowid: Option<Rowid> = {
             let num_bytes = resp.read_ub2()?;
-            if num_bytes == 0 {
-                None
-            } else {
-                Some(Rowid::deserialize(resp)?)
-            }
+            if num_bytes == 0 { None } else { Some(Rowid::deserialize(resp)?) }
         };
         self.statement.set_bind_directions(resp)
     }

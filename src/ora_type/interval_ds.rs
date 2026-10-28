@@ -75,13 +75,7 @@ impl OracleIntervalDS {
         seconds: i8,
         nanoseconds: i32,
     ) -> Self {
-        Self {
-            days,
-            hours,
-            minutes,
-            seconds,
-            nanoseconds,
-        }
+        Self { days, hours, minutes, seconds, nanoseconds }
     }
 
     /// Returns the number of seconds in the interval.

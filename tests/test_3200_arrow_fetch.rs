@@ -66,21 +66,11 @@ fn test_3200(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
         oracledb::BindParameters::default(),
     )?;
     assert_eq!(batch.num_rows(), 3);
-    let ids = batch
-        .column(0)
-        .as_any()
-        .downcast_ref::<Int64Array>()
-        .unwrap();
-    let notes = batch
-        .column(1)
-        .as_any()
-        .downcast_ref::<StringArray>()
-        .unwrap();
-    let amounts = batch
-        .column(2)
-        .as_any()
-        .downcast_ref::<Float64Array>()
-        .unwrap();
+    let ids = batch.column(0).as_any().downcast_ref::<Int64Array>().unwrap();
+    let notes =
+        batch.column(1).as_any().downcast_ref::<StringArray>().unwrap();
+    let amounts =
+        batch.column(2).as_any().downcast_ref::<Float64Array>().unwrap();
     assert_eq!(ids.values(), &[1, 2, 3]);
     assert_eq!(notes.value(0), "first");
     assert!(notes.is_null(1));
@@ -150,12 +140,7 @@ fn test_3202(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     )?;
 
     assert_eq!(
-        batch
-            .column(0)
-            .as_any()
-            .downcast_ref::<Int8Array>()
-            .unwrap()
-            .value(0),
+        batch.column(0).as_any().downcast_ref::<Int8Array>().unwrap().value(0),
         1
     );
     assert_eq!(
@@ -185,11 +170,8 @@ fn test_3202(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
             .value(0),
         4
     );
-    let decimals = batch
-        .column(4)
-        .as_any()
-        .downcast_ref::<Decimal128Array>()
-        .unwrap();
+    let decimals =
+        batch.column(4).as_any().downcast_ref::<Decimal128Array>().unwrap();
     assert_eq!(decimals.value(0), 12345);
     assert_eq!(decimals.precision(), 10);
     assert_eq!(decimals.scale(), 2);
@@ -235,11 +217,8 @@ fn test_3203(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
         "select value from test_3203 order by id",
         oracledb::BindParameters::default(),
     )?;
-    let array = batch
-        .column(0)
-        .as_any()
-        .downcast_ref::<Decimal128Array>()
-        .unwrap();
+    let array =
+        batch.column(0).as_any().downcast_ref::<Decimal128Array>().unwrap();
     let fetched_values: Vec<String> =
         (0..array.len()).map(|i| array.value_as_string(i)).collect();
     assert_eq!(fetched_values, data);

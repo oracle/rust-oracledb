@@ -76,9 +76,7 @@ impl OracleTimestamp {
     /// Returns the timestamp as the number of microseconds since July 1, 1970
     /// as is required by the Arrow data format.
     pub(crate) fn to_timestamp_micros(self) -> Result<i64, Error> {
-        Ok(chrono::NaiveDateTime::try_from(self)?
-            .and_utc()
-            .timestamp_micros())
+        Ok(chrono::NaiveDateTime::try_from(self)?.and_utc().timestamp_micros())
     }
 
     /// Returns the day of the timestamp.

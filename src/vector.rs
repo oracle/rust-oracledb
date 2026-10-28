@@ -201,11 +201,7 @@ impl SparseVector {
         }
         let values =
             VectorData::decode(buf, num_sparse_elements, vector_format)?;
-        Ok(Self {
-            num_dimensions,
-            indices,
-            values,
-        })
+        Ok(Self { num_dimensions, indices, values })
     }
 
     /// Encodes the sparse vector in the format required by the database.
@@ -223,11 +219,7 @@ impl SparseVector {
         indices: Vec<usize>,
         values: VectorData,
     ) -> Self {
-        Self {
-            num_dimensions,
-            indices,
-            values,
-        }
+        Self { num_dimensions, indices, values }
     }
 
     /// Returns the number of dimensions in the sparse vector.

@@ -87,11 +87,7 @@ impl OracleNumber {
             result *= 10_i128.pow(num_zeros_to_add.try_into().unwrap());
         }
 
-        if self.is_positive {
-            Ok(result)
-        } else {
-            Ok(-result)
-        }
+        if self.is_positive { Ok(result) } else { Ok(-result) }
     }
 }
 
@@ -185,11 +181,8 @@ impl FromBuf for OracleNumber {
         for i in 0..num_mantissa_digits {
             // positive numbers have 1 added to them whereas negative numbers
             // are subtracted from the value 101
-            let mantissa_byte = if is_positive {
-                buf[i + 1] - 1
-            } else {
-                101 - buf[i + 1]
-            };
+            let mantissa_byte =
+                if is_positive { buf[i + 1] - 1 } else { 101 - buf[i + 1] };
 
             // process the first digit; leading zeroes are ignored
             let mut digit = mantissa_byte / 10;

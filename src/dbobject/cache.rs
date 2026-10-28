@@ -494,9 +494,7 @@ fn metadata_from_name(
         }
         _ => (db_type_from_name(type_name)?, precision, scale),
     };
-    Ok(Metadata::new_object_field(
-        name, db_type, max_size, precision, scale,
-    ))
+    Ok(Metadata::new_object_field(name, db_type, max_size, precision, scale))
 }
 
 /// Parses collection and scalar field details from a TDS value.
@@ -524,10 +522,7 @@ fn parse_tds(
         input.set_pos(element_pos);
         let element = parse_tds_attr(&mut input)?
             .ok_or_else(Error::unexpected_result)?;
-        Ok(DbObjectParsedTds {
-            attrs: Vec::new(),
-            element: Some(element),
-        })
+        Ok(DbObjectParsedTds { attrs: Vec::new(), element: Some(element) })
     } else {
         input.set_pos(pos);
         let mut attrs = Vec::with_capacity(num_expected_attrs);
@@ -537,10 +532,7 @@ fn parse_tds(
                     .ok_or_else(Error::unexpected_result)?,
             );
         }
-        Ok(DbObjectParsedTds {
-            attrs,
-            element: None,
-        })
+        Ok(DbObjectParsedTds { attrs, element: None })
     }
 }
 
@@ -634,12 +626,7 @@ fn parse_tds_attr(
         }
     };
     let db_type = DbType::from_ora_type_and_csfrm(ora_type_num, csfrm);
-    Ok(Some(DbObjectParsedTdsAttr {
-        db_type,
-        max_size,
-        precision,
-        scale,
-    }))
+    Ok(Some(DbObjectParsedTdsAttr { db_type, max_size, precision, scale }))
 }
 
 /// Reads the attribute rows returned by `DBMS_PICKLER.GET_TYPE_SHAPE`.
@@ -813,8 +800,7 @@ impl DbObjectTypeCache {
             }
             self.populate_partial_types(client, client_ref)?;
             if name != typ.fqn() {
-                self.types_by_name
-                    .insert(name.to_string(), Arc::clone(&typ));
+                self.types_by_name.insert(name.to_string(), Arc::clone(&typ));
             }
             Ok(typ)
         })();

@@ -56,10 +56,7 @@ fn main() -> Result<(), oracledb::Error> {
 
     statement.ensure_fully_parsed()?;
 
-    println!(
-        "Fully parsed after inspection: {}",
-        statement.is_fully_parsed()
-    );
+    println!("Fully parsed after inspection: {}", statement.is_fully_parsed());
 
     for (index, metadata) in statement.out_metadata().iter().enumerate() {
         println!(

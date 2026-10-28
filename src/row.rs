@@ -183,10 +183,7 @@ impl Row {
         column_info: &Arc<Vec<Metadata>>,
         column_values: DbRow,
     ) -> Self {
-        Self {
-            column_info: Arc::clone(column_info),
-            column_values,
-        }
+        Self { column_info: Arc::clone(column_info), column_values }
     }
 
     /// Creates a new empty row with no column values or data.

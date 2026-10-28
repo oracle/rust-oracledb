@@ -452,8 +452,7 @@ fn test_3106(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
 
     assert_eq!(result.rows_affected(), 2);
     assert_eq!(
-        conn.query_row("select id from test_3106", &[],)?
-            .get::<i32>(0)?,
+        conn.query_row("select id from test_3106", &[],)?.get::<i32>(0)?,
         2
     );
     Ok(())

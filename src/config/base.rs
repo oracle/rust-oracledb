@@ -109,9 +109,7 @@ impl Config {
 
     /// Returns the driver name in use by the configuration.
     pub fn driver_name(&self) -> &str {
-        self.driver_name
-            .as_deref()
-            .unwrap_or(defaults::default_driver_name())
+        self.driver_name.as_deref().unwrap_or(defaults::default_driver_name())
     }
 
     /// Returns the full connect descriptor associated with the configuration.
@@ -125,9 +123,7 @@ impl Config {
     /// Returns the machine in use by the configuration. The default value is
     /// the name of the machine on which the program is running.
     pub fn machine(&self) -> &str {
-        self.machine
-            .as_deref()
-            .unwrap_or(defaults::default_machine())
+        self.machine.as_deref().unwrap_or(defaults::default_machine())
     }
 
     /// Returns the name of the OS user in use by the configuration. The
@@ -139,9 +135,7 @@ impl Config {
     /// Returns the program in use by the configuration. The default value is
     /// the name of the program that is running.
     pub fn program(&self) -> &str {
-        self.program
-            .as_deref()
-            .unwrap_or(defaults::default_program())
+        self.program.as_deref().unwrap_or(defaults::default_program())
     }
 
     /// Sets the authorization mode that should be used to establish a

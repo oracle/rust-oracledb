@@ -140,9 +140,7 @@ fn parse_easy_connect_hosts(
         if host.is_none() {
             break;
         }
-        address_list
-            .addresses
-            .push(Address::new(host, protocol.clone()));
+        address_list.addresses.push(Address::new(host, protocol.clone()));
         if let Some(ch) = parser.peek_char()
             && ch == ':'
         {

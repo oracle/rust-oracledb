@@ -601,26 +601,14 @@ const DATA_TYPES: [DataType; 322] = [
         constants::ORA_TYPE_NUM_NUMBER,
         TYPE_REP_ORACLE,
     ),
-    DataType(
-        DATA_TYPE_FLOAT,
-        constants::ORA_TYPE_NUM_NUMBER,
-        TYPE_REP_ORACLE,
-    ),
+    DataType(DATA_TYPE_FLOAT, constants::ORA_TYPE_NUM_NUMBER, TYPE_REP_ORACLE),
     DataType(
         DATA_TYPE_STR,
         constants::ORA_TYPE_NUM_VARCHAR,
         TYPE_REP_UNIVERSAL,
     ),
-    DataType(
-        DATA_TYPE_VNU,
-        constants::ORA_TYPE_NUM_NUMBER,
-        TYPE_REP_ORACLE,
-    ),
-    DataType(
-        DATA_TYPE_PDN,
-        constants::ORA_TYPE_NUM_NUMBER,
-        TYPE_REP_ORACLE,
-    ),
+    DataType(DATA_TYPE_VNU, constants::ORA_TYPE_NUM_NUMBER, TYPE_REP_ORACLE),
+    DataType(DATA_TYPE_PDN, constants::ORA_TYPE_NUM_NUMBER, TYPE_REP_ORACLE),
     DataType(
         DATA_TYPE_VCS,
         constants::ORA_TYPE_NUM_VARCHAR,
@@ -632,36 +620,20 @@ const DATA_TYPES: [DataType; 322] = [
         TYPE_REP_UNIVERSAL,
     ),
     DataType(DATA_TYPE_OAC9, DATA_TYPE_OAC9, TYPE_REP_UNIVERSAL),
-    DataType(
-        DATA_TYPE_UIN,
-        constants::ORA_TYPE_NUM_NUMBER,
-        TYPE_REP_ORACLE,
-    ),
-    DataType(
-        DATA_TYPE_SLS,
-        constants::ORA_TYPE_NUM_NUMBER,
-        TYPE_REP_ORACLE,
-    ),
+    DataType(DATA_TYPE_UIN, constants::ORA_TYPE_NUM_NUMBER, TYPE_REP_ORACLE),
+    DataType(DATA_TYPE_SLS, constants::ORA_TYPE_NUM_NUMBER, TYPE_REP_ORACLE),
     DataType(
         DATA_TYPE_LVC,
         constants::ORA_TYPE_NUM_VARCHAR,
         TYPE_REP_UNIVERSAL,
     ),
-    DataType(
-        DATA_TYPE_LVB,
-        constants::ORA_TYPE_NUM_RAW,
-        TYPE_REP_UNIVERSAL,
-    ),
+    DataType(DATA_TYPE_LVB, constants::ORA_TYPE_NUM_RAW, TYPE_REP_UNIVERSAL),
     DataType(
         constants::ORA_TYPE_NUM_CHAR,
         constants::ORA_TYPE_NUM_CHAR,
         TYPE_REP_UNIVERSAL,
     ),
-    DataType(
-        DATA_TYPE_AVC,
-        constants::ORA_TYPE_NUM_CHAR,
-        TYPE_REP_UNIVERSAL,
-    ),
+    DataType(DATA_TYPE_AVC, constants::ORA_TYPE_NUM_CHAR, TYPE_REP_UNIVERSAL),
     DataType(
         constants::ORA_TYPE_NUM_BINARY_FLOAT,
         constants::ORA_TYPE_NUM_BINARY_FLOAT,
@@ -677,11 +649,7 @@ const DATA_TYPES: [DataType; 322] = [
         constants::ORA_TYPE_NUM_CURSOR,
         TYPE_REP_UNIVERSAL,
     ),
-    DataType(
-        DATA_TYPE_RDD,
-        constants::ORA_TYPE_NUM_ROWID,
-        TYPE_REP_UNIVERSAL,
-    ),
+    DataType(DATA_TYPE_RDD, constants::ORA_TYPE_NUM_ROWID, TYPE_REP_UNIVERSAL),
     DataType(DATA_TYPE_OSL, DATA_TYPE_OSL, TYPE_REP_UNIVERSAL),
     DataType(
         DATA_TYPE_EXT_NAMED,
@@ -723,32 +691,16 @@ const DATA_TYPES: [DataType; 322] = [
     ),
     DataType(DATA_TYPE_DJSON, DATA_TYPE_DJSON, TYPE_REP_UNIVERSAL),
     DataType(DATA_TYPE_CLV, DATA_TYPE_CLV, TYPE_REP_UNIVERSAL),
-    DataType(
-        DATA_TYPE_DTR,
-        constants::ORA_TYPE_NUM_NUMBER,
-        TYPE_REP_ORACLE,
-    ),
-    DataType(
-        DATA_TYPE_DUN,
-        constants::ORA_TYPE_NUM_NUMBER,
-        TYPE_REP_ORACLE,
-    ),
-    DataType(
-        DATA_TYPE_DOP,
-        constants::ORA_TYPE_NUM_NUMBER,
-        TYPE_REP_ORACLE,
-    ),
+    DataType(DATA_TYPE_DTR, constants::ORA_TYPE_NUM_NUMBER, TYPE_REP_ORACLE),
+    DataType(DATA_TYPE_DUN, constants::ORA_TYPE_NUM_NUMBER, TYPE_REP_ORACLE),
+    DataType(DATA_TYPE_DOP, constants::ORA_TYPE_NUM_NUMBER, TYPE_REP_ORACLE),
     DataType(
         DATA_TYPE_VST,
         constants::ORA_TYPE_NUM_VARCHAR,
         TYPE_REP_UNIVERSAL,
     ),
     DataType(DATA_TYPE_ODT, constants::ORA_TYPE_NUM_DATE, TYPE_REP_ORACLE),
-    DataType(
-        DATA_TYPE_DOL,
-        constants::ORA_TYPE_NUM_NUMBER,
-        TYPE_REP_ORACLE,
-    ),
+    DataType(DATA_TYPE_DOL, constants::ORA_TYPE_NUM_NUMBER, TYPE_REP_ORACLE),
     DataType(DATA_TYPE_TIME, DATA_TYPE_TIME, TYPE_REP_UNIVERSAL),
     DataType(DATA_TYPE_TIME_TZ, DATA_TYPE_TIME_TZ, TYPE_REP_UNIVERSAL),
     DataType(
@@ -771,11 +723,7 @@ const DATA_TYPES: [DataType; 322] = [
         constants::ORA_TYPE_NUM_INTERVAL_DS,
         TYPE_REP_UNIVERSAL,
     ),
-    DataType(
-        DATA_TYPE_EDATE,
-        constants::ORA_TYPE_NUM_DATE,
-        TYPE_REP_ORACLE,
-    ),
+    DataType(DATA_TYPE_EDATE, constants::ORA_TYPE_NUM_DATE, TYPE_REP_ORACLE),
     DataType(DATA_TYPE_ETIME, DATA_TYPE_ETIME, TYPE_REP_UNIVERSAL),
     DataType(DATA_TYPE_ETTZ, DATA_TYPE_ETTZ, TYPE_REP_UNIVERSAL),
     DataType(DATA_TYPE_ESTAMP, DATA_TYPE_ESTAMP, TYPE_REP_UNIVERSAL),

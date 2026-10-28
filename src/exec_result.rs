@@ -89,9 +89,7 @@ impl ExecResult {
     /// This transfers ownership of the data to the caller.
     pub fn returned_data(&mut self) -> Vec<Row> {
         if let Some(rows) = self.returned_data.take() {
-            rows.into_iter()
-                .map(|r| Row::new(&self.column_info, r))
-                .collect()
+            rows.into_iter().map(|r| Row::new(&self.column_info, r)).collect()
         } else {
             Vec::new()
         }
@@ -145,9 +143,7 @@ impl ExecBatchResult {
     /// transfers ownership of the returned data to the caller.
     pub fn out_bind_data(&mut self) -> Vec<Row> {
         if let Some(rows) = self.out_bind_data.take() {
-            rows.into_iter()
-                .map(|r| Row::new(&self.column_info, r))
-                .collect()
+            rows.into_iter().map(|r| Row::new(&self.column_info, r)).collect()
         } else {
             std::iter::repeat_with(Row::new_empty)
                 .take(self.num_execs)

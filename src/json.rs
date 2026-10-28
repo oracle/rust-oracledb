@@ -236,12 +236,7 @@ impl OsonDecoderFieldNamesSeg {
 
     /// Creates a new field names segment deocder and returns it.
     fn new(lengths_size: usize) -> Self {
-        Self {
-            num_fields: 0,
-            offsets_size: 0,
-            seg_size: 0,
-            lengths_size,
-        }
+        Self { num_fields: 0, offsets_size: 0, seg_size: 0, lengths_size }
     }
 }
 
@@ -567,8 +562,7 @@ impl OsonEncoder {
         self.short_field_names_seg.process_field_names(0);
         let num_short_field_names =
             self.short_field_names_seg.field_names.len();
-        self.long_field_names_seg
-            .process_field_names(num_short_field_names);
+        self.long_field_names_seg.process_field_names(num_short_field_names);
 
         // determine remaining flags and field id size
         flags |= OSON_FLAG_HASH_ID_UINT8 | OSON_FLAG_TINY_NODES_STAT;
@@ -711,8 +705,7 @@ impl OsonEncoderFieldNamesSeg {
         if field_name.name.len() <= 255 {
             self.buf.write_u8(field_name.name.len().try_into().unwrap());
         } else {
-            self.buf
-                .write_u16be(field_name.name.len().try_into().unwrap());
+            self.buf.write_u16be(field_name.name.len().try_into().unwrap());
         }
         self.buf.write_bytes(field_name.name.as_bytes());
         self.field_names.push(field_name);
@@ -720,10 +713,7 @@ impl OsonEncoderFieldNamesSeg {
 
     /// Creates a new OSON encoder field names segment.
     fn new() -> Self {
-        Self {
-            buf: WriteBuffer::new(),
-            field_names: Vec::new(),
-        }
+        Self { buf: WriteBuffer::new(), field_names: Vec::new() }
     }
 
     /// Processes the field names in preparation for encoding within OSON. The
@@ -775,8 +765,7 @@ impl OsonEncoderTreeSeg {
             self.encode_node(value);
         }
         for offset in offsets {
-            self.buf
-                .write_u32be_at(offset.try_into().unwrap(), offsets_pos);
+            self.buf.write_u32be_at(offset.try_into().unwrap(), offsets_pos);
             offsets_pos += 4;
         }
     }
@@ -901,8 +890,7 @@ impl OsonEncoderTreeSeg {
             self.encode_node(value);
         }
         for offset in offsets {
-            self.buf
-                .write_u32be_at(offset.try_into().unwrap(), offsets_pos);
+            self.buf.write_u32be_at(offset.try_into().unwrap(), offsets_pos);
             offsets_pos += 4;
         }
     }
@@ -919,11 +907,7 @@ impl OsonEncoderTreeSeg {
                     .insert(field_name.name.clone(), field_name.field_id);
             }
         }
-        Self {
-            buf: WriteBuffer::new(),
-            field_id_length,
-            field_id_map,
-        }
+        Self { buf: WriteBuffer::new(), field_id_length, field_id_map }
     }
 }
 
@@ -941,12 +925,7 @@ impl OsonFieldName {
         } else {
             hash_id &= 0xffff;
         }
-        Self {
-            name: name.to_string(),
-            hash_id,
-            offset: 0,
-            field_id: 0,
-        }
+        Self { name: name.to_string(), hash_id, offset: 0, field_id: 0 }
     }
 }
 

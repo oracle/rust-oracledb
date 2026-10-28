@@ -44,11 +44,7 @@ impl Parser<'_> {
 
     /// Creates a new parser for the given string and returns it.
     pub(crate) fn new(source: &str) -> Parser<'_> {
-        Parser {
-            source,
-            pos: 0,
-            temp_pos: 0,
-        }
+        Parser { source, pos: 0, temp_pos: 0 }
     }
 
     /// Consumes the next character in the string and returns it.
@@ -65,11 +61,7 @@ impl Parser<'_> {
     /// Consumes the next character in the string and returns whether it
     /// matches the specified character.
     pub(crate) fn next_char_matches(&mut self, match_ch: char) -> bool {
-        if let Some(ch) = self.next_char() {
-            ch == match_ch
-        } else {
-            false
-        }
+        if let Some(ch) = self.next_char() { ch == match_ch } else { false }
     }
 
     /// Parses delimited text and returns the text between the delimiters (or
@@ -95,9 +87,8 @@ impl Parser<'_> {
     /// Returns a parse error showing the line and position in that line that
     /// caused the issue.
     pub(crate) fn parse_error(&self) -> Error {
-        let start_line_pos = self.source[..self.temp_pos]
-            .rfind('\n')
-            .map_or(0, |i| i + 1);
+        let start_line_pos =
+            self.source[..self.temp_pos].rfind('\n').map_or(0, |i| i + 1);
         let end_line_pos = self.source[self.temp_pos..]
             .find('\n')
             .map_or(self.source.len(), |i| self.temp_pos + i);
@@ -181,11 +172,7 @@ impl Parser<'_> {
 
     /// Returns true if the current character being considered matches.
     pub(crate) fn peek_char_matches(&self, match_ch: char) -> bool {
-        if let Some(ch) = self.peek_char() {
-            ch == match_ch
-        } else {
-            false
-        }
+        if let Some(ch) = self.peek_char() { ch == match_ch } else { false }
     }
 
     pub(crate) fn restore_pos(&mut self) {

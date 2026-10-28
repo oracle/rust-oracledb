@@ -98,11 +98,8 @@ pub fn enquote_name(value: &str, capitalize: bool) -> Result<String, Error> {
     if value.contains('"') {
         Err(Error::name_has_embedded_quotes())
     } else {
-        let adjusted_value = if capitalize {
-            value.to_uppercase()
-        } else {
-            value.to_string()
-        };
+        let adjusted_value =
+            if capitalize { value.to_uppercase() } else { value.to_string() };
         Ok(format!("\"{}\"", adjusted_value))
     }
 }

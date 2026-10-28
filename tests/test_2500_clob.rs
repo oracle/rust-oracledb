@@ -199,9 +199,8 @@ fn test_2509(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
         .build()?
         .query_row(&[])?;
     let mut lob: oracledb::Lob = row.take(0)?;
-    let error = lob
-        .write(&[0xff])
-        .expect_err("invalid UTF-8 must be rejected");
+    let error =
+        lob.write(&[0xff]).expect_err("invalid UTF-8 must be rejected");
     assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
     Ok(())
 }

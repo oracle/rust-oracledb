@@ -87,10 +87,7 @@ impl Connection {
     /// Establishes a standalone connection to the database and returns it.
     pub(crate) fn connect(config: Config) -> Result<Connection, Error> {
         let conn_impl = ConnImpl::connect(config, String::new())?;
-        Ok(Connection {
-            conn_impl: Some(conn_impl),
-            pool_contents_ref: None,
-        })
+        Ok(Connection { conn_impl: Some(conn_impl), pool_contents_ref: None })
     }
 
     /// Creates a connection from a pooled connection.
@@ -302,8 +299,7 @@ impl Connection {
         &self,
         client_identifier: &str,
     ) -> Result<(), Error> {
-        self.get_impl()?
-            .set_pending_client_identifier(client_identifier)
+        self.get_impl()?.set_pending_client_identifier(client_identifier)
     }
 
     /// Sets the client info associated with the connection. This is the same

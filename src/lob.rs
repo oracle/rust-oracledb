@@ -85,12 +85,7 @@ impl PendingLobData {
             };
             // LOB locators are returned as a length-encoded byte sequence.
             let locator = resp.read_bytes_with_length()?.into_owned();
-            Ok(Some(Self {
-                chunk_size,
-                db_type,
-                locator,
-                size,
-            }))
+            Ok(Some(Self { chunk_size, db_type, locator, size }))
         }
     }
 
@@ -151,7 +146,7 @@ impl Lob {
         op: LobOp<'a>,
     ) -> Result<LobOpMessage<'a>, Error> {
         let mut message = LobOpMessage::new(&self.locator, op);
-        self.client_ref.lock()?.process_message(&mut message)?;
+        self.client_ref.lock()?.process_lob_op(&mut message)?;
         if let Some(locator) = message.take_returned_locator() {
             self.locator = locator;
         }
@@ -218,7 +213,7 @@ impl Lob {
                     csfrm: db_type.csfrm,
                 },
             );
-            client_ref.lock()?.process_message(&mut message)?;
+            client_ref.lock()?.process_lob_op(&mut message)?;
             message
         };
 
@@ -247,11 +242,7 @@ impl Lob {
 
     /// Closes the LOB.
     pub fn close(&mut self) -> Result<(), Error> {
-        let op = if self.is_bfile() {
-            LobOp::FileClose
-        } else {
-            LobOp::Close
-        };
+        let op = if self.is_bfile() { LobOp::FileClose } else { LobOp::Close };
         self.process_lob_op(op)?;
         Ok(())
     }
@@ -293,22 +284,15 @@ impl Lob {
 
     /// Returns whether the LOB has been opened using [`open`](Self::open).
     pub fn is_open(&mut self) -> Result<bool, Error> {
-        let op = if self.is_bfile() {
-            LobOp::FileIsOpen
-        } else {
-            LobOp::IsOpen
-        };
+        let op =
+            if self.is_bfile() { LobOp::FileIsOpen } else { LobOp::IsOpen };
         let message = self.process_lob_op(op)?;
         Ok(message.returned_bool())
     }
 
     /// Opens the LOB.
     pub fn open(&mut self) -> Result<(), Error> {
-        let op = if self.is_bfile() {
-            LobOp::FileOpen
-        } else {
-            LobOp::Open
-        };
+        let op = if self.is_bfile() { LobOp::FileOpen } else { LobOp::Open };
         self.process_lob_op(op)?;
         Ok(())
     }

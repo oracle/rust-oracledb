@@ -117,9 +117,8 @@ fn test_1805(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     assert_eq!(result.rows_affected(), 3);
 
     let cursor = conn.query("select c from test_1805 order by id", &[])?;
-    let values: Vec<Option<Vec<u8>>> = cursor
-        .map(|row| row?.get(0))
-        .collect::<Result<Vec<_>, _>>()?;
+    let values: Vec<Option<Vec<u8>>> =
+        cursor.map(|row| row?.get(0)).collect::<Result<Vec<_>, _>>()?;
     assert!(values[0].is_none());
     assert_eq!(values[1].as_deref(), Some(short_value.as_slice()));
     assert_eq!(values[2].as_deref(), Some(long_value.as_slice()));

@@ -78,6 +78,17 @@ pub(crate) enum PendingDbValue {
 }
 
 impl PendingDbValue {
+    /// Cleans up the pending database value. This is called when the pending
+    /// value will not be transformed into a public value.
+    pub(crate) fn cleanup(self, client: &mut Client) {
+        match self {
+            Self::Cursor(statement) => client.return_statement(&statement),
+            Self::Lob(mut data) => {
+                client.add_lob_to_close(data.take_locator())
+            }
+        }
+    }
+
     /// Converts pending data into a public value with a client reference.
     pub(crate) fn into_db_value(self, client_ref: &ClientRef) -> DbValue {
         match self {
@@ -694,11 +705,7 @@ where
     }
 
     fn max_size(&self) -> usize {
-        if let Some(value) = self {
-            <T>::max_size(value)
-        } else {
-            0
-        }
+        if let Some(value) = self { <T>::max_size(value) } else { 0 }
     }
 }
 

@@ -47,6 +47,7 @@ use crate::dbobject::DbObjectTypeCache;
 use crate::end_user_security_context::EndUserSecurityContext;
 use crate::error::Error;
 use crate::messages::AuthMessage;
+use crate::messages::CommitMessage;
 use crate::messages::ConnectMessage;
 use crate::messages::DataTypesMessage;
 use crate::messages::EofMessage;
@@ -54,9 +55,11 @@ use crate::messages::ExecuteMessage;
 use crate::messages::FastAuthMessage;
 use crate::messages::FetchMessage;
 use crate::messages::FlushOutBindsMessage;
+use crate::messages::LobOpMessage;
 use crate::messages::LogoffMessage;
 use crate::messages::MarkerMessage;
 use crate::messages::Message;
+use crate::messages::PingMessage;
 use crate::messages::ProtocolMessage;
 use crate::messages::RollbackMessage;
 use crate::packet::Packet;
@@ -136,6 +139,20 @@ impl Client {
     /// Processes the call status flags returned by the server.
     fn process_call_status(&mut self, call_status: u32) {
         self.transaction_in_progress = call_status & 0x00000002 != 0
+    }
+
+    /// Processes a single message and receives back the response. If the
+    /// message requires resending, that is done and only the second response
+    /// is returned.
+    fn process_message(
+        &mut self,
+        message: &mut impl Message,
+    ) -> Result<Response, Error> {
+        let mut response = self.perform_round_trip(message)?;
+        if message.resend_needed() {
+            response = self.perform_round_trip(message)?;
+        }
+        Ok(response)
     }
 
     /// Receives a data packet from the database. Control packets and marker
@@ -596,6 +613,12 @@ impl Client {
         statement.clear_cursor();
     }
 
+    /// Commits any pending transaction.
+    pub(crate) fn commit(&mut self) -> Result<(), Error> {
+        self.process_message(&mut CommitMessage::new())?;
+        Ok(())
+    }
+
     /// Returns the configuration associated with the client.
     pub(crate) fn config(&self) -> &Config {
         &self.config
@@ -636,8 +659,7 @@ impl Client {
                 TcpStream::connect(sock_addr)?
             };
         self.transport.connect(stream, address, &self.config)?;
-        self.transport
-            .set_max_packet_size(description.sdu() as usize);
+        self.transport.set_max_packet_size(description.sdu() as usize);
         let mut address = address.clone();
         let mut connect_data = connect_data.to_string();
         let mut connect_message =
@@ -693,7 +715,9 @@ impl Client {
             self.override_ttc_field_version =
                 constants::FAST_AUTH_TTC_FIELD_VERSION;
             self.process_message(&mut fast_auth_message)?;
-            fast_auth_message.process_auth_phase_two(self)
+            let auth_message = fast_auth_message.auth_message();
+            self.process_message(auth_message)?;
+            self.post_connect(auth_message)
 
         // otherwise, do the normal authentication; disable end of response
         // for the first two messages as the server does not send an end of
@@ -910,6 +934,12 @@ impl Client {
         }
     }
 
+    /// Commits any pending transaction.
+    pub(crate) fn ping(&mut self) -> Result<(), Error> {
+        self.process_message(&mut PingMessage::new())?;
+        Ok(())
+    }
+
     /// Runs activities after the auth message has been processed. The auth
     /// message contains information about the database which is retained.
     pub(crate) fn post_connect(
@@ -934,18 +964,13 @@ impl Client {
         Ok(db_info)
     }
 
-    /// Processes a single message and receives back the response. If the
-    /// message requires resending, that is done and only the second response
-    /// is returned.
-    pub(crate) fn process_message(
+    /// Processes a LOB operation.
+    pub(crate) fn process_lob_op(
         &mut self,
-        message: &mut impl Message,
-    ) -> Result<Response, Error> {
-        let mut response = self.perform_round_trip(message)?;
-        if message.resend_needed() {
-            response = self.perform_round_trip(message)?;
-        }
-        Ok(response)
+        message: &mut LobOpMessage,
+    ) -> Result<(), Error> {
+        self.process_message(message)?;
+        Ok(())
     }
 
     /// Returns whether the client should be closed based on the pending error
@@ -959,6 +984,12 @@ impl Client {
     /// authentication.
     pub(crate) fn reset_ttc_field_version(&mut self) {
         self.override_ttc_field_version = 0;
+    }
+
+    /// Rolls back any pending transaction.
+    pub(crate) fn rollback(&mut self) -> Result<(), Error> {
+        self.process_message(&mut RollbackMessage::new())?;
+        Ok(())
     }
 
     /// Returns a statement to the statement cache for subsequent use, or

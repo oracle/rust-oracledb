@@ -155,16 +155,8 @@ fn test_1906(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
         "organization index",
     )?;
     let data = oracledb::BindParameters::Slice(&[
-        &[
-            &1,
-            &"String #1",
-            &oracledb::OracleTimestamp::new_date(2017, 4, 4),
-        ],
-        &[
-            &2,
-            &"String #2",
-            &oracledb::OracleTimestamp::new_date(2017, 4, 5),
-        ],
+        &[&1, &"String #1", &oracledb::OracleTimestamp::new_date(2017, 4, 4)],
+        &[&2, &"String #2", &oracledb::OracleTimestamp::new_date(2017, 4, 5)],
         &[
             &3,
             &"3".repeat(249),

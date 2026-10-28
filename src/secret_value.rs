@@ -47,10 +47,7 @@ impl SecretValue {
     pub(crate) fn new(value: &[u8]) -> Self {
         let mut obfuscator = vec![0u8; value.len()];
         rand::rng().fill(&mut obfuscator[..]);
-        Self {
-            obfuscated_value: xor_bytes(value, &obfuscator),
-            obfuscator,
-        }
+        Self { obfuscated_value: xor_bytes(value, &obfuscator), obfuscator }
     }
 }
 

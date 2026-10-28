@@ -330,10 +330,7 @@ fn test_2102(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
         oracledb::JsonValue::BinaryDouble(25.25),
     );
     let str_value = String::from("str_value");
-    map.insert(
-        "str_key".to_string(),
-        oracledb::JsonValue::String(str_value),
-    );
+    map.insert("str_key".to_string(), oracledb::JsonValue::String(str_value));
     let date_value = oracledb::OracleTimestamp::new_date(2026, 2, 28);
     map.insert(
         "date_key".to_string(),
@@ -384,10 +381,7 @@ fn test_2102(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     map.insert("raw_key".to_string(), oracledb::JsonValue::Raw(raw_value));
     let num_str = String::from("12345678901234567890123456789012345");
     let num_value = oracledb::OracleNumber::from_str(&num_str).unwrap();
-    map.insert(
-        "num_key".to_string(),
-        oracledb::JsonValue::Number(num_value),
-    );
+    map.insert("num_key".to_string(), oracledb::JsonValue::Number(num_value));
     let str_u8_value = String::from("A").repeat(64);
     map.insert(
         "string_u8_key".to_string(),
@@ -442,11 +436,7 @@ fn test_2104(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     let expected: Vec<f32> = vec![1.0, 2.0];
     let vec_str = format!(
         "[{}]",
-        expected
-            .iter()
-            .map(|v| v.to_string())
-            .collect::<Vec<_>>()
-            .join(",")
+        expected.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(",")
     );
     let row = conn.query_row(
         &format!(
@@ -558,10 +548,7 @@ fn test_2108(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     let oracledb::JsonValue::JsonObject(second) = &items[1] else {
         panic!("expected nested JSON object");
     };
-    assert!(matches!(
-        second.get("name"),
-        Some(oracledb::JsonValue::Null)
-    ));
+    assert!(matches!(second.get("name"), Some(oracledb::JsonValue::Null)));
     assert!(matches!(
         second.get("active"),
         Some(oracledb::JsonValue::Boolean(true))
@@ -613,10 +600,8 @@ fn test_2110(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     let mut input_map = HashMap::new();
     input_map.insert("short".to_string(), repeated.clone());
     input_map.insert(long_name.clone(), repeated.clone());
-    input_map.insert(
-        "nested".to_string(),
-        oracledb::JsonValue::JsonObject(nested),
-    );
+    input_map
+        .insert("nested".to_string(), oracledb::JsonValue::JsonObject(nested));
     input_map.insert(
         "array".to_string(),
         oracledb::JsonValue::JsonArray(vec![

@@ -75,11 +75,7 @@ impl PoolManager {
         receive_channel: mpsc::Receiver<PoolManagerRequest>,
         config: PoolConfig,
     ) -> PoolManager {
-        PoolManager {
-            config,
-            receive_channel,
-            contents_ref,
-        }
+        PoolManager { config, receive_channel, contents_ref }
     }
 
     /// Runs the manager (in a thread).

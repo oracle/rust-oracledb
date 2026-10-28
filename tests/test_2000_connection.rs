@@ -268,10 +268,7 @@ fn test_2009(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
         Err(error) => error,
     };
     let elapsed = started.elapsed();
-    assert!(matches!(
-        error.kind(),
-        oracledb::ErrorKind::CallTimeoutExceeded
-    ));
+    assert!(matches!(error.kind(), oracledb::ErrorKind::CallTimeoutExceeded));
     assert!(elapsed >= Duration::from_millis(200));
     assert!(elapsed < Duration::from_secs(5));
 

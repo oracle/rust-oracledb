@@ -98,11 +98,7 @@ impl Statement {
         client_ref: ClientRef,
         statement: CachedStatement,
     ) -> Self {
-        Self {
-            client_ref,
-            statement,
-            return_on_drop: true,
-        }
+        Self { client_ref, statement, return_on_drop: true }
     }
 
     /// Returns the bind names used by the statement.
@@ -144,11 +140,7 @@ impl Statement {
         self.statement.check_binds(&params)?;
         let num_execs = params.num_rows();
         let mut response = self.get_execute_response(params, false)?;
-        Ok(ExecBatchResult::new(
-            &self.statement,
-            num_execs,
-            &mut response,
-        ))
+        Ok(ExecBatchResult::new(&self.statement, num_execs, &mut response))
     }
 
     /// Executes the statement with the given named parameters and returns an

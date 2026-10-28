@@ -51,12 +51,7 @@ impl Rowid {
         resp.advance(1)?;
         let block_num = resp.read_ub4()?;
         let slot_num = resp.read_ub2()?;
-        Ok(Self {
-            rba,
-            partition_id,
-            block_num,
-            slot_num,
-        })
+        Ok(Self { rba, partition_id, block_num, slot_num })
     }
 
     /// Returns a rowid from an encoded buffer.
@@ -65,12 +60,7 @@ impl Rowid {
         let partition_id = buf.read_u16be()?;
         let block_num = buf.read_u32be()?;
         let slot_num = buf.read_u16be()?;
-        Ok(Self {
-            rba,
-            partition_id,
-            block_num,
-            slot_num,
-        })
+        Ok(Self { rba, partition_id, block_num, slot_num })
     }
 }
 

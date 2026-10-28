@@ -75,10 +75,7 @@ impl Pool {
                 PoolManager::new(manager_contents_ref, rx, manager_config);
             manager.run();
         });
-        Ok(Self {
-            contents_ref,
-            bg_task: Some(bg_task),
-        })
+        Ok(Self { contents_ref, bg_task: Some(bg_task) })
     }
 
     /// Returns a connection from the pool.

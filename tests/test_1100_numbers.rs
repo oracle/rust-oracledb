@@ -38,10 +38,7 @@ fn test_1100() {
     assert_eq!(oracledb::OracleNumber::from(3105u16).to_string(), "3105");
     assert_eq!(oracledb::OracleNumber::from(65536u32).to_string(), "65536");
     assert_eq!(oracledb::OracleNumber::from(65537u64).to_string(), "65537");
-    assert_eq!(
-        oracledb::OracleNumber::from(100000u128).to_string(),
-        "100000"
-    );
+    assert_eq!(oracledb::OracleNumber::from(100000u128).to_string(), "100000");
 }
 
 #[test]
@@ -49,18 +46,9 @@ fn test_1100() {
 fn test_1101() {
     assert_eq!(oracledb::OracleNumber::from(-10i8).to_string(), "-10");
     assert_eq!(oracledb::OracleNumber::from(-256i16).to_string(), "-256");
-    assert_eq!(
-        oracledb::OracleNumber::from(-65000i32).to_string(),
-        "-65000"
-    );
-    assert_eq!(
-        oracledb::OracleNumber::from(-68050i64).to_string(),
-        "-68050"
-    );
-    assert_eq!(
-        oracledb::OracleNumber::from(-10000i128).to_string(),
-        "-10000"
-    );
+    assert_eq!(oracledb::OracleNumber::from(-65000i32).to_string(), "-65000");
+    assert_eq!(oracledb::OracleNumber::from(-68050i64).to_string(), "-68050");
+    assert_eq!(oracledb::OracleNumber::from(-10000i128).to_string(), "-10000");
 }
 
 #[rstest]

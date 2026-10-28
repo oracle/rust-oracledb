@@ -254,9 +254,8 @@ fn test_2608(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
         &[],
     )?;
     let cursor: oracledb::Cursor = row.take(0)?;
-    let values: Vec<i32> = cursor
-        .map(|row| row?.get(0))
-        .collect::<Result<Vec<_>, _>>()?;
+    let values: Vec<i32> =
+        cursor.map(|row| row?.get(0)).collect::<Result<Vec<_>, _>>()?;
     assert_eq!(values, vec![1, 2, 3]);
     Ok(())
 }

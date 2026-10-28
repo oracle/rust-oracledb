@@ -47,10 +47,7 @@ impl FetchMessage<'_> {
         statement: &'statement mut CachedStatement,
         last_row: Option<DbRow>,
     ) -> FetchMessage<'statement> {
-        FetchMessage {
-            statement,
-            last_row,
-        }
+        FetchMessage { statement, last_row }
     }
 }
 

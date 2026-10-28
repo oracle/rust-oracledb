@@ -298,10 +298,7 @@ impl RecordBatchCreator {
     fn create_batch(&mut self) -> Result<arrow_array::RecordBatch, Error> {
         let arrays: Vec<arrow_array::ArrayRef> =
             self.builders.iter_mut().map(|b| b.finish()).collect();
-        Ok(arrow_array::RecordBatch::try_new(
-            self.schema.clone(),
-            arrays,
-        )?)
+        Ok(arrow_array::RecordBatch::try_new(self.schema.clone(), arrays)?)
     }
 
     /// Creates a new structure for creating a RecordBatch
@@ -312,9 +309,6 @@ impl RecordBatchCreator {
             .iter()
             .map(|f| make_builder(f.data_type(), 0))
             .collect();
-        Ok(Self {
-            schema: schema.into(),
-            builders,
-        })
+        Ok(Self { schema: schema.into(), builders })
     }
 }

@@ -54,9 +54,7 @@ impl WriteBuffer {
 
     /// Creates a new instance.
     pub fn new() -> Self {
-        Self {
-            buf: Vec::<u8>::new(),
-        }
+        Self { buf: Vec::<u8>::new() }
     }
 
     /// Reserves the specified number of bytes in the buffer for later use. The

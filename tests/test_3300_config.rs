@@ -96,10 +96,7 @@ fn test_3301(
         Ok(_) => panic!("expected failure"),
         Err(err) => err,
     };
-    assert!(matches!(
-        err.kind(),
-        oracledb::ErrorKind::InvalidNetworkName(_)
-    ));
+    assert!(matches!(err.kind(), oracledb::ErrorKind::InvalidNetworkName(_)));
     Ok(())
 }
 

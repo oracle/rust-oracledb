@@ -32,7 +32,6 @@
 
 use crate::client::Client;
 use crate::constants;
-use crate::db_info::DbInfo;
 use crate::error::Error;
 use crate::messages::Message;
 use crate::messages::auth::AuthMessage;
@@ -52,6 +51,12 @@ pub struct FastAuthMessage {
 }
 
 impl FastAuthMessage {
+    /// Returns the authorization message associated with the fast
+    /// authorization message.
+    pub(crate) fn auth_message(&mut self) -> &mut AuthMessage {
+        &mut self.auth_message
+    }
+
     /// Creates a new FastAuthMessage structure and returns it.
     pub(crate) fn new() -> FastAuthMessage {
         FastAuthMessage {
@@ -59,16 +64,6 @@ impl FastAuthMessage {
             data_types_message: DataTypesMessage::new(),
             auth_message: AuthMessage::new(),
         }
-    }
-
-    /// Processes the second phase of authorization and performs post connect
-    /// processing.
-    pub(crate) fn process_auth_phase_two(
-        &mut self,
-        client: &mut Client,
-    ) -> Result<DbInfo, Error> {
-        client.process_message(&mut self.auth_message)?;
-        client.post_connect(&mut self.auth_message)
     }
 }
 
@@ -99,8 +94,7 @@ impl Message for FastAuthMessage {
         client: &Client,
         message_type: u8,
     ) -> bool {
-        self.auth_message
-            .is_final_ttc_message_type(client, message_type)
+        self.auth_message.is_final_ttc_message_type(client, message_type)
     }
 
     fn pre_deserialize(&mut self, client: &mut Client, _resp: &mut Response) {

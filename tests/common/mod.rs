@@ -156,8 +156,7 @@ fn is_db_min_version(
 pub fn conn() -> oracledb::Connection {
     let config = oracledb::get_test_config().config.clone();
     let conn = oracledb::connect(config).unwrap();
-    conn.execute("alter session set time_zone = 'UTC'", &[])
-        .unwrap();
+    conn.execute("alter session set time_zone = 'UTC'", &[]).unwrap();
     conn
 }
 

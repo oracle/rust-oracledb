@@ -88,10 +88,7 @@ fn test_2902() -> Result<(), oracledb::Error> {
     let err = pool
         .close()
         .expect_err("closing a pool with a checked-out connection must fail");
-    assert!(matches!(
-        err.kind(),
-        oracledb::ErrorKind::PoolHasBusyConnections
-    ));
+    assert!(matches!(err.kind(), oracledb::ErrorKind::PoolHasBusyConnections));
     connection.ping()?;
 
     connection.close()?;

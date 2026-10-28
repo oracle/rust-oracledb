@@ -73,9 +73,9 @@ pub(crate) fn column_db_type(
         DataType::Binary | DataType::LargeBinary | DataType::BinaryView => {
             Ok(crate::DB_TYPE_RAW)
         }
-        _ => Err(Error::unsupported_arrow_type(
-            column.data_type().to_string(),
-        )),
+        _ => {
+            Err(Error::unsupported_arrow_type(column.data_type().to_string()))
+        }
     }
 }
 
@@ -86,11 +86,7 @@ pub(crate) fn column_max_size(
 ) -> usize {
     macro_rules! max_size {
         ($e:expr) => {
-            $e.iter()
-                .flatten()
-                .map(|item| item.len())
-                .max()
-                .unwrap_or(0)
+            $e.iter().flatten().map(|item| item.len()).max().unwrap_or(0)
         };
     }
     match column.data_type() {

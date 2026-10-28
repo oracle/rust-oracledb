@@ -59,11 +59,8 @@ fn test_3700(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     // nested address type has been cached yet.
     let people_type = conn.get_type("TEST_3700_PEOPLE_TYPE")?;
     assert!(people_type.is_collection());
-    let person_type = people_type
-        .element_metadata()
-        .unwrap()
-        .object_type()?
-        .unwrap();
+    let person_type =
+        people_type.element_metadata().unwrap().object_type()?.unwrap();
     let person_attrs = person_type.attributes();
     assert_eq!(person_attrs.len(), 2);
     let nested_type = person_attrs[1].object_type()?.unwrap();
@@ -259,32 +256,14 @@ fn test_3703(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
             ("SMALLINTVALUE", oracledb::DB_TYPE_NUMBER, 38, 0, 0),
             ("REALVALUE", oracledb::DB_TYPE_NUMBER, 63, -127, 0),
             ("DECIMALVALUE", oracledb::DB_TYPE_NUMBER, 20, 6, 0),
-            (
-                "DOUBLEPRECISIONVALUE",
-                oracledb::DB_TYPE_NUMBER,
-                126,
-                -127,
-                0,
-            ),
+            ("DOUBLEPRECISIONVALUE", oracledb::DB_TYPE_NUMBER, 126, -127, 0),
             ("FLOATVALUE", oracledb::DB_TYPE_NUMBER, 126, -127, 0),
             ("BINARYFLOATVALUE", oracledb::DB_TYPE_BINARY_FLOAT, 0, 0, 0),
-            (
-                "BINARYDOUBLEVALUE",
-                oracledb::DB_TYPE_BINARY_DOUBLE,
-                0,
-                0,
-                0,
-            ),
+            ("BINARYDOUBLEVALUE", oracledb::DB_TYPE_BINARY_DOUBLE, 0, 0, 0),
             ("DATEVALUE", oracledb::DB_TYPE_DATE, 0, 0, 0),
             ("TIMESTAMPVALUE", oracledb::DB_TYPE_TIMESTAMP, 0, 3, 0),
             ("TIMESTAMPTZVALUE", oracledb::DB_TYPE_TIMESTAMP_TZ, 0, 4, 0),
-            (
-                "TIMESTAMPLTZVALUE",
-                oracledb::DB_TYPE_TIMESTAMP_LTZ,
-                0,
-                5,
-                0,
-            ),
+            ("TIMESTAMPLTZVALUE", oracledb::DB_TYPE_TIMESTAMP_LTZ, 0, 5, 0),
             ("INTERVALDSVALUE", oracledb::DB_TYPE_INTERVAL_DS, 4, 2, 0),
             ("INTERVALYMVALUE", oracledb::DB_TYPE_INTERVAL_YM, 3, 0, 0),
             ("CLOBVALUE", oracledb::DB_TYPE_CLOB, 0, 0, 0),
