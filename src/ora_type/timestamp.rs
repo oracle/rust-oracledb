@@ -33,6 +33,9 @@ use chrono::Timelike;
 use std::fmt;
 use std::fmt::Write;
 
+#[cfg(feature = "arrow")]
+use arrow_schema::TimeUnit;
+
 use crate::constants;
 use crate::db_type::DbType;
 use crate::error::Error;
@@ -73,10 +76,22 @@ impl Default for OracleTimestamp {
 
 impl OracleTimestamp {
     #[cfg(feature = "arrow")]
-    /// Returns the timestamp as the number of microseconds since July 1, 1970
-    /// as is required by the Arrow data format.
-    pub(crate) fn to_timestamp_micros(self) -> Result<i64, Error> {
-        Ok(chrono::NaiveDateTime::try_from(self)?.and_utc().timestamp_micros())
+    /// Returns the timestamp in the specified Arrow time unit.
+    pub(crate) fn to_timestamp(
+        self,
+        time_unit: TimeUnit,
+    ) -> Result<i64, Error> {
+        let timestamp = chrono::NaiveDateTime::try_from(self)?.and_utc();
+        match time_unit {
+            TimeUnit::Second => Ok(timestamp.timestamp()),
+            TimeUnit::Millisecond => Ok(timestamp.timestamp_millis()),
+            TimeUnit::Microsecond => Ok(timestamp.timestamp_micros()),
+            TimeUnit::Nanosecond => {
+                timestamp.timestamp_nanos_opt().ok_or_else(|| {
+                    Error::out_of_range("timestamp is outside Arrow range")
+                })
+            }
+        }
     }
 
     /// Returns the day of the timestamp.

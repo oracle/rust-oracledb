@@ -36,8 +36,9 @@ use arrow_array::builder::make_builder;
 use arrow_array::builder::{
     BinaryBuilder, BooleanBuilder, Decimal128Builder, Float32Builder,
     Float64Builder, Int8Builder, Int16Builder, Int32Builder, Int64Builder,
-    StringBuilder, TimestampMicrosecondBuilder, UInt8Builder, UInt16Builder,
-    UInt32Builder, UInt64Builder,
+    StringBuilder, TimestampMicrosecondBuilder, TimestampMillisecondBuilder,
+    TimestampNanosecondBuilder, TimestampSecondBuilder, UInt8Builder,
+    UInt16Builder, UInt32Builder, UInt64Builder,
 };
 use arrow_schema::{DataType, Field, Schema, SchemaRef, TimeUnit};
 
@@ -70,7 +71,13 @@ fn default_type(col: &Metadata) -> Result<DataType, Error> {
     } else if col.db_type().is_binary_type() {
         Ok(DataType::Binary)
     } else if col.db_type().is_date_type() {
-        Ok(DataType::Timestamp(TimeUnit::Microsecond, None))
+        let unit = match col.scale() {
+            0 => TimeUnit::Second,
+            1..=3 => TimeUnit::Millisecond,
+            4..=6 => TimeUnit::Microsecond,
+            _ => TimeUnit::Nanosecond,
+        };
+        Ok(DataType::Timestamp(unit, None))
     } else {
         match col.db_type().ora_type_num {
             constants::ORA_TYPE_NUM_BINARY_DOUBLE => Ok(DataType::Float64),
@@ -239,16 +246,33 @@ impl RecordBatchCreator {
                     .unwrap()
                     .append_option(row.get::<Option<i64>>(column_index)?);
             }
-            DataType::Timestamp(TimeUnit::Microsecond, _) => {
+            DataType::Timestamp(time_unit, _) => {
                 let value = row
                     .get::<Option<OracleTimestamp>>(column_index)?
-                    .map(|v| v.to_timestamp_micros())
+                    .map(|v| v.to_timestamp(*time_unit))
                     .transpose()?;
-                builder
-                    .as_any_mut()
-                    .downcast_mut::<TimestampMicrosecondBuilder>()
-                    .unwrap()
-                    .append_option(value)
+                match time_unit {
+                    TimeUnit::Second => builder
+                        .as_any_mut()
+                        .downcast_mut::<TimestampSecondBuilder>()
+                        .unwrap()
+                        .append_option(value),
+                    TimeUnit::Millisecond => builder
+                        .as_any_mut()
+                        .downcast_mut::<TimestampMillisecondBuilder>()
+                        .unwrap()
+                        .append_option(value),
+                    TimeUnit::Microsecond => builder
+                        .as_any_mut()
+                        .downcast_mut::<TimestampMicrosecondBuilder>()
+                        .unwrap()
+                        .append_option(value),
+                    TimeUnit::Nanosecond => builder
+                        .as_any_mut()
+                        .downcast_mut::<TimestampNanosecondBuilder>()
+                        .unwrap()
+                        .append_option(value),
+                }
             }
             DataType::UInt8 => {
                 builder

@@ -146,7 +146,7 @@ second column displays the Arrow type.
 | ---------------------- | ---------- |
 | `DB_TYPE_CHAR`, `DB_TYPE_VARCHAR`, `DB_TYPE_NCHAR`, and `DB_TYPE_NVARCHAR` | `Utf8` |
 | `DB_TYPE_RAW`, `DB_TYPE_LONG_RAW`, and `DB_TYPE_BLOB` | `Binary` |
-| `DB_TYPE_DATE`, `DB_TYPE_TIMESTAMP`, `DB_TYPE_TIMESTAMP_TZ`, and `DB_TYPE_TIMESTAMP_LTZ` | `Timestamp(Microsecond, None)` |
+| `DB_TYPE_DATE`, `DB_TYPE_TIMESTAMP`, `DB_TYPE_TIMESTAMP_TZ`, and `DB_TYPE_TIMESTAMP_LTZ` | `Timestamp(unit, None)` |
 | `DB_TYPE_BINARY_FLOAT` | `Float32` |
 | `DB_TYPE_BINARY_DOUBLE` | `Float64` |
 | `DB_TYPE_BOOLEAN` | `Boolean` |
@@ -156,6 +156,10 @@ second column displays the Arrow type.
 | `DB_TYPE_NUMBER`, precision 10 to 18, scale 0 | `Int64` |
 | `DB_TYPE_NUMBER` with nonzero scale, or precision greater than 18 | `Decimal128` |
 | `DB_TYPE_NUMBER` with precision 0, or scale whose absolute value is greater than precision | `Float64` |
+
+`DATE` values use seconds. `TIMESTAMP` values use seconds for scale 0,
+milliseconds for scales 1 to 3, microseconds for scales 4 to 6, and nanoseconds
+for scales 7 to 9.
 
 For Arrow decimal values, Arrow requires a fixed precision and scale. If an
 Oracle `NUMBER` column does not have fixed precision, or if its scale cannot be

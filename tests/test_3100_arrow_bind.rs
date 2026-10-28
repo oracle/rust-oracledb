@@ -35,8 +35,8 @@ use std::sync::Arc;
 use arrow_array::{
     Array, BinaryArray, BooleanArray, Date32Array, Decimal128Array,
     Float32Array, Float64Array, Int8Array, Int16Array, Int32Array, Int64Array,
-    RecordBatch, StringArray, TimestampMicrosecondArray, UInt8Array,
-    UInt16Array, UInt32Array, UInt64Array,
+    RecordBatch, StringArray, TimestampMicrosecondArray, TimestampSecondArray,
+    UInt8Array, UInt16Array, UInt32Array, UInt64Array,
 };
 use arrow_schema::{DataType, Field, Schema, TimeUnit};
 use rstest::*;
@@ -373,10 +373,10 @@ fn test_3104(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
         batch
             .column(6)
             .as_any()
-            .downcast_ref::<TimestampMicrosecondArray>()
+            .downcast_ref::<TimestampSecondArray>()
             .unwrap()
             .value(0),
-        1_735_689_600_000_000
+        1_735_689_600
     );
     Ok(())
 }

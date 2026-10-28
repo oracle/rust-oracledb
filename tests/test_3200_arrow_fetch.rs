@@ -32,9 +32,10 @@ mod common;
 
 use arrow_array::{
     Array, BinaryArray, Decimal128Array, Float64Array, Int8Array, Int16Array,
-    Int32Array, Int64Array, StringArray,
+    Int32Array, Int64Array, StringArray, TimestampMicrosecondArray,
+    TimestampMillisecondArray, TimestampNanosecondArray, TimestampSecondArray,
 };
-use arrow_schema::DataType;
+use arrow_schema::{DataType, TimeUnit};
 use rstest::*;
 
 use common::conn;
@@ -240,5 +241,74 @@ fn test_3204(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
         oracledb::ErrorKind::UnsupportedDbType(_)
             | oracledb::ErrorKind::ArrowOperation
     ));
+    Ok(())
+}
+
+#[rstest]
+/// test default Arrow timestamp units and values for Oracle timestamp precision
+fn test_3206(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let batch = conn.query_arrow(
+        r#"
+        select cast(timestamp '2026-01-02 03:04:05' as timestamp(0)),
+               cast(timestamp '2026-01-02 03:04:05.123' as timestamp(3)),
+               cast(timestamp '2026-01-02 03:04:05.123456' as timestamp(6)),
+               cast(timestamp '2026-01-02 03:04:05.123456789' as timestamp(9))
+        from dual
+        "#,
+        oracledb::BindParameters::default(),
+    )?;
+    let units = [
+        TimeUnit::Second,
+        TimeUnit::Millisecond,
+        TimeUnit::Microsecond,
+        TimeUnit::Nanosecond,
+    ];
+    for (index, unit) in units.into_iter().enumerate() {
+        assert_eq!(
+            batch.schema().field(index).data_type(),
+            &DataType::Timestamp(unit, None)
+        );
+    }
+    let expected = chrono::NaiveDate::from_ymd_opt(2026, 1, 2)
+        .unwrap()
+        .and_hms_nano_opt(3, 4, 5, 123_456_789)
+        .unwrap()
+        .and_utc();
+    assert_eq!(
+        batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<TimestampSecondArray>()
+            .unwrap()
+            .value(0),
+        expected.timestamp()
+    );
+    assert_eq!(
+        batch
+            .column(1)
+            .as_any()
+            .downcast_ref::<TimestampMillisecondArray>()
+            .unwrap()
+            .value(0),
+        expected.timestamp_millis()
+    );
+    assert_eq!(
+        batch
+            .column(2)
+            .as_any()
+            .downcast_ref::<TimestampMicrosecondArray>()
+            .unwrap()
+            .value(0),
+        expected.timestamp_micros()
+    );
+    assert_eq!(
+        batch
+            .column(3)
+            .as_any()
+            .downcast_ref::<TimestampNanosecondArray>()
+            .unwrap()
+            .value(0),
+        expected.timestamp_nanos_opt().unwrap()
+    );
     Ok(())
 }

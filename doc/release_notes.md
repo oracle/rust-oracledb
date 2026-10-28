@@ -9,6 +9,8 @@
     ([issue 35](https://github.com/oracle/rust-oracledb/issues/35)).
 1.  Added support for getting the domain and any annotations from columns that
     support them
+1.  Added support for fetching Arrow timestamps in seconds, milliseconds,
+    microseconds, and nanoseconds as determined by Oracle column precision.
     ([issue 48](https://github.com/oracle/rust-oracledb/issues/48)).
 1.  Fixed bug causing bind variables to be detected within DDL statements
     ([issue 33](https://github.com/oracle/rust-oracledb/issues/33)).
