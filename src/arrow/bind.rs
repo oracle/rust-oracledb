@@ -172,10 +172,7 @@ pub(crate) fn validate_column(
 fn is_timestamp_out_of_oracle_range(
     value: Option<chrono::NaiveDateTime>,
 ) -> bool {
-    value.is_none_or(|value| {
-        let year = value.year();
-        year < -4711 || year > 9999
-    })
+    value.is_none_or(|value| !(-4711..=9999).contains(&value.year()))
 }
 
 /// Utility function that writes the value found at the specified row index in

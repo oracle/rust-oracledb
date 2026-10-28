@@ -92,10 +92,10 @@ impl PendingDbValue {
     /// Converts pending data into a public value with a client reference.
     pub(crate) fn into_db_value(self, client_ref: &ClientRef) -> DbValue {
         match self {
-            PendingDbValue::Cursor(statement) => DbValue::Cursor(Box::new(
-                Cursor::new(Statement::new(client_ref.clone(), statement)),
-            )),
-            PendingDbValue::Lob(data) => {
+            Self::Cursor(statement) => DbValue::Cursor(Box::new(Cursor::new(
+                Statement::new(client_ref.clone(), statement),
+            ))),
+            Self::Lob(data) => {
                 DbValue::Lob(Lob::new(client_ref.clone(), data))
             }
         }
