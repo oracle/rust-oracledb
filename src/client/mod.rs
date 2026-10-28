@@ -273,7 +273,9 @@ impl Client {
         message: &mut impl Message,
     ) -> Result<(), Error> {
         let mut buf = WriteBuffer::new();
-        self.write_piggybacks(&mut buf);
+        if message.get_packet_type() == constants::PACKET_TYPE_DATA {
+            self.write_piggybacks(&mut buf);
+        }
         message.serialize(self, &mut buf);
         self.transport.send_packets(
             message.get_packet_type(),

@@ -31,6 +31,8 @@
     ([issue 51](https://github.com/oracle/rust-oracledb/issues/51)).
 1.  Fixed bug connecting to Oracle Database 12c
     ([issue 55](https://github.com/oracle/rust-oracledb/issues/55)).
+1.  Fixed bug causing piggybacks to be sent on non-data packets
+    ([issue 59](https://github.com/oracle/rust-oracledb/issues/59)).
 1.  Fixed bug that would cause the maximum SDU specified in all descriptions to
     be used instead of the one specified for each individual description.
 1.  Fixed the error `NUMBER has scale 0 but requested scale is -38`
