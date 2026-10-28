@@ -216,7 +216,7 @@ impl Response {
         let opcode = self.read_u8()?;
         match opcode {
             constants::TTC_SERVER_PIGGYBACK_LTXID => {
-                let _ltxid = self.read_bytes_with_length()?;
+                let _ltxid = self.read_bytes_with_double_length()?;
             }
             constants::TTC_SERVER_PIGGYBACK_QUERY_CACHE_INVALIDATION
             | constants::TTC_SERVER_PIGGYBACK_TRACE_EVENT => {}
@@ -242,7 +242,7 @@ impl Response {
                 let _flags = self.read_ub4()?;
                 let _error_code = self.read_ub4()?;
                 let _queue = self.read_u8()?;
-                let _replay_context = self.read_bytes_with_length()?;
+                let _replay_context = self.read_bytes_with_double_length()?;
             }
             constants::TTC_SERVER_PIGGYBACK_SESS_RET => {
                 self.read_ub2()?;

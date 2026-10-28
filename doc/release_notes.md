@@ -31,6 +31,9 @@
     when fetching zero into an Arrow Decimal128 array with a negative scale.
 1.  Fixed panics when binding out-of-range Arrow timestamps. Invalid values
     now return the error `timestamp is outside Oracle range`.
+1.  Fixed connection failures with `unknown TTC message type` errors when the
+    database returns Application Continuity replay context or logical
+    transaction ID (LTXID) data.
 
 
 ## rust-oracledb 26.0.0-beta.4 (September 23, 2026)
