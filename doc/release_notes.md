@@ -22,6 +22,8 @@
     for query results with
     [StatementBuilder::with_requested_schema()](crate::StatementBuilder::with_requested_schema)
     ([issue 53](https://github.com/oracle/rust-oracledb/issues/53)).
+1.  Fixed bug with request boundary handling
+    ([issue 32](https://github.com/oracle/rust-oracledb/issues/32)).
 1.  Fixed bug causing bind variables to be detected within DDL statements
     ([issue 33](https://github.com/oracle/rust-oracledb/issues/33)).
 1.  Fixed issue with encoding integers with trailing zeros

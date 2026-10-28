@@ -744,15 +744,15 @@ impl Client {
         self.security_context = None;
         self.last_warning = None;
         self.transport.set_read_timeout(None)?;
-        if self.in_request {
-            if self.pending_session_state != 0 {
-                self.in_request = false;
-            } else {
-                self.pending_session_state =
-                    constants::TTC_SESSION_STATE_REQUEST_END;
-            }
+        if self.in_request && self.pending_session_state != 0 {
+            self.in_request = false;
         }
         if self.in_request || self.transaction_in_progress {
+            if self.in_request {
+                self.pending_session_state =
+                    constants::TTC_SESSION_STATE_REQUEST_END;
+                self.in_request = false;
+            }
             self.process_message(&mut RollbackMessage::new())?;
         }
         Ok(())
