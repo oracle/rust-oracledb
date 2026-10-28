@@ -12,6 +12,7 @@
 1.  Added support for fetching CLOB, NCLOB, and LONG columns as Arrow
     `LargeUtf8` instead of `Utf8`, and BLOB and LONG RAW as `LargeBinary`
     instead of `Binary`.
+1.  Added `oracle.type-name` metadata to generated Arrow fields.
 1.  Added support for fetching Arrow timestamps in seconds, milliseconds,
     microseconds, and nanoseconds as determined by Oracle column precision.
     ([issue 48](https://github.com/oracle/rust-oracledb/issues/48)).

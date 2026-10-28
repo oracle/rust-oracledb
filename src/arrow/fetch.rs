@@ -28,7 +28,7 @@
 // Defines support for fetching query results as Arrow record batches.
 //-----------------------------------------------------------------------------
 
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 
 use arrow_array::builder::ArrayBuilder;
@@ -60,7 +60,12 @@ fn default_schema(columns: &[Metadata]) -> Result<Schema, Error> {
     let mut fields: Vec<Field> = Vec::with_capacity(columns.len());
     for col in columns {
         let data_type = default_type(col)?;
-        fields.push(Field::new(col.name(), data_type, col.nullable()));
+        let metadata =
+            HashMap::from([("oracle.type-name".to_string(), col.data_type())]);
+        fields.push(
+            Field::new(col.name(), data_type, col.nullable())
+                .with_metadata(metadata),
+        );
     }
     Ok(Schema::new(fields))
 }

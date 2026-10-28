@@ -73,6 +73,33 @@ fn test_3200(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
         batch.column(1).as_any().downcast_ref::<StringArray>().unwrap();
     let amounts =
         batch.column(2).as_any().downcast_ref::<Float64Array>().unwrap();
+    assert_eq!(
+        batch
+            .schema()
+            .field(0)
+            .metadata()
+            .get("oracle.type-name")
+            .map(String::as_str),
+        Some("NUMBER(10)")
+    );
+    assert_eq!(
+        batch
+            .schema()
+            .field(1)
+            .metadata()
+            .get("oracle.type-name")
+            .map(String::as_str),
+        Some("VARCHAR2(30)")
+    );
+    assert_eq!(
+        batch
+            .schema()
+            .field(2)
+            .metadata()
+            .get("oracle.type-name")
+            .map(String::as_str),
+        Some("BINARY_DOUBLE")
+    );
     assert_eq!(ids.values(), &[1, 2, 3]);
     assert_eq!(notes.value(0), "first");
     assert!(notes.is_null(1));
@@ -195,6 +222,24 @@ fn test_3202(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
             .unwrap()
             .value(0),
         9.25
+    );
+    assert_eq!(
+        batch
+            .schema()
+            .field(4)
+            .metadata()
+            .get("oracle.type-name")
+            .map(String::as_str),
+        Some("NUMBER(10,2)")
+    );
+    assert_eq!(
+        batch
+            .schema()
+            .field(5)
+            .metadata()
+            .get("oracle.type-name")
+            .map(String::as_str),
+        Some("NUMBER")
     );
     Ok(())
 }
