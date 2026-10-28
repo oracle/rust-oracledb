@@ -130,6 +130,11 @@ id=1, name=Anna
 id=2, name=John
 ```
 
+To control the output types or schema metadata, execute the query through a
+`StatementBuilder` and call
+[StatementBuilder::with_requested_schema()](crate::StatementBuilder::with_requested_schema).
+See [Requesting an Arrow Schema](#arrowrequestedschema).
+
 ### <a name="arrowfetchtypemapping"></a> 13.2.1 Arrow Fetch Type Mapping
 
 Rust-oracledb maps Oracle Database column types to Arrow array types when
@@ -170,5 +175,61 @@ represented as an Arrow decimal, rust-oracledb fetches the value as `Float64`.
 
 If a query column has an Oracle Database type that cannot be mapped to an
 Arrow type, `query_arrow()` returns an error.
+
+### <a name="arrowrequestedschema"></a> 13.2.2 Requesting an Arrow Schema
+
+By default, [Connection::query_arrow()](crate::Connection::query_arrow) derives
+the Arrow schema and data types from Oracle Database metadata. To choose the
+Arrow data type for a query result, use
+[StatementBuilder::with_requested_schema()](crate::StatementBuilder::with_requested_schema).
+For example:
+
+```rust
+use std::sync::Arc;
+use arrow_schema::{DataType, Field, Schema};
+
+// Fields correspond to SELECT columns by position
+let schema = Arc::new(Schema::new(vec![
+    Field::new("ID", DataType::Int64, true),
+    Field::new("NAME", DataType::LargeUtf8, true),
+]));
+
+let batch = connection
+    .statement("select id, name from arrow_table order by id")?
+    .with_requested_schema(schema)
+    .build()?
+    .query_arrow(oracledb::BindParameters::default())?;
+```
+
+Fields map to query columns by position. The requested schema must contain
+one field for each result column. The returned `RecordBatch` uses the requested
+schema's field names, nullability, and metadata. Fields that can contain null
+values should be marked as nullable.
+
+The following requested conversions are supported:
+
+| Oracle Database Type | Requested Arrow Type |
+| -------------------- | -------------------- |
+| `NUMBER` | `Int8`, `Int16`, `Int32`, `Int64` |
+| `NUMBER` | `UInt8`, `UInt16`, `UInt32`, `UInt64` |
+| `NUMBER` | `Float32`, `Float64` |
+| `NUMBER` | `Decimal128(precision, scale)` |
+| `NUMBER` | `Utf8`, `LargeUtf8` |
+| Character types, including CLOB, NCLOB, LONG, and ROWID types | `Utf8`, `LargeUtf8` |
+| RAW, LONG RAW, and BLOB | `Binary`, `LargeBinary` |
+| DATE and TIMESTAMP types | `Timestamp` with seconds, milliseconds, microseconds, or nanoseconds |
+| `BINARY_FLOAT` | `Float32` |
+| `BINARY_DOUBLE` | `Float64` |
+| `BOOLEAN` | `Boolean` |
+
+Values must fit the requested type. Integer conversions require whole numbers
+within the target integer range. Decimal128 conversions must preserve the
+value exactly and fit the requested precision and scale. Timestamp units
+coarser than the stored precision discard fractional digits. Timestamp
+timezone metadata does not perform a timezone conversion.
+
+An incompatible type, invalid decimal definition, or column count mismatch
+returns an error. Without a requested schema, the default fetch mappings
+continue to apply.
 
 [Apache Arrow]: https://docs.rs/crate/arrow/latest

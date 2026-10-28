@@ -18,6 +18,10 @@
     microseconds, and nanoseconds as determined by Oracle column precision.
 1.  Added Arrow batch binding support for `Float16`, `FixedSizeBinary`, and
     `Null` arrays.
+1.  Added support for [requesting the Arrow schema](#arrowrequestedschema) used
+    for query results with
+    [StatementBuilder::with_requested_schema()](crate::StatementBuilder::with_requested_schema)
+    ([issue 53](https://github.com/oracle/rust-oracledb/issues/53)).
 1.  Fixed bug causing bind variables to be detected within DDL statements
     ([issue 33](https://github.com/oracle/rust-oracledb/issues/33)).
 1.  Fixed issue with encoding integers with trailing zeros

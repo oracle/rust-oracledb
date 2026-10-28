@@ -28,11 +28,16 @@
 // Defines the structure representing statement options.
 //-----------------------------------------------------------------------------
 
+#[cfg(feature = "arrow")]
+use arrow_schema::SchemaRef;
+
 #[derive(Clone)]
 pub(crate) struct StatementOptions {
     prefetch_rows: u32,
     fetch_array_size: u32,
     fetch_lobs: bool,
+    #[cfg(feature = "arrow")]
+    requested_schema: Option<SchemaRef>,
 }
 
 impl StatementOptions {
@@ -42,6 +47,8 @@ impl StatementOptions {
             prefetch_rows: 2,
             fetch_array_size: 100,
             fetch_lobs: false,
+            #[cfg(feature = "arrow")]
+            requested_schema: None,
         }
     }
 
@@ -62,6 +69,12 @@ impl StatementOptions {
         self.prefetch_rows
     }
 
+    /// Returns the requested schema to use when fetching Arrow data.
+    #[cfg(feature = "arrow")]
+    pub(crate) fn requested_schema(&self) -> Option<&SchemaRef> {
+        self.requested_schema.as_ref()
+    }
+
     /// Sets the number of rows to fetch each time rows are fetched.
     pub(crate) fn set_fetch_array_size(&mut self, value: u32) {
         self.fetch_array_size = value;
@@ -77,5 +90,11 @@ impl StatementOptions {
     /// fetched.
     pub(crate) fn set_prefetch_rows(&mut self, value: u32) {
         self.prefetch_rows = value;
+    }
+
+    /// Sets the requested schema to use when fetching Arrow data.
+    #[cfg(feature = "arrow")]
+    pub(crate) fn set_requested_schema(&mut self, schema: SchemaRef) {
+        self.requested_schema = Some(schema);
     }
 }

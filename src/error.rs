@@ -43,6 +43,7 @@ use crate::response::ResponseLocation;
 pub enum ErrorKind {
     ArrowOperation,
     CallTimeoutExceeded,
+    CannotConvertToArrowDecimal128(String, u8, i8),
     ColumnTruncated(usize, usize),
     DbError(DbError),
     DbObjectTypeUnavailable,
@@ -112,6 +113,7 @@ pub enum ErrorKind {
     WalletPasswordMissingOrInvalid(String, String),
     WalletPrivateKeyInvalid(String),
     WalletUnreadable(String),
+    WrongArrowSchemaLength(usize, usize),
     WrongNumPositionalBinds(usize, usize),
 }
 
@@ -200,6 +202,13 @@ impl fmt::Display for Error {
             ErrorKind::CallTimeoutExceeded => {
                 fmt.write_str("the configured call timeout was exceeded")?
             }
+            ErrorKind::CannotConvertToArrowDecimal128(
+                num, precision, scale
+            ) => write!(
+                fmt,
+                "{num} cannot be converted to an Apache Arrow \
+                 decimal128({precision}, {scale})"
+            )?,
             ErrorKind::ColumnTruncated(col_value_size, actual_size) => write!(
                 fmt,
                 "column truncated to {col_value_size} bytes. \
@@ -453,6 +462,16 @@ impl fmt::Display for Error {
             ErrorKind::WalletUnreadable(file_name) => {
                 write!(fmt, "wallet with name {file_name} unreadable")?
             }
+            ErrorKind::WrongArrowSchemaLength(
+                num_schema_fields,
+                num_fetched_columns,
+            ) => {
+                write!(
+                    fmt,
+                    "requested Arrow schema has {num_schema_fields} fields \
+                     but query returned {num_fetched_columns} columns",
+                )?
+            }
             ErrorKind::WrongNumPositionalBinds(expected_num, actual_num) => {
                 write!(
                     fmt,
@@ -478,6 +497,18 @@ impl Error {
             cause,
             backtrace: std::backtrace::Backtrace::capture(),
         }))
+    }
+
+    #[cfg(feature = "arrow")]
+    pub(crate) fn cannot_convert_to_arrow_decimal128(
+        num: String,
+        precision: u8,
+        scale: i8,
+    ) -> Self {
+        Self::new(
+            ErrorKind::CannotConvertToArrowDecimal128(num, precision, scale),
+            None,
+        )
     }
 
     pub(crate) fn column_truncated(
@@ -864,6 +895,20 @@ impl Error {
 
     pub(crate) fn wallet_private_key_invalid(reason: String) -> Error {
         Error::new(ErrorKind::WalletPrivateKeyInvalid(reason), None)
+    }
+
+    #[cfg(feature = "arrow")]
+    pub(crate) fn wrong_arrow_schema_length(
+        num_schema_fields: usize,
+        num_fetched_columns: usize,
+    ) -> Self {
+        Self::new(
+            ErrorKind::WrongArrowSchemaLength(
+                num_schema_fields,
+                num_fetched_columns,
+            ),
+            None,
+        )
     }
 
     pub(crate) fn wrong_num_positional_binds(

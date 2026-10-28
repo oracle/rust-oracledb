@@ -33,6 +33,8 @@ use super::StatementOptions;
 
 use crate::client::ClientRef;
 use crate::error::Error;
+#[cfg(feature = "arrow")]
+use arrow_schema::SchemaRef;
 
 pub struct StatementBuilder<'sql> {
     client_ref: ClientRef,
@@ -87,6 +89,15 @@ impl<'sql> StatementBuilder<'sql> {
     /// is executed.
     pub fn prefetch_rows(mut self, value: u32) -> Self {
         self.options.set_prefetch_rows(value);
+        self
+    }
+
+    /// Specifies the Arrow schema to use for query results. Fields map to
+    /// query columns by position. The schema must have one field per column
+    /// and use supported fetch types. This option only affects query_arrow().
+    #[cfg(feature = "arrow")]
+    pub fn with_requested_schema(mut self, schema: SchemaRef) -> Self {
+        self.options.set_requested_schema(schema);
         self
     }
 }

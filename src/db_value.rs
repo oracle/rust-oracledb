@@ -493,6 +493,10 @@ impl<'a> FromDbValue<'a> for String {
             ColumnData::Owned(Some(DbValue::String(v))) => Ok(v),
             ColumnData::Borrowed(Some(DbValue::Rowid(v))) => Ok(v.to_string()),
             ColumnData::Owned(Some(DbValue::Rowid(v))) => Ok(v.to_string()),
+            ColumnData::Borrowed(Some(DbValue::Number(v))) => {
+                Ok(v.to_string())
+            }
+            ColumnData::Owned(Some(DbValue::Number(v))) => Ok(v.to_string()),
             _ => Err(Self::unsupported_conversion(column_data)),
         }
     }

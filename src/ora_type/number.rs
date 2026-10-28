@@ -39,6 +39,9 @@ use crate::read_buffer::FromBuf;
 use crate::write_buffer::ToBuf;
 use crate::write_buffer::WriteBuffer;
 
+#[cfg(feature = "arrow")]
+use arrow_array::types::DecimalType;
+
 /// Represents the value of NUMBER columns in the database.
 #[derive(Clone, Copy)]
 pub struct OracleNumber {
@@ -64,20 +67,22 @@ impl OracleNumber {
 
         // the precision of the number cannot exceed the requested precision
         if self.num_digits > precision {
-            return Err(Error::out_of_range(format!(
-                "NUMBER has precision {} but requested precision is {}",
-                self.num_digits, precision
-            )));
+            return Err(Error::cannot_convert_to_arrow_decimal128(
+                self.to_string(),
+                precision,
+                scale,
+            ));
         }
 
         // the scale of the number cannot exceed the requested scale
         let num_scale = i16::from(self.num_digits) - self.decimal_point_index;
         let num_zeros_to_add = i16::from(scale) - num_scale;
         if num_zeros_to_add < 0 {
-            return Err(Error::out_of_range(format!(
-                "NUMBER has scale {} but requested scale is {}",
-                num_scale, scale
-            )));
+            return Err(Error::cannot_convert_to_arrow_decimal128(
+                self.to_string(),
+                precision,
+                scale,
+            ));
         }
 
         // add each of the digits to the result
@@ -89,8 +94,22 @@ impl OracleNumber {
 
         // add any trailing zeros that are required
         if num_zeros_to_add > 0 {
-            result *= 10_i128.pow(num_zeros_to_add.try_into().unwrap());
+            result = 10_i128
+                .checked_pow(num_zeros_to_add.try_into().unwrap())
+                .and_then(|factor| result.checked_mul(factor))
+                .ok_or_else(|| {
+                    Error::cannot_convert_to_arrow_decimal128(
+                        self.to_string(),
+                        precision,
+                        scale,
+                    )
+                })?;
         }
+
+        // validate precision and scale
+        arrow_array::types::Decimal128Type::validate_decimal_precision(
+            result, precision, scale,
+        )?;
 
         if self.is_positive { Ok(result) } else { Ok(-result) }
     }

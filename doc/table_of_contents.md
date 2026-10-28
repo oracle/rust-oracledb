@@ -217,6 +217,7 @@ instead of the mouse.
 
     13.2 [Fetching Arrow Data](#fetchingarrowdata)
     - 13.2.1 [Arrow Fetch Type Mapping](#arrowfetchtypemapping)
+    - 13.2.2 [Requesting an Arrow Schema](#arrowrequestedschema)
 
 14. [High Availability with rust-oracledb](#highavailability)
 

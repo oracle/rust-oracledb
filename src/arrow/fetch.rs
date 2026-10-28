@@ -41,6 +41,9 @@ use arrow_array::builder::{
     TimestampNanosecondBuilder, TimestampSecondBuilder, UInt8Builder,
     UInt16Builder, UInt32Builder, UInt64Builder,
 };
+use arrow_array::types::{
+    Decimal128Type, validate_decimal_precision_and_scale,
+};
 use arrow_schema::{DataType, Field, Schema, SchemaRef, TimeUnit};
 
 use crate::bind_params::BindParameters;
@@ -137,7 +140,21 @@ pub(crate) fn query_single_batch(
     let mut response =
         client.execute(statement, client_ref, params.slice(0, 1), false)?;
     let metadata = statement.out_metadata().to_vec();
-    let mut creator = RecordBatchCreator::new(&metadata)?;
+    let schema = if let Some(schema) = statement.options().requested_schema() {
+        if schema.fields().len() != metadata.len() {
+            return Err(Error::wrong_arrow_schema_length(
+                schema.fields().len(),
+                metadata.len(),
+            ));
+        }
+        for (column, field) in metadata.iter().zip(schema.fields()) {
+            validate_fetch_type(column, field)?;
+        }
+        schema.clone()
+    } else {
+        Arc::new(default_schema(&metadata)?)
+    };
+    let mut creator = RecordBatchCreator::new(schema)?;
     let column_info = Arc::new(metadata);
     for index in 0..params.num_rows() {
         if index > 0 {
@@ -165,6 +182,57 @@ pub(crate) fn query_single_batch(
         }
     }
     creator.create_batch()
+}
+
+/// Validates that an Oracle result column supports the requested Arrow type.
+fn validate_fetch_type(column: &Metadata, field: &Field) -> Result<(), Error> {
+    let data_type = field.data_type();
+    if let DataType::Decimal128(precision, scale) = data_type {
+        validate_decimal_precision_and_scale::<Decimal128Type>(
+            *precision, *scale,
+        )?;
+    }
+    let db_type = column.db_type();
+    let is_compatible = if db_type == crate::DB_TYPE_NUMBER {
+        matches!(
+            data_type,
+            DataType::Decimal128(_, _)
+                | DataType::Float32
+                | DataType::Float64
+                | DataType::Int8
+                | DataType::Int16
+                | DataType::Int32
+                | DataType::Int64
+                | DataType::UInt8
+                | DataType::UInt16
+                | DataType::UInt32
+                | DataType::UInt64
+                | DataType::Utf8
+                | DataType::LargeUtf8
+        )
+    } else if db_type.is_binary_type() {
+        matches!(data_type, DataType::Binary | DataType::LargeBinary)
+    } else if db_type == crate::DB_TYPE_BOOLEAN {
+        matches!(data_type, DataType::Boolean)
+    } else if db_type.is_date_type() {
+        matches!(data_type, DataType::Timestamp(_, _))
+    } else if db_type.is_string_type() {
+        matches!(data_type, DataType::Utf8 | DataType::LargeUtf8)
+    } else if db_type == crate::DB_TYPE_BINARY_FLOAT {
+        matches!(data_type, DataType::Float32)
+    } else if db_type == crate::DB_TYPE_BINARY_DOUBLE {
+        matches!(data_type, DataType::Float64)
+    } else {
+        false
+    };
+    if is_compatible {
+        Ok(())
+    } else {
+        Err(Error::unsupported_conversion(
+            &format!("{} column {}", column.data_type(), field.name()),
+            &data_type.to_string(),
+        ))
+    }
 }
 
 /// Structure used for creating a record batch from the results of a fetch.
@@ -345,13 +413,12 @@ impl RecordBatchCreator {
     }
 
     /// Creates a new structure for creating a RecordBatch
-    fn new(columns: &[Metadata]) -> Result<Self, Error> {
-        let schema = default_schema(columns)?;
+    fn new(schema: SchemaRef) -> Result<Self, Error> {
         let builders = schema
             .fields()
             .iter()
             .map(|f| make_builder(f.data_type(), 0))
             .collect();
-        Ok(Self { schema: schema.into(), builders })
+        Ok(Self { schema, builders })
     }
 }
