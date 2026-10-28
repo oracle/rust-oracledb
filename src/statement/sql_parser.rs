@@ -168,7 +168,12 @@ impl SqlParser<'_> {
     /// leading dashes have been found and all remaining characters up to the
     /// end of the current line are discarded.
     fn parse_single_line_comment(&mut self) {
-        self.parser.skip_to_end_of_line();
+        while let Some(ch) = self.parser.peek_char() {
+            if ch == '\n' {
+                break;
+            }
+            self.parser.next_char();
+        }
     }
 
     /// Creates a new SQL parser for the given SQL.

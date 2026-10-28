@@ -316,3 +316,11 @@ fn test_3519(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
         &[],
     )
 }
+
+#[rstest]
+/// statements starting with a single line comment are processed correctly
+fn test_3520(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let sql = "-- comment\nselect 1 from dual";
+    assert!(conn.statement(sql)?.build()?.is_query());
+    Ok(())
+}

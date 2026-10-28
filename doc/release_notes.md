@@ -31,6 +31,9 @@
     ([issue 51](https://github.com/oracle/rust-oracledb/issues/51)).
 1.  Fixed bug connecting to Oracle Database 12c
     ([issue 55](https://github.com/oracle/rust-oracledb/issues/55)).
+1.  Fixed bug causing the type of SQL statements to be unrecognized if the SQL
+    statement starts with a single-line comment
+    ([issue 57](https://github.com/oracle/rust-oracledb/issues/57)).
 1.  Fixed bug causing piggybacks to be sent on non-data packets
     ([issue 59](https://github.com/oracle/rust-oracledb/issues/59)).
 1.  Fixed bug that would cause the maximum SDU specified in all descriptions to
