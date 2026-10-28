@@ -64,7 +64,7 @@ fn test_1201(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     for row in cursor {
         let row = row?;
         let value: oracledb::OracleTimestamp = row.get(0)?;
-        assert_eq!(value.to_string(), "2025-10-31T09:46:25.000000000Z");
+        assert_eq!(value.to_string(), "2025-10-31T09:46:25.000000000");
     }
     Ok(())
 }
@@ -83,7 +83,7 @@ fn test_1202(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     for row in cursor {
         let row = row?;
         let value: oracledb::OracleTimestamp = row.get(0)?;
-        assert_eq!(value.to_string(), "2025-10-31T11:39:58.123456789Z");
+        assert_eq!(value.to_string(), "2025-10-31T11:39:58.123456789");
     }
     Ok(())
 }
@@ -102,7 +102,7 @@ fn test_1203(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     for row in cursor {
         let row = row?;
         let value: oracledb::OracleTimestamp = row.get(0)?;
-        assert_eq!(value.to_string(), "2025-10-31T11:46:01.987654000Z");
+        assert_eq!(value.to_string(), "2025-10-31T11:46:01.987654000");
     }
     Ok(())
 }
@@ -122,7 +122,7 @@ fn test_1204(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     for row in cursor {
         let row = row?;
         let value: oracledb::OracleTimestamp = row.get(0)?;
-        assert_eq!(value.to_string(), "2025-10-31T17:52:15.456000000-06:00");
+        assert_eq!(value.to_string(), "2025-10-31T17:52:15.456000000Z");
     }
     Ok(())
 }
@@ -189,8 +189,9 @@ fn test_1207(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     )?;
     let low: oracledb::OracleTimestamp = row.get(0)?;
     let high: oracledb::OracleTimestamp = row.get(1)?;
-    assert_eq!(low.to_string(), "0001-01-01T00:00:00.000000000Z");
-    assert_eq!(high.to_string(), "9999-12-31T00:00:00.000000000Z");
+    assert!(!low.is_utc() && !high.is_utc());
+    assert_eq!(low.to_string(), "0001-01-01T00:00:00.000000000");
+    assert_eq!(high.to_string(), "9999-12-31T00:00:00.000000000");
     Ok(())
 }
 
@@ -209,10 +210,10 @@ fn test_1208(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
 }
 
 #[test]
-/// Verifies timestamp components and fixed-offset display behavior without a
-/// database connection.
+/// Verifies timestamp components and display behavior without a database
+/// connection.
 fn test_1209() {
-    let timestamp = oracledb::OracleTimestamp::new_timestamp_tz(
+    let timestamp = oracledb::OracleTimestamp::new_utc_timestamp(
         2026,
         9,
         3,
@@ -220,8 +221,6 @@ fn test_1209() {
         5,
         6,
         123_456_789,
-        5,
-        30,
     );
     assert_eq!(timestamp.year(), 2026);
     assert_eq!(timestamp.month(), 9);
@@ -230,7 +229,6 @@ fn test_1209() {
     assert_eq!(timestamp.minute(), 5);
     assert_eq!(timestamp.second(), 6);
     assert_eq!(timestamp.nanoseconds(), 123_456_789);
-    assert_eq!(timestamp.tz_hour_offset(), 5);
-    assert_eq!(timestamp.tz_minute_offset(), 30);
-    assert_eq!(timestamp.to_string(), "2026-09-03T14:05:06.123456789+05:30");
+    assert!(timestamp.is_utc());
+    assert_eq!(timestamp.to_string(), "2026-09-03T14:05:06.123456789Z");
 }

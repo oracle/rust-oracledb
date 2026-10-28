@@ -142,7 +142,7 @@ fn validate_obj(json: oracledb::JsonValue) {
         if let Some(oracledb::JsonValue::Timestamp(value)) =
             map.get("tstamp_tz_key")
         {
-            let expected_value = oracledb::OracleTimestamp::new_timestamp_tz(
+            let expected_value = oracledb::OracleTimestamp::new_utc_timestamp(
                 2026,
                 3,
                 3,
@@ -150,8 +150,6 @@ fn validate_obj(json: oracledb::JsonValue) {
                 31,
                 25,
                 745_000_000,
-                0,
-                0,
             );
             assert_eq!(value, &expected_value);
         } else {
@@ -354,7 +352,7 @@ fn test_2102(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
         "tstamp_key".to_string(),
         oracledb::JsonValue::Timestamp(tstamp_value),
     );
-    let tstamp_tz_value = oracledb::OracleTimestamp::new_timestamp(
+    let tstamp_tz_value = oracledb::OracleTimestamp::new_utc_timestamp(
         2026,
         3,
         3,

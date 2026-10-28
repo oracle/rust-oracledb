@@ -22,6 +22,9 @@
     for query results with
     [StatementBuilder::with_requested_schema()](crate::StatementBuilder::with_requested_schema)
     ([issue 53](https://github.com/oracle/rust-oracledb/issues/53)).
+1.  Timestamp with time zone columns are now fetched and bound as UTC
+    timestamps
+    ([issue 8](https://github.com/oracle/rust-oracledb/issues/8)).
 1.  Fixed bug with request boundary handling
     ([issue 32](https://github.com/oracle/rust-oracledb/issues/32)).
 1.  Fixed bug causing bind variables to be detected within DDL statements

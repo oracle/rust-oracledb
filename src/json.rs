@@ -853,7 +853,14 @@ impl OsonEncoderTreeSeg {
                 }
             }
             JsonValue::Timestamp(v) => {
-                if v.nanoseconds() == 0 {
+                if v.is_utc() {
+                    self.buf.write_u8(OSON_TYPE_TIMESTAMP_TZ);
+                    v.to_buf(
+                        &mut self.buf,
+                        crate::DB_TYPE_TIMESTAMP_TZ,
+                        false,
+                    );
+                } else if v.nanoseconds() == 0 {
                     self.buf.write_u8(OSON_TYPE_TIMESTAMP7);
                     v.to_buf(&mut self.buf, crate::DB_TYPE_DATE, false);
                 } else {
