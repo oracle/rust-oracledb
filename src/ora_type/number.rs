@@ -57,6 +57,11 @@ impl OracleNumber {
         precision: u8,
         scale: i8,
     ) -> Result<i128, Error> {
+        // zero can be represented at any scale
+        if self.num_digits == 0 && self.decimal_point_index == 0 {
+            return Ok(0);
+        }
+
         // the precision of the number cannot exceed the requested precision
         if self.num_digits > precision {
             return Err(Error::out_of_range(format!(

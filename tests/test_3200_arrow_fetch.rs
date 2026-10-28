@@ -413,3 +413,98 @@ fn test_3206(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     );
     Ok(())
 }
+
+#[rstest]
+#[case::fraction(10, 4, Some("12.5"), Some("125000"))]
+#[case::negative_fraction(10, 4, Some("-12.5"), Some("-125000"))]
+#[case::leading_fractional_zeros(10, 4, Some("0.0001"), Some("1"))]
+#[case::positive_scale_zero(10, 4, Some("0"), Some("0"))]
+#[case::positive_scale_null(10, 4, None, None)]
+#[case::scale_zero(
+    19,
+    0,
+    Some("1234567890123456789"),
+    Some("1234567890123456789")
+)]
+#[case::negative_integer(38, 0, Some("-1"), Some("-1"))]
+#[case::scale_zero_zero(19, 0, Some("0"), Some("0"))]
+#[case::scale_zero_null(19, 0, None, None)]
+#[case::negative_scale(4, -1, Some("12340"), Some("1234"))]
+#[case::negative_value_and_scale(4, -1, Some("-12340"), Some("-1234"))]
+#[case::negative_scale_positive(4, -2, Some("9900"), Some("99"))]
+#[case::negative_scale_negative(4, -2, Some("-9900"), Some("-99"))]
+#[case::negative_scale_zero(4, -2, Some("0"), Some("0"))]
+#[case::negative_scale_null(4, -2, None, None)]
+#[case::negative_scale_boundary(4, -2, Some("999900"), Some("9999"))]
+#[case::negative_scale_boundary_negative(4, -2, Some("-999900"), Some("-9999"))]
+#[case::negative_scale_trailing_zeros(4, -2, Some("10000"), Some("100"))]
+#[case::negative_scale_one_digit(4, -2, Some("100"), Some("1"))]
+#[case::maximum_precision(
+    38,
+    0,
+    Some("99999999999999999999999999999999999999"),
+    Some("99999999999999999999999999999999999999")
+)]
+#[case::maximum_precision_negative(
+    38,
+    0,
+    Some("-99999999999999999999999999999999999999"),
+    Some("-99999999999999999999999999999999999999")
+)]
+#[case::maximum_positive_scale(
+    38,
+    38,
+    Some("0.99999999999999999999999999999999999999"),
+    Some("99999999999999999999999999999999999999")
+)]
+#[case::maximum_positive_scale_negative(
+    38,
+    38,
+    Some("-0.99999999999999999999999999999999999999"),
+    Some("-99999999999999999999999999999999999999")
+)]
+#[case::maximum_positive_scale_zero(38, 38, Some("0"), Some("0"))]
+#[case::maximum_positive_scale_null(38, 38, None, None)]
+#[case::maximum_negative_scale(
+    38, -38,
+    Some("100000000000000000000000000000000000000"), Some("1")
+)]
+#[case::maximum_negative_scale_negative(
+    38, -38,
+    Some("-100000000000000000000000000000000000000"), Some("-1")
+)]
+#[case::maximum_negative_scale_zero(38, -38, Some("0"), Some("0"))]
+#[case::maximum_negative_scale_null(38, -38, None, None)]
+/// test Decimal128 coefficients across scales, precision boundaries, and nulls
+fn test_3208(
+    conn: oracledb::Connection,
+    #[case] precision: u8,
+    #[case] scale: i8,
+    #[case] input: Option<&str>,
+    #[case] expected_coefficient: Option<&str>,
+) -> Result<(), oracledb::Error> {
+    // Every non-null input is exactly representable by the declared NUMBER
+    // type, so the SQL CAST does not round it before the driver fetches it.
+    let sql = format!(
+        r#"
+        select cast(to_number(:1) as number({precision}, {scale})) from dual
+        "#
+    );
+    let batch =
+        conn.query_arrow(&sql, oracledb::BindParameters::Slice(&[&[&input]]))?;
+    assert_eq!(batch.num_rows(), 1);
+    assert_eq!(
+        batch.schema().field(0).data_type(),
+        &DataType::Decimal128(precision, scale)
+    );
+    let values =
+        batch.column(0).as_any().downcast_ref::<Decimal128Array>().unwrap();
+    match expected_coefficient {
+        Some(expected) => {
+            assert!(!values.is_null(0));
+            assert_eq!(values.value(0), expected.parse::<i128>().unwrap());
+        }
+        None => assert!(values.is_null(0)),
+    }
+    Ok(())
+}

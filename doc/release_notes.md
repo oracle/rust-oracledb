@@ -9,13 +9,13 @@
     ([issue 35](https://github.com/oracle/rust-oracledb/issues/35)).
 1.  Added support for getting the domain and any annotations from columns that
     support them
+    ([issue 48](https://github.com/oracle/rust-oracledb/issues/48)).
 1.  Added support for fetching CLOB, NCLOB, and LONG columns as Arrow
     `LargeUtf8` instead of `Utf8`, and BLOB and LONG RAW as `LargeBinary`
     instead of `Binary`.
 1.  Added `oracle.type-name` metadata to generated Arrow fields.
 1.  Added support for fetching Arrow timestamps in seconds, milliseconds,
     microseconds, and nanoseconds as determined by Oracle column precision.
-    ([issue 48](https://github.com/oracle/rust-oracledb/issues/48)).
 1.  Fixed bug causing bind variables to be detected within DDL statements
     ([issue 33](https://github.com/oracle/rust-oracledb/issues/33)).
 1.  Fixed issue with encoding integers with trailing zeros
@@ -25,6 +25,8 @@
     ([issue 51](https://github.com/oracle/rust-oracledb/issues/51)).
 1.  Fixed bug that would cause the maximum SDU specified in all descriptions to
     be used instead of the one specified for each individual description.
+1.  Fixed the error `NUMBER has scale 0 but requested scale is -38`
+    when fetching zero into an Arrow Decimal128 array with a negative scale.
 
 
 ## rust-oracledb 26.0.0-beta.4 (September 23, 2026)
