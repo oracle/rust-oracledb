@@ -1,6 +1,6 @@
 # <a name="releasenotes"></a> rust-oracledb Release Notes
 
-## rust-oracledb 26.0.0-beta.5 (TBD)
+## rust-oracledb 26.0.0-beta.5 (October 28, 2026)
 
 1.  Added support for fetching BFILE LOBs.
 1.  Added support for fetching database objects and collections.
