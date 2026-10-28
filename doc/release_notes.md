@@ -29,6 +29,8 @@
 1.  Fixed bug preventing statement from being re-parsed on a second attempt
     when errors take place on the first attempt
     ([issue 51](https://github.com/oracle/rust-oracledb/issues/51)).
+1.  Fixed bug connecting to Oracle Database 12c
+    ([issue 55](https://github.com/oracle/rust-oracledb/issues/55)).
 1.  Fixed bug that would cause the maximum SDU specified in all descriptions to
     be used instead of the one specified for each individual description.
 1.  Fixed the error `NUMBER has scale 0 but requested scale is -38`

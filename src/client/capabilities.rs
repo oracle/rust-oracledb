@@ -153,7 +153,9 @@ impl Capabilities {
             self.ttc_field_version = caps[CCAP_IX_FIELD_VERSION];
             self.compile_caps[CCAP_IX_FIELD_VERSION] = self.ttc_field_version;
         }
-        if caps[CCAP_IX_TTC4] & CCAP_VAL_EXPLICIT_BOUNDARY != 0 {
+        if caps.len() > CCAP_IX_TTC4
+            && caps[CCAP_IX_TTC4] & CCAP_VAL_EXPLICIT_BOUNDARY != 0
+        {
             self.supports_request_boundaries = true;
         }
         if caps.len() > CCAP_IX_FEATURE_BACKPORT2
