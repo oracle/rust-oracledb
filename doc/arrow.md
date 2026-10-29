@@ -71,6 +71,7 @@ Database bind type.
 | `Int8`, `Int16`, `Int32`, `Int64` | `DB_TYPE_NUMBER` |
 | `UInt8`, `UInt16`, `UInt32`, `UInt64` | `DB_TYPE_NUMBER` |
 | `Decimal128` | `DB_TYPE_NUMBER` |
+| `Decimal256` | `DB_TYPE_NUMBER` |
 | `Null` | `DB_TYPE_NUMBER` |
 | `Float16`, `Float32` | `DB_TYPE_BINARY_FLOAT` |
 | `Float64` | `DB_TYPE_BINARY_DOUBLE` |
@@ -215,7 +216,7 @@ The following requested conversions are supported:
 | `NUMBER` | `Int8`, `Int16`, `Int32`, `Int64` |
 | `NUMBER` | `UInt8`, `UInt16`, `UInt32`, `UInt64` |
 | `NUMBER` | `Float32`, `Float64` |
-| `NUMBER` | `Decimal128(precision, scale)` |
+| `NUMBER` | `Decimal128(precision, scale)`, `Decimal256(precision, scale)` |
 | `NUMBER` | `Utf8`, `LargeUtf8` |
 | Character types, including CLOB, NCLOB, LONG, and ROWID types | `Utf8`, `LargeUtf8` |
 | RAW, LONG RAW, and BLOB | `Binary`, `LargeBinary` |
@@ -225,13 +226,20 @@ The following requested conversions are supported:
 | `BOOLEAN` | `Boolean` |
 
 Values must fit the requested type. Integer conversions require whole numbers
-within the target integer range. Decimal128 conversions must preserve the
-value exactly and fit the requested precision and scale. Timestamp units
-coarser than the stored precision discard fractional digits. Timestamp
-timezone metadata does not perform a timezone conversion.
+within the target integer range. Decimal128 and Decimal256 conversions must
+preserve the value exactly and fit the requested precision and scale.
+Timestamp units coarser than the stored precision discard fractional digits.
+Timestamp timezone metadata does not perform a timezone conversion.
 
 An incompatible type, invalid decimal definition, or column count mismatch
 returns an error. Without a requested schema, the default fetch mappings
 continue to apply.
+
+Decimal256 supports precision up to 76. Request a Decimal256 field to fetch
+NUMBER values whose scaled coefficients do not fit Decimal128. The requested
+precision and scale must represent every fetched NUMBER value exactly.
+Decimal256 is not selected by the default fetch mappings. Bound Decimal256
+values must fit Oracle NUMBER's numeric range and the driver's NUMBER
+representation. Values that cannot be represented return an error.
 
 [Apache Arrow]: https://docs.rs/crate/arrow/latest

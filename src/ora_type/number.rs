@@ -40,7 +40,10 @@ use crate::write_buffer::ToBuf;
 use crate::write_buffer::WriteBuffer;
 
 #[cfg(feature = "arrow")]
-use arrow_array::types::DecimalType;
+use arrow_array::types::{ArrowPrimitiveType, Decimal256Type, DecimalType};
+
+#[cfg(feature = "arrow")]
+type Decimal256Value = <Decimal256Type as ArrowPrimitiveType>::Native;
 
 /// Represents the value of NUMBER columns in the database.
 #[derive(Clone, Copy)]
@@ -67,7 +70,7 @@ impl OracleNumber {
 
         // the precision of the number cannot exceed the requested precision
         if self.num_digits > precision {
-            return Err(Error::cannot_convert_to_arrow_decimal128(
+            return Err(Error::cannot_convert_to_arrow_decimal(
                 self.to_string(),
                 precision,
                 scale,
@@ -78,7 +81,7 @@ impl OracleNumber {
         let num_scale = i16::from(self.num_digits) - self.decimal_point_index;
         let num_zeros_to_add = i16::from(scale) - num_scale;
         if num_zeros_to_add < 0 {
-            return Err(Error::cannot_convert_to_arrow_decimal128(
+            return Err(Error::cannot_convert_to_arrow_decimal(
                 self.to_string(),
                 precision,
                 scale,
@@ -98,7 +101,7 @@ impl OracleNumber {
                 .checked_pow(num_zeros_to_add.try_into().unwrap())
                 .and_then(|factor| result.checked_mul(factor))
                 .ok_or_else(|| {
-                    Error::cannot_convert_to_arrow_decimal128(
+                    Error::cannot_convert_to_arrow_decimal(
                         self.to_string(),
                         precision,
                         scale,
@@ -112,6 +115,79 @@ impl OracleNumber {
         )?;
 
         if self.is_positive { Ok(result) } else { Ok(-result) }
+    }
+
+    /// Converts an OracleNumber to the integer coefficient expected for Arrow
+    /// Decimal256 with the specified precision and scale.
+    #[cfg(feature = "arrow")]
+    pub(crate) fn as_decimal256(
+        &self,
+        precision: u8,
+        scale: i8,
+    ) -> Result<Decimal256Value, Error> {
+        if self.num_digits == 0 && self.decimal_point_index == 0 {
+            return Ok(Decimal256Value::default());
+        }
+        let num_scale = i16::from(self.num_digits) - self.decimal_point_index;
+        let num_zeros_to_add = i16::from(scale) - num_scale;
+        if self.num_digits > precision || num_zeros_to_add < 0 {
+            return Err(Error::cannot_convert_to_arrow_decimal(
+                self.to_string(),
+                precision,
+                scale,
+            ));
+        }
+        let ten = Decimal256Value::from_i128(10);
+        let mut result = Decimal256Value::default();
+        for digit in &self.digits[..usize::from(self.num_digits)] {
+            result = result
+                .wrapping_mul(ten)
+                .wrapping_add(Decimal256Value::from_i128(i128::from(*digit)));
+        }
+        if num_zeros_to_add > 0 {
+            result = ten
+                .checked_pow(num_zeros_to_add.try_into().unwrap())
+                .and_then(|factor| result.checked_mul(factor))
+                .ok_or_else(|| {
+                    Error::cannot_convert_to_arrow_decimal(
+                        self.to_string(),
+                        precision,
+                        scale,
+                    )
+                })?;
+        }
+        Decimal256Type::validate_decimal_precision(result, precision, scale)?;
+        if self.is_positive { Ok(result) } else { Ok(-result) }
+    }
+
+    /// Converts an Arrow Decimal256 value to an Oracle NUMBER using exact
+    /// decimal text.
+    #[cfg(feature = "arrow")]
+    pub(crate) fn from_decimal256(
+        value: Decimal256Value,
+        precision: u8,
+        scale: i8,
+    ) -> Result<Self, Error> {
+        Decimal256Type::validate_decimal_precision(value, precision, scale)?;
+        let text = Decimal256Type::format_decimal(value, precision, scale);
+        let number: Self = text.parse()?;
+
+        // The writer encodes decimal digits in pairs. If the decimal point
+        // index is odd, it adds a leading zero to align the pairs. Count that
+        // padding digit when checking whether the 40-digit buffer is large
+        // enough.
+        let num_digits = usize::from(number.num_digits)
+            + usize::from(number.decimal_point_index % 2 != 0);
+
+        // If the number is nonzero, reject it when its decimal-point index
+        // is outside -129..=126, or its padded digit count exceeds 40.
+        if number.num_digits != 0
+            && (!(-129..=126).contains(&number.decimal_point_index)
+                || num_digits > constants::ORA_NUM_MAX_DIGITS)
+        {
+            return Err(Error::invalid_oracle_number(text));
+        }
+        Ok(number)
     }
 }
 

@@ -31,8 +31,8 @@
 use arrow_array::Array;
 use arrow_array::cast::AsArray;
 use arrow_array::types::{
-    Date32Type, Date64Type, Decimal128Type, Float16Type, Float32Type,
-    Float64Type, Int8Type, Int16Type, Int32Type, Int64Type,
+    Date32Type, Date64Type, Decimal128Type, Decimal256Type, Float16Type,
+    Float32Type, Float64Type, Int8Type, Int16Type, Int32Type, Int64Type,
     TimestampMicrosecondType, TimestampMillisecondType,
     TimestampNanosecondType, TimestampSecondType, UInt8Type, UInt16Type,
     UInt32Type, UInt64Type,
@@ -64,7 +64,8 @@ pub(crate) fn column_db_type(
         | DataType::UInt16
         | DataType::UInt32
         | DataType::UInt64
-        | DataType::Decimal128(_, _) => Ok(crate::DB_TYPE_NUMBER),
+        | DataType::Decimal128(_, _)
+        | DataType::Decimal256(_, _) => Ok(crate::DB_TYPE_NUMBER),
         DataType::Float16 | DataType::Float32 => {
             Ok(crate::DB_TYPE_BINARY_FLOAT)
         }
@@ -116,11 +117,17 @@ pub(crate) fn column_max_size(
 }
 
 /// Validates values in an Arrow column before they are bound to Oracle.
-/// Timestamp conversion must be checked here because writing a bind value to
-/// the buffer is infallible.
+/// Conversion must be checked here because writing a bind value to the buffer
+/// is infallible.
 pub(crate) fn validate_column(
     column: &std::sync::Arc<dyn arrow_array::Array>,
 ) -> Result<(), Error> {
+    if let DataType::Decimal256(precision, scale) = column.data_type() {
+        let values = column.as_primitive::<Decimal256Type>();
+        for value in values.iter().flatten() {
+            OracleNumber::from_decimal256(value, *precision, *scale)?;
+        }
+    }
     let invalid_timestamp = match column.data_type() {
         DataType::Timestamp(TimeUnit::Second, _) => {
             let values = column.as_primitive::<TimestampSecondType>();
@@ -222,6 +229,14 @@ pub(crate) fn write_to_buf(
                 .value_as_string(row_index);
             let num: OracleNumber = str_val.parse().unwrap();
             num
+        }),
+        DataType::Decimal256(precision, scale) => &(!is_null).then(|| {
+            OracleNumber::from_decimal256(
+                column.as_primitive::<Decimal256Type>().value(row_index),
+                *precision,
+                *scale,
+            )
+            .unwrap()
         }),
         DataType::Date32 => &(!is_null).then(|| {
             OracleTimestamp::from(

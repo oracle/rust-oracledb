@@ -41,10 +41,11 @@ use arrow_array::types::{
     UInt32Type, UInt64Type,
 };
 use arrow_array::{
-    Array, BinaryArray, BooleanArray, Decimal128Array, Float32Array,
-    Float64Array, Int64Array, LargeBinaryArray, LargeStringArray, StringArray,
-    TimestampMicrosecondArray, TimestampMillisecondArray,
-    TimestampNanosecondArray, TimestampSecondArray, UInt64Array,
+    Array, BinaryArray, BooleanArray, Decimal128Array, Decimal256Array,
+    Float32Array, Float64Array, Int64Array, LargeBinaryArray,
+    LargeStringArray, StringArray, TimestampMicrosecondArray,
+    TimestampMillisecondArray, TimestampNanosecondArray, TimestampSecondArray,
+    UInt64Array,
 };
 use arrow_schema::{DataType, Field, Schema, TimeUnit};
 use rstest::*;
@@ -442,35 +443,35 @@ fn test_3808(
 )]
 #[case::scale_factor_overflow(
     "1e38", 38, 1,
-    oracledb::ErrorKind::CannotConvertToArrowDecimal128(
+    oracledb::ErrorKind::CannotConvertToArrowDecimal(
         "100000000000000000000000000000000000000".into(), 38, 1
     )
 )]
 #[case::multiplication_overflow(
     "2e37", 38, 1,
-    oracledb::ErrorKind::CannotConvertToArrowDecimal128(
+    oracledb::ErrorKind::CannotConvertToArrowDecimal(
         "20000000000000000000000000000000000000".into(), 38, 1
     )
 )]
 #[case::negative_multiplication_overflow(
     "-2e37", 38, 1,
-    oracledb::ErrorKind::CannotConvertToArrowDecimal128(
+    oracledb::ErrorKind::CannotConvertToArrowDecimal(
         "-20000000000000000000000000000000000000".into(), 38, 1
     )
 )]
 #[case::power_overflow(
     "1e100", 38, 0,
-    oracledb::ErrorKind::CannotConvertToArrowDecimal128(
+    oracledb::ErrorKind::CannotConvertToArrowDecimal(
         "10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000".into(), 38, 0
     )
 )]
 #[case::precision_loss(
     "1234", 3, 0,
-    oracledb::ErrorKind::CannotConvertToArrowDecimal128("1234".into(), 3, 0)
+    oracledb::ErrorKind::CannotConvertToArrowDecimal("1234".into(), 3, 0)
 )]
 #[case::scale_loss(
     "1.25", 4, 1,
-    oracledb::ErrorKind::CannotConvertToArrowDecimal128("1.25".into(), 4, 1)
+    oracledb::ErrorKind::CannotConvertToArrowDecimal("1.25".into(), 4, 1)
 )]
 /// test values that exceed the requested Decimal128 precision return errors
 fn test_3809(
@@ -830,5 +831,222 @@ fn test_3820(
     assert_eq!(values.value(1), "12345678901234567890123456789012345678");
     assert_eq!(values.value(2), format!("-0.{}1", "0".repeat(35)));
     assert!(values.is_null(3));
+    Ok(())
+}
+
+#[rstest]
+#[case::small_decimal("12.25", 4, 2, "1225".into())]
+#[case::integer_beyond_float(
+    "9007199254740993", 76, 38, format!("9007199254740993{}", "0".repeat(38))
+)]
+#[case::large_integer(
+    "22222222222222222222222222222222222222", 76, 38,
+    format!("22222222222222222222222222222222222222{}", "0".repeat(38))
+)]
+#[case::positive_fraction("123.45", 76, 38, format!("12345{}", "0".repeat(36)))]
+#[case::large_fraction(
+    "88888888888888888888.888888888888888888", 76, 38,
+    format!("88888888888888888888888888888888888888{}", "0".repeat(20))
+)]
+#[case::fraction_below_one(
+    "0.99999999999999999999999999999999999999", 76, 38,
+    "99999999999999999999999999999999999999".into()
+)]
+#[case::fraction_above_one(
+    "1.9876543210987654321098765432109876543", 76, 38,
+    "198765432109876543210987654321098765430".into()
+)]
+#[case::large_integer_with_fraction(
+    "9876543210987654321098765432109876543.7", 76, 38,
+    format!("98765432109876543210987654321098765437{}", "0".repeat(37))
+)]
+#[case::negative_fraction("-0.0000000000000000000000000000000000001", 76, 38, "-10".into())]
+#[case::smallest_positive_fraction("1e-76", 76, 76, "1".into())]
+#[case::smallest_negative_fraction("-1e-76", 76, 76, "-1".into())]
+#[case::negative_scale("9900", 4, -2, "99".into())]
+#[case::negative_value_and_scale("-9900", 4, -2, "-99".into())]
+#[case::large_negative_scale("1e76", 76, -76, "1".into())]
+#[case::large_coefficient("1e75", 76, 0, format!("1{}", "0".repeat(75)))]
+#[case::zero_negative_scale("0", 1, -128, "0".into())]
+#[case::zero_positive_scale("0", 76, 76, "0".into())]
+/// test requested Decimal256 fetches preserve the exact coefficient, scale, and nulls
+fn test_3821(
+    conn: oracledb::Connection,
+    #[case] value: &str,
+    #[case] precision: u8,
+    #[case] scale: i8,
+    #[case] expected: String,
+) -> Result<(), oracledb::Error> {
+    let schema = Arc::new(Schema::new(vec![Field::new(
+        "VALUE",
+        DataType::Decimal256(precision, scale),
+        true,
+    )]));
+    let sql = r#"
+        select value from (
+            select 1 as id, to_number(:1) as value from dual
+            union all
+            select 2, cast(null as number) from dual
+        ) order by id
+        "#;
+    let batch = conn
+        .statement(sql)?
+        .with_requested_schema(schema.clone())
+        .build()?
+        .query_arrow(oracledb::BindParameters::Slice(&[&[&value]]))?;
+    assert_eq!(batch.schema(), schema);
+    assert_eq!(batch.num_rows(), 2);
+    let values =
+        batch.column(0).as_any().downcast_ref::<Decimal256Array>().unwrap();
+    assert_eq!(values.value(0).to_string(), expected);
+    assert!(values.is_null(1));
+    Ok(())
+}
+
+#[rstest]
+#[case::precision_loss("1234", 3, 0)]
+#[case::scale_loss("1.25", 4, 1)]
+#[case::power_overflow("1e100", 76, 0)]
+#[case::multiplication_overflow("9e75", 76, 1)]
+#[case::negative_multiplication_overflow("-9e75", 76, 1)]
+/// test Decimal256 fetch conversion failures report the source value and target type
+fn test_3822(
+    conn: oracledb::Connection,
+    #[case] value: &str,
+    #[case] precision: u8,
+    #[case] scale: i8,
+) -> Result<(), oracledb::Error> {
+    let schema = Arc::new(Schema::new(vec![Field::new(
+        "VALUE",
+        DataType::Decimal256(precision, scale),
+        true,
+    )]));
+    let sql = format!("select {value} from dual");
+    let expected = conn.query_row(&sql, &[])?.get::<String>(0)?;
+    let error = conn
+        .statement(&sql)?
+        .with_requested_schema(schema)
+        .build()?
+        .query_arrow(oracledb::BindParameters::default())
+        .unwrap_err();
+    assert_eq!(
+        error.kind(),
+        &oracledb::ErrorKind::CannotConvertToArrowDecimal(
+            expected.clone(),
+            precision,
+            scale,
+        )
+    );
+    assert_eq!(
+        error.to_string(),
+        format!(
+            "{expected} cannot be converted to an Apache Arrow decimal({precision}, {scale})"
+        )
+    );
+    Ok(())
+}
+
+#[rstest]
+#[case::zero_precision(0, 0)]
+#[case::excess_precision(77, 0)]
+#[case::excess_scale(76, 77)]
+#[case::scale_exceeds_precision(4, 5)]
+/// test invalid Decimal256 schema definitions are rejected even for empty results
+fn test_3823(
+    conn: oracledb::Connection,
+    #[case] precision: u8,
+    #[case] scale: i8,
+) -> Result<(), oracledb::Error> {
+    let schema = Arc::new(Schema::new(vec![Field::new(
+        "VALUE",
+        DataType::Decimal256(precision, scale),
+        true,
+    )]));
+    let error = conn
+        .statement("select 1 from dual where 1 = 0")?
+        .with_requested_schema(schema)
+        .build()?
+        .query_arrow(oracledb::BindParameters::default())
+        .unwrap_err();
+    assert_eq!(error.kind(), &oracledb::ErrorKind::ArrowOperation);
+    Ok(())
+}
+
+#[rstest]
+#[case::padded_coefficient("123", 3, 2)]
+#[case::coefficient_exceeds_76_digits("1e76", 76, 0)]
+/// test a fetched Decimal256 coefficient must fit the requested precision
+fn test_3824(
+    conn: oracledb::Connection,
+    #[case] value: &str,
+    #[case] precision: u8,
+    #[case] scale: i8,
+) -> Result<(), oracledb::Error> {
+    let schema = Arc::new(Schema::new(vec![Field::new(
+        "VALUE",
+        DataType::Decimal256(precision, scale),
+        true,
+    )]));
+    let sql = format!("select {value} from dual");
+    let error = conn
+        .statement(&sql)?
+        .with_requested_schema(schema)
+        .build()?
+        .query_arrow(oracledb::BindParameters::default())
+        .unwrap_err();
+    assert_eq!(error.kind(), &oracledb::ErrorKind::ArrowOperation);
+    Ok(())
+}
+
+#[rstest]
+/// test a character column cannot be fetched as Decimal256
+fn test_3825(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let schema = Arc::new(Schema::new(vec![Field::new(
+        "VALUE",
+        DataType::Decimal256(76, 38),
+        true,
+    )]));
+    let error = conn
+        .statement("select 'text' from dual")?
+        .with_requested_schema(schema)
+        .build()?
+        .query_arrow(oracledb::BindParameters::default())
+        .unwrap_err();
+    assert!(matches!(
+        error.kind(),
+        oracledb::ErrorKind::UnsupportedConversion(_, _)
+    ));
+    Ok(())
+}
+
+#[rstest]
+/// test duplicate Decimal256 values are preserved across database fetches
+fn test_3826(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let schema = Arc::new(Schema::new(vec![Field::new(
+        "VALUE",
+        DataType::Decimal256(4, 2),
+        true,
+    )]));
+    let value = "12.25";
+    let batch = conn
+        .statement(
+            r#"
+            select to_number(:1) as value from dual
+            connect by level <= 6
+            "#,
+        )?
+        .fetch_array_size(3)
+        .prefetch_rows(0)
+        .with_requested_schema(schema.clone())
+        .build()?
+        .query_arrow(oracledb::BindParameters::Slice(&[&[&value]]))?;
+    assert_eq!(batch.schema(), schema);
+    assert_eq!(batch.num_rows(), 6);
+    let values =
+        batch.column(0).as_any().downcast_ref::<Decimal256Array>().unwrap();
+    for row in 0..values.len() {
+        assert!(!values.is_null(row));
+        assert_eq!(values.value(row).to_string(), "1225");
+    }
     Ok(())
 }

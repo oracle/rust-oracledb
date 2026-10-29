@@ -32,14 +32,14 @@ mod common;
 
 use std::sync::Arc;
 
-use arrow_array::types::{ArrowPrimitiveType, Float16Type};
+use arrow_array::types::{ArrowPrimitiveType, Decimal256Type, Float16Type};
 use arrow_array::{
     Array, BinaryArray, BooleanArray, Date32Array, Decimal128Array,
-    FixedSizeBinaryArray, Float16Array, Float32Array, Float64Array, Int8Array,
-    Int16Array, Int32Array, Int64Array, NullArray, RecordBatch, StringArray,
-    TimestampMicrosecondArray, TimestampMillisecondArray,
-    TimestampNanosecondArray, TimestampSecondArray, UInt8Array, UInt16Array,
-    UInt32Array, UInt64Array,
+    Decimal256Array, FixedSizeBinaryArray, Float16Array, Float32Array,
+    Float64Array, Int8Array, Int16Array, Int32Array, Int64Array, NullArray,
+    RecordBatch, StringArray, TimestampMicrosecondArray,
+    TimestampMillisecondArray, TimestampNanosecondArray, TimestampSecondArray,
+    UInt8Array, UInt16Array, UInt32Array, UInt64Array,
 };
 use arrow_schema::{DataType, Field, Schema, TimeUnit};
 use rstest::*;
@@ -625,5 +625,187 @@ fn test_3111(
             "timestamp is outside Oracle range".into()
         )
     );
+    Ok(())
+}
+
+#[rstest]
+#[case::positive_scale("12345", 5, 2, "123.45".into())]
+#[case::integer(
+    "12345678901234567890123456789012345678", 38, 0,
+    "12345678901234567890123456789012345678".into()
+)]
+#[case::coefficient_beyond_i128(
+    "1000000000000000000000000000000000000000", 40, 2,
+    format!("1{}", "0".repeat(37))
+)]
+#[case::precision_76(
+    concat!("10000000000000000000000000000000000000", "00000000000000000000000000000000000000"),
+    76, 38, format!("1{}", "0".repeat(37))
+)]
+#[case::negative_scale("99", 2, -2, "9900".into())]
+#[case::small_fraction("1", 76, 76, format!("0.{}1", "0".repeat(75)))]
+#[case::maximum_exponent("1", 1, -125, format!("1{}", "0".repeat(125)))]
+/// test binding Decimal256 values preserves positive, negative, zero, and null values
+fn test_3112(
+    conn: oracledb::Connection,
+    #[case] coefficient: &str,
+    #[case] precision: u8,
+    #[case] scale: i8,
+    #[case] expected: String,
+) -> Result<(), oracledb::Error> {
+    type Decimal256Value = <Decimal256Type as ArrowPrimitiveType>::Native;
+    let value = coefficient.parse::<Decimal256Value>().unwrap();
+    let values = Decimal256Array::from(vec![
+        Some(value),
+        Some(-value),
+        Some(Decimal256Value::default()),
+        None,
+    ])
+    .with_precision_and_scale(precision, scale)?;
+    let input = RecordBatch::try_from_iter([(
+        "VALUE",
+        Arc::new(values) as Arc<dyn Array>,
+    )])?;
+    let schema =
+        Arc::new(Schema::new(vec![Field::new("VALUE", DataType::Utf8, true)]));
+    let batch = conn
+        .statement("select :1 from dual")?
+        .with_requested_schema(schema)
+        .build()?
+        .query_arrow(input.into())?;
+    assert_eq!(batch.num_rows(), 4);
+    let result =
+        batch.column(0).as_any().downcast_ref::<StringArray>().unwrap();
+    assert_eq!(result.value(0), expected);
+    assert_eq!(result.value(1), format!("-{expected}"));
+    assert_eq!(result.value(2), "0");
+    assert!(result.is_null(3));
+    Ok(())
+}
+
+#[rstest]
+#[case::too_many_digits("11111111111111111111111111111111111111111", 41, 0)]
+#[case::alignment_overflow("1111111111111111111111111111111111111111", 40, 1)]
+#[case::exponent_overflow("1", 1, -126)]
+#[case::negative_exponent_overflow("-1", 1, -126)]
+/// test Decimal256 values that exceed Oracle NUMBER storage return errors
+fn test_3113(
+    conn: oracledb::Connection,
+    #[case] coefficient: &str,
+    #[case] precision: u8,
+    #[case] scale: i8,
+) -> Result<(), oracledb::Error> {
+    type Decimal256Value = <Decimal256Type as ArrowPrimitiveType>::Native;
+    let value = coefficient.parse::<Decimal256Value>().unwrap();
+    let values = Decimal256Array::from(vec![
+        Some(Decimal256Value::default()),
+        None,
+        Some(value),
+    ])
+    .with_precision_and_scale(precision, scale)?;
+    let expected = values.value_as_string(2);
+    let input = RecordBatch::try_from_iter([(
+        "VALUE",
+        Arc::new(values) as Arc<dyn Array>,
+    )])?;
+    let error = conn.query_arrow("select :1 from dual", input).unwrap_err();
+    assert_eq!(
+        error.kind(),
+        &oracledb::ErrorKind::InvalidOracleNumber(expected)
+    );
+    Ok(())
+}
+
+#[rstest]
+/// test a Decimal256 coefficient must fit its declared Arrow precision when
+/// binding
+fn test_3114(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    type Decimal256Value = <Decimal256Type as ArrowPrimitiveType>::Native;
+    let values = Decimal256Array::from(vec![Decimal256Value::from_i128(123)])
+        .with_precision_and_scale(2, 0)?;
+    let input = RecordBatch::try_from_iter([(
+        "VALUE",
+        Arc::new(values) as Arc<dyn Array>,
+    )])?;
+    let error = conn.query_arrow("select :1 from dual", input).unwrap_err();
+    assert_eq!(error.kind(), &oracledb::ErrorKind::ArrowOperation);
+    Ok(())
+}
+
+#[rstest]
+/// test Decimal256 batch insert and fetch
+fn test_3115(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    type Decimal256Value = <Decimal256Type as ArrowPrimitiveType>::Native;
+    let _guard = common::create_table(
+        &conn,
+        "test_3115",
+        "id number(9) primary key, value number",
+    )?;
+    let expected_text = [
+        "9007199254740993",
+        "22222222222222222222222222222222222222",
+        "88888888888888888888.888888888888888888",
+        "-0.0000000000000000000000000000000000001",
+        "0.99999999999999999999999999999999999999",
+        "1.9876543210987654321098765432109876543",
+        "9876543210987654321098765432109876543.7",
+    ];
+    let coefficients = [
+        format!("9007199254740993{}", "0".repeat(38)),
+        format!("22222222222222222222222222222222222222{}", "0".repeat(38)),
+        format!("88888888888888888888888888888888888888{}", "0".repeat(20)),
+        "-10".into(),
+        "99999999999999999999999999999999999999".into(),
+        "198765432109876543210987654321098765430".into(),
+        format!("98765432109876543210987654321098765437{}", "0".repeat(37)),
+    ];
+    let values = Decimal256Array::from(
+        coefficients
+            .iter()
+            .map(|v| v.parse::<Decimal256Value>().unwrap())
+            .collect::<Vec<_>>(),
+    )
+    .with_precision_and_scale(76, 38)?;
+    let ids =
+        Int32Array::from((1..=expected_text.len() as i32).collect::<Vec<_>>());
+    let input = RecordBatch::try_from_iter([
+        ("ID", Arc::new(ids) as Arc<dyn Array>),
+        ("VALUE", Arc::new(values) as Arc<dyn Array>),
+    ])?;
+    let result =
+        conn.execute_batch("insert into test_3115 values (:1, :2)", input)?;
+    assert_eq!(result.rows_affected(), expected_text.len() as u64);
+    let schema = Arc::new(Schema::new(vec![Field::new(
+        "VALUE",
+        DataType::Decimal256(76, 38),
+        true,
+    )]));
+    let batch = conn
+        .statement("select value from test_3115 order by id")?
+        .with_requested_schema(schema.clone())
+        .build()?
+        .query_arrow(oracledb::BindParameters::default())?;
+    assert_eq!(batch.schema(), schema);
+    assert_eq!(batch.num_rows(), expected_text.len());
+    let values =
+        batch.column(0).as_any().downcast_ref::<Decimal256Array>().unwrap();
+    for (index, expected) in coefficients.iter().enumerate() {
+        assert!(!values.is_null(index));
+        assert_eq!(values.value(index).to_string(), *expected);
+    }
+    let schema =
+        Arc::new(Schema::new(vec![Field::new("VALUE", DataType::Utf8, true)]));
+    let batch = conn
+        .statement("select value from test_3115 order by id")?
+        .with_requested_schema(schema)
+        .build()?
+        .query_arrow(oracledb::BindParameters::default())?;
+    assert_eq!(batch.num_rows(), expected_text.len());
+    let values =
+        batch.column(0).as_any().downcast_ref::<StringArray>().unwrap();
+    for (index, expected) in expected_text.iter().enumerate() {
+        assert!(!values.is_null(index));
+        assert_eq!(values.value(index), *expected);
+    }
     Ok(())
 }

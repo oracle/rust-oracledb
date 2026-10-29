@@ -43,7 +43,7 @@ use crate::response::ResponseLocation;
 pub enum ErrorKind {
     ArrowOperation,
     CallTimeoutExceeded,
-    CannotConvertToArrowDecimal128(String, u8, i8),
+    CannotConvertToArrowDecimal(String, u8, i8),
     ColumnTruncated(usize, usize),
     DbError(DbError),
     DbObjectTypeUnavailable,
@@ -202,12 +202,12 @@ impl fmt::Display for Error {
             ErrorKind::CallTimeoutExceeded => {
                 fmt.write_str("the configured call timeout was exceeded")?
             }
-            ErrorKind::CannotConvertToArrowDecimal128(
+            ErrorKind::CannotConvertToArrowDecimal(
                 num, precision, scale
             ) => write!(
                 fmt,
                 "{num} cannot be converted to an Apache Arrow \
-                 decimal128({precision}, {scale})"
+                 decimal({precision}, {scale})"
             )?,
             ErrorKind::ColumnTruncated(col_value_size, actual_size) => write!(
                 fmt,
@@ -500,13 +500,13 @@ impl Error {
     }
 
     #[cfg(feature = "arrow")]
-    pub(crate) fn cannot_convert_to_arrow_decimal128(
+    pub(crate) fn cannot_convert_to_arrow_decimal(
         num: String,
         precision: u8,
         scale: i8,
     ) -> Self {
         Self::new(
-            ErrorKind::CannotConvertToArrowDecimal128(num, precision, scale),
+            ErrorKind::CannotConvertToArrowDecimal(num, precision, scale),
             None,
         )
     }

@@ -34,15 +34,15 @@ use std::sync::Arc;
 use arrow_array::builder::ArrayBuilder;
 use arrow_array::builder::make_builder;
 use arrow_array::builder::{
-    BinaryBuilder, BooleanBuilder, Decimal128Builder, Float32Builder,
-    Float64Builder, Int8Builder, Int16Builder, Int32Builder, Int64Builder,
-    LargeBinaryBuilder, LargeStringBuilder, StringBuilder,
+    BinaryBuilder, BooleanBuilder, Decimal128Builder, Decimal256Builder,
+    Float32Builder, Float64Builder, Int8Builder, Int16Builder, Int32Builder,
+    Int64Builder, LargeBinaryBuilder, LargeStringBuilder, StringBuilder,
     TimestampMicrosecondBuilder, TimestampMillisecondBuilder,
     TimestampNanosecondBuilder, TimestampSecondBuilder, UInt8Builder,
     UInt16Builder, UInt32Builder, UInt64Builder,
 };
 use arrow_array::types::{
-    Decimal128Type, validate_decimal_precision_and_scale,
+    Decimal128Type, Decimal256Type, validate_decimal_precision_and_scale,
 };
 use arrow_schema::{DataType, Field, Schema, SchemaRef, TimeUnit};
 
@@ -192,11 +192,17 @@ fn validate_fetch_type(column: &Metadata, field: &Field) -> Result<(), Error> {
             *precision, *scale,
         )?;
     }
+    if let DataType::Decimal256(precision, scale) = data_type {
+        validate_decimal_precision_and_scale::<Decimal256Type>(
+            *precision, *scale,
+        )?;
+    }
     let db_type = column.db_type();
     let is_compatible = if db_type == crate::DB_TYPE_NUMBER {
         matches!(
             data_type,
             DataType::Decimal128(_, _)
+                | DataType::Decimal256(_, _)
                 | DataType::Float32
                 | DataType::Float64
                 | DataType::Int8
@@ -285,6 +291,17 @@ impl RecordBatchCreator {
                 builder
                     .as_any_mut()
                     .downcast_mut::<Decimal128Builder>()
+                    .unwrap()
+                    .append_option(value);
+            }
+            DataType::Decimal256(precision, scale) => {
+                let value = row
+                    .get::<Option<OracleNumber>>(column_index)?
+                    .map(|v| v.as_decimal256(*precision, *scale))
+                    .transpose()?;
+                builder
+                    .as_any_mut()
+                    .downcast_mut::<Decimal256Builder>()
                     .unwrap()
                     .append_option(value);
             }
