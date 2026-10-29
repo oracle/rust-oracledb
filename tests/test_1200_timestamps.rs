@@ -232,3 +232,21 @@ fn test_1209() {
     assert!(timestamp.is_utc());
     assert_eq!(timestamp.to_string(), "2026-09-03T14:05:06.123456789Z");
 }
+
+#[rstest]
+/// Verifies timestamp with time zone round trips successfully.
+fn test_1210(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let timestamp = oracledb::OracleTimestamp::new_utc_timestamp(
+        2026,
+        10,
+        28,
+        21,
+        19,
+        32,
+        987_654_321,
+    );
+    let row = conn.query_row("select :1 from dual", &[&timestamp])?;
+    let fetched_timestamp: oracledb::OracleTimestamp = row.get(0)?;
+    assert_eq!(timestamp, fetched_timestamp);
+    Ok(())
+}

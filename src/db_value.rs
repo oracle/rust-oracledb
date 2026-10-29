@@ -715,7 +715,11 @@ impl ToDbValue for OracleNumber {
 
 impl ToDbValue for OracleTimestamp {
     fn db_type(&self) -> &'static DbType {
-        crate::DB_TYPE_TIMESTAMP
+        if self.is_utc() {
+            crate::DB_TYPE_TIMESTAMP_TZ
+        } else {
+            crate::DB_TYPE_TIMESTAMP
+        }
     }
 }
 

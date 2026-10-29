@@ -2,6 +2,8 @@
 
 ## rust-oracledb 26.0.0-beta.6 (TBD)
 
+1. Fixed bug when binding UTC timestamps.
+
 
 ## rust-oracledb 26.0.0-beta.5 (October 28, 2026)
 

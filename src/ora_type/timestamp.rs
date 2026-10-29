@@ -257,9 +257,10 @@ impl ToBuf for OracleTimestamp {
         buf.write_u8(self.second() + 1);
         if actual_db_type != crate::DB_TYPE_DATE {
             buf.write_u32be(self.nanoseconds());
-        } else if actual_db_type == crate::DB_TYPE_TIMESTAMP_TZ {
-            buf.write_u8(constants::TZ_HOUR_OFFSET);
-            buf.write_u8(constants::TZ_MINUTE_OFFSET);
+            if actual_db_type == crate::DB_TYPE_TIMESTAMP_TZ {
+                buf.write_u8(constants::TZ_HOUR_OFFSET);
+                buf.write_u8(constants::TZ_MINUTE_OFFSET);
+            }
         }
     }
 }
