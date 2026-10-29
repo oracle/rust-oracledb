@@ -2,6 +2,9 @@
 
 ## rust-oracledb 26.0.0-beta.6 (TBD)
 
+1.  Added support for binding Arrow timestamp arrays with non-empty timezone
+    metadata as `TIMESTAMP WITH TIME ZONE`. Values are normalized to UTC; the
+    input timezone name is not retained.
 1. Fixed bug when binding UTC timestamps.
 
 

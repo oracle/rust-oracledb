@@ -462,6 +462,67 @@ fn test_3106(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
 }
 
 #[rstest]
+/// test binding Arrow timestamps to TIMESTAMP WITH TIME ZONE columns
+fn test_3109(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let _guard = common::create_table(
+        &conn,
+        "test_3109",
+        "id number, c timestamp(6) with time zone",
+    )?;
+
+    // Arrow timestamp values are microseconds since 1970-01-01 00:00:00 UTC.
+    // These represent 2025-01-01 00:00:00.123456 UTC, the same date/time
+    // without fractional seconds, and a null value.
+    // The timezone metadata selects the TIMESTAMP WITH TIME ZONE bind path;
+    // it does not change the instants represented by the numeric values.
+    // Asia/Kolkata displays the first value as 2025-01-01 05:30:00.123456
+    // +05:30, the same instant as 2025-01-01 00:00:00.123456 UTC. The driver
+    // stores the UTC representation with offset +00:00, without retaining
+    // the Asia/Kolkata timezone name.
+    let timestamps = TimestampMicrosecondArray::from(vec![
+        Some(1_735_689_600_123_456),
+        Some(1_735_689_600_000_000),
+        None,
+    ])
+    .with_timezone("Asia/Kolkata");
+    let batch = RecordBatch::try_new(
+        Arc::new(Schema::new(vec![
+            Field::new("ID", DataType::Int32, false),
+            Field::new("C", timestamps.data_type().clone(), true),
+        ])),
+        vec![Arc::new(Int32Array::from(vec![1, 2, 3])), Arc::new(timestamps)],
+    )
+    .unwrap();
+    assert_eq!(
+        conn.execute_batch("insert into test_3109 values (:1, :2)", batch)?
+            .rows_affected(),
+        3
+    );
+
+    // Check the stored date/time, fractional seconds, and UTC offset directly.
+    let cursor = conn.query(
+        r#"
+        select to_char(c, 'YYYY-MM-DD HH24:MI:SS.FF6 TZH:TZM')
+        from test_3109 order by id
+        "#,
+        &[],
+    )?;
+    let mut values = Vec::new();
+    for row in cursor {
+        values.push(row?.get::<Option<String>>(0)?);
+    }
+    assert_eq!(
+        values,
+        vec![
+            Some("2025-01-01 00:00:00.123456 +00:00".to_string()),
+            Some("2025-01-01 00:00:00.000000 +00:00".to_string()),
+            None,
+        ]
+    );
+    Ok(())
+}
+
+#[rstest]
 /// test binding Float16, FixedSizeBinary, and Null arrays
 fn test_3110(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     let _guard = common::create_table(

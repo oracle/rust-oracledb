@@ -69,8 +69,13 @@ pub(crate) fn column_db_type(
             Ok(crate::DB_TYPE_BINARY_FLOAT)
         }
         DataType::Float64 => Ok(crate::DB_TYPE_BINARY_DOUBLE),
-        DataType::Date32 | DataType::Date64 | DataType::Timestamp(_, _) => {
-            Ok(crate::DB_TYPE_TIMESTAMP)
+        DataType::Date32 | DataType::Date64 => Ok(crate::DB_TYPE_TIMESTAMP),
+        DataType::Timestamp(_, timezone) => {
+            if timezone.as_ref().is_some_and(|timezone| !timezone.is_empty()) {
+                Ok(crate::DB_TYPE_TIMESTAMP_TZ)
+            } else {
+                Ok(crate::DB_TYPE_TIMESTAMP)
+            }
         }
         DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View => {
             Ok(crate::DB_TYPE_VARCHAR)

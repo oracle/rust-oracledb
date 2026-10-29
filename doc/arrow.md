@@ -74,7 +74,9 @@ Database bind type.
 | `Null` | `DB_TYPE_NUMBER` |
 | `Float16`, `Float32` | `DB_TYPE_BINARY_FLOAT` |
 | `Float64` | `DB_TYPE_BINARY_DOUBLE` |
-| `Date32`, `Date64`, `Timestamp` | `DB_TYPE_TIMESTAMP` |
+| `Date32`, `Date64` | `DB_TYPE_TIMESTAMP` |
+| `Timestamp` with no timezone or empty timezone metadata | `DB_TYPE_TIMESTAMP` |
+| `Timestamp` with non-empty timezone metadata | `DB_TYPE_TIMESTAMP_TZ` |
 | `Utf8`, `LargeUtf8` | `DB_TYPE_VARCHAR` |
 | `Binary`, `LargeBinary`, `FixedSizeBinary` | `DB_TYPE_RAW` |
 
