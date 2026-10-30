@@ -81,7 +81,7 @@ pub struct Client {
     transport: Transport,
     caps: capabilities::Capabilities,
     config: Config,
-    combo_key: Option<[u8; 32]>,
+    combo_key: Option<Vec<u8>>,
     dbobject_type_cache: DbObjectTypeCache,
     charset_id: u16,
     ncharset_id: u16,
@@ -588,7 +588,7 @@ impl Client {
             .set_new_password(new_password);
         mem::swap(&mut temp_config, &mut self.config);
         let mut auth_message = AuthMessage::new();
-        auth_message.set_combo_key(&self.combo_key.unwrap());
+        auth_message.set_combo_key(self.combo_key.as_ref().unwrap());
         let result = self.process_message(&mut auth_message);
         mem::swap(&mut temp_config, &mut self.config);
         result.map(|_| ())

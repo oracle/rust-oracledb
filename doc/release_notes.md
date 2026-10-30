@@ -7,7 +7,10 @@
 1.  Added support for binding Arrow timestamp arrays with non-empty timezone
     metadata as `TIMESTAMP WITH TIME ZONE`. Values are normalized to UTC; the
     input timezone name is not retained.
-1. Fixed bug when binding UTC timestamps.
+1.  Added support for authentication with Oracle Database 11g password
+    verifiers and an error is returned for any unknown password verifiers
+    ([issue 63](https://github.com/oracle/rust-oracledb/issues/63)).
+1.  Fixed bug when binding UTC timestamps.
 
 
 ## rust-oracledb 26.0.0-beta.5 (October 28, 2026)

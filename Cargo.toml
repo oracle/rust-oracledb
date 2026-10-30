@@ -44,10 +44,12 @@ base16ct = { version = "1.0.0", features = ["alloc"] }
 base64ct = { version = "1.8.3", features = ["alloc"] }
 cbc = "0.2.1"
 chrono = "0.4.45"
+md-5 = "0.11.0"
 pbkdf2 = "0.13.0"
 pkcs8 = { version = "0.11.0", features = ["pem", "encryption"] }
 rand = "0.10.2"
 rustls = "0.23.42"
+sha1 = "0.11.0"
 sha2 = "0.11.0"
 uuid = { version = "1.24.0", features = ["v4"] }
 webpki-roots = "1.0.8"
