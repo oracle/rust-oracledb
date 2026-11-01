@@ -10,6 +10,8 @@
 1.  Added support for authentication with Oracle Database 11g password
     verifiers and an error is returned for any unknown password verifiers
     ([issue 63](https://github.com/oracle/rust-oracledb/issues/63)).
+1.  Added [Error::db_error_code()](crate::Error::db_error_code()) as a
+    convenience when processing database errors.
 1.  Fixed bug when binding UTC timestamps.
 
 

@@ -688,10 +688,7 @@ fn test_2724(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
         Ok(_) => panic!("a duplicate primary key must be rejected"),
         Err(error) => error,
     };
-    assert!(matches!(
-        error.kind(),
-        oracledb::ErrorKind::DbError(db_error) if db_error.code() == 1
-    ));
+    assert_eq!(error.db_error_code(), Some(1));
 
     statement.execute(&[&2, &"after-error"])?;
     let row =

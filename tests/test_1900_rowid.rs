@@ -119,10 +119,7 @@ fn test_1904(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
         Ok(_) => panic!("an invalid ROWID must be rejected"),
         Err(error) => error,
     };
-    assert!(matches!(
-        error.kind(),
-        oracledb::ErrorKind::DbError(db_error) if db_error.code() == 1410
-    ));
+    assert_eq!(error.db_error_code(), Some(1410));
     Ok(())
 }
 
