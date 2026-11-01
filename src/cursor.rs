@@ -29,6 +29,7 @@
 //-----------------------------------------------------------------------------
 
 use std::collections::VecDeque;
+use std::fmt;
 use std::sync::Arc;
 
 use crate::error::Error;
@@ -123,5 +124,15 @@ impl Iterator for Cursor {
         } else {
             None
         }
+    }
+}
+
+impl fmt::Debug for Cursor {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("Cursor")
+            .field("statement", &self.statement)
+            .field("cached_rows", &self.rows.len())
+            .field("end_of_fetch", &self.end_of_fetch)
+            .finish()
     }
 }

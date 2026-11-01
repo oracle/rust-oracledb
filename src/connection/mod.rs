@@ -33,6 +33,7 @@ mod conn_impl;
 pub(crate) use conn_impl::ConnImpl;
 pub(crate) use conn_impl::ConnImplStatus;
 
+use std::fmt;
 use std::sync::Arc;
 
 use crate::bind_params::BindParameters;
@@ -347,6 +348,23 @@ impl Connection {
     /// Returns the version of the database.
     pub fn version(&self) -> Result<OracleVersion, Error> {
         Ok(self.get_impl()?.get_server_version())
+    }
+}
+
+impl fmt::Debug for Connection {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut s = f.debug_struct("Connection");
+        s.field("open", &self.conn_impl.is_some());
+        s.field("pooled", &self.pool_contents_ref.is_some());
+        if let Some(ref conn_impl) = self.conn_impl {
+            s.field("db_name", &conn_impl.get_db_name());
+            s.field("db_domain", &conn_impl.get_db_domain());
+            s.field("service_name", &conn_impl.get_service_name());
+            s.field("instance_name", &conn_impl.get_instance_name());
+            s.field("session_id", &conn_impl.get_session_id());
+            s.field("serial_num", &conn_impl.get_serial_num());
+        }
+        s.finish()
     }
 }
 

@@ -100,18 +100,15 @@ fn test_2000(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
 #[rstest]
 /// test invalid end user security context length
 fn test_2001() -> Result<(), oracledb::Error> {
-    match create_end_user_security_context(
+    let error = create_end_user_security_context(
         "x".repeat(70_000),
         "y".repeat(70_000),
-    ) {
-        Ok(_) => panic!("expected context creation to fail"),
-        Err(err) => {
-            assert!(matches!(
-                err.kind(),
-                oracledb::ErrorKind::InvalidEndUserSecurityContextLength(_)
-            ));
-        }
-    }
+    )
+    .expect_err("expected context creation to fail");
+    assert!(matches!(
+        error.kind(),
+        oracledb::ErrorKind::InvalidEndUserSecurityContextLength(_)
+    ));
     Ok(())
 }
 
@@ -133,18 +130,15 @@ fn test_2001() -> Result<(), oracledb::Error> {
 fn test_2002(
     #[case] identity: oracledb::EndUserIdentity,
 ) -> Result<(), oracledb::Error> {
-    match oracledb::EndUserSecurityContext::new(
+    let error = oracledb::EndUserSecurityContext::new(
         identity,
         "database_access_token_2002".to_string(),
-    ) {
-        Ok(_) => panic!("expected context creation to fail"),
-        Err(err) => {
-            assert!(matches!(
-                err.kind(),
-                oracledb::ErrorKind::InvalidEndUserSecurityContext(_)
-            ));
-        }
-    }
+    )
+    .expect_err("expected context creation to fail");
+    assert!(matches!(
+        error.kind(),
+        oracledb::ErrorKind::InvalidEndUserSecurityContext(_)
+    ));
     Ok(())
 }
 
@@ -171,18 +165,15 @@ fn test_2003(
 #[rstest]
 /// test end user security context rejects empty database access token
 fn test_2004() -> Result<(), oracledb::Error> {
-    match create_end_user_security_context(
+    let error = create_end_user_security_context(
         "end_user_token_2004".to_string(),
         "".to_string(),
-    ) {
-        Ok(_) => panic!("expected context creation to fail"),
-        Err(err) => {
-            assert!(matches!(
-                err.kind(),
-                oracledb::ErrorKind::InvalidEndUserSecurityContext(_)
-            ));
-        }
-    }
+    )
+    .expect_err("expected context creation to fail");
+    assert!(matches!(
+        error.kind(),
+        oracledb::ErrorKind::InvalidEndUserSecurityContext(_)
+    ));
     Ok(())
 }
 
@@ -190,19 +181,15 @@ fn test_2004() -> Result<(), oracledb::Error> {
 /// Tests missing credentials and missing connect strings before the network
 /// layer is used.
 fn test_2005() {
-    let err = match oracledb::connect(oracledb::Config::default()) {
-        Ok(_) => panic!("missing credentials must fail"),
-        Err(err) => err,
-    };
-    assert!(matches!(err.kind(), oracledb::ErrorKind::NoCredentials));
+    let error = oracledb::connect(oracledb::Config::default())
+        .expect_err("missing credentials must fail");
+    assert!(matches!(error.kind(), oracledb::ErrorKind::NoCredentials));
 
-    let err = match oracledb::connect(
+    let error = oracledb::connect(
         oracledb::Config::default().set_credentials("user", "password"),
-    ) {
-        Ok(_) => panic!("missing connect string must fail"),
-        Err(err) => err,
-    };
-    assert!(matches!(err.kind(), oracledb::ErrorKind::NoConnectString));
+    )
+    .expect_err("missing connect string must fail");
+    assert!(matches!(error.kind(), oracledb::ErrorKind::NoConnectString));
 }
 
 #[rstest]
@@ -261,12 +248,9 @@ fn test_2008(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
 fn test_2009(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     conn.set_call_timeout(Some(Duration::from_millis(600)))?;
     let started = Instant::now();
-    let error = match conn.execute("begin dbms_session.sleep(1); end;", &[]) {
-        Ok(_) => {
-            panic!("the database call must exceed the configured timeout")
-        }
-        Err(error) => error,
-    };
+    let error = conn
+        .execute("begin dbms_session.sleep(1); end;", &[])
+        .expect_err("the database call must exceed the configured timeout");
     let elapsed = started.elapsed();
     assert!(matches!(error.kind(), oracledb::ErrorKind::CallTimeoutExceeded));
     assert!(elapsed >= Duration::from_millis(200));

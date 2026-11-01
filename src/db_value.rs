@@ -28,6 +28,8 @@
 // Defines the structures and enumeration containing database values.
 //-----------------------------------------------------------------------------
 
+use std::fmt;
+
 use crate::client::Client;
 use crate::client::ClientRef;
 use crate::constants;
@@ -308,23 +310,61 @@ impl DbValue {
     /// Returns the type of the stored value.
     pub(crate) fn type_name(&self) -> &str {
         match self {
-            DbValue::Array(_) => "array",
-            DbValue::BinaryDouble(_) => "binary_double",
-            DbValue::BinaryFloat(_) => "binary_float",
-            DbValue::Boolean(_) => "boolean",
-            DbValue::Bytes(_) => "raw",
-            DbValue::Cursor(_) => "cursor",
-            DbValue::DbCollection(_) => "database collection",
-            DbValue::DbObject(_) => "database object",
-            DbValue::IntervalDS(_) => "interval day to second",
-            DbValue::IntervalYM(_) => "interval year to month",
-            DbValue::Json(_) => "json",
-            DbValue::Number(_) => "number",
-            DbValue::Rowid(_) => "rowid",
-            DbValue::String(_) => "string",
-            DbValue::Timestamp(_) => "timestamp",
-            DbValue::Vector(_) => "vector",
-            DbValue::Lob(_) => "lob",
+            Self::Array(_) => "array",
+            Self::BinaryDouble(_) => "binary_double",
+            Self::BinaryFloat(_) => "binary_float",
+            Self::Boolean(_) => "boolean",
+            Self::Bytes(_) => "raw",
+            Self::Cursor(_) => "cursor",
+            Self::DbCollection(_) => "database collection",
+            Self::DbObject(_) => "database object",
+            Self::IntervalDS(_) => "interval day to second",
+            Self::IntervalYM(_) => "interval year to month",
+            Self::Json(_) => "json",
+            Self::Number(_) => "number",
+            Self::Rowid(_) => "rowid",
+            Self::String(_) => "string",
+            Self::Timestamp(_) => "timestamp",
+            Self::Vector(_) => "vector",
+            Self::Lob(_) => "lob",
+        }
+    }
+}
+
+impl fmt::Debug for DbValue {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Array(v) => f.debug_tuple("Array").field(v).finish(),
+            Self::BinaryDouble(v) => {
+                f.debug_tuple("BinaryDouble").field(v).finish()
+            }
+            Self::BinaryFloat(v) => {
+                f.debug_tuple("BinaryFloat").field(v).finish()
+            }
+            Self::Boolean(v) => f.debug_tuple("Boolean").field(v).finish(),
+            Self::Bytes(v) => crate::utils::bytes_debug_fmt(f, "Bytes", v),
+            Self::Cursor(v) => write!(f, "{:#?}", v),
+            Self::DbCollection(v) => {
+                f.debug_tuple("DbCollection").field(v).finish()
+            }
+            Self::DbObject(v) => f.debug_tuple("DbObject").field(v).finish(),
+            Self::IntervalDS(v) => {
+                f.debug_tuple("IntervalDS").field(&v.to_string()).finish()
+            }
+            Self::IntervalYM(v) => {
+                f.debug_tuple("IntervalYM").field(&v.to_string()).finish()
+            }
+            Self::Json(v) => f.debug_tuple("Json").field(v).finish(),
+            Self::Number(v) => f.debug_tuple("Number").field(v).finish(),
+            Self::Rowid(v) => {
+                f.debug_tuple("Rowid").field(&v.to_string()).finish()
+            }
+            Self::String(v) => crate::utils::string_debug_fmt(f, "String", v),
+            Self::Timestamp(v) => {
+                f.debug_tuple("Timestamp").field(&v.to_string()).finish()
+            }
+            Self::Vector(_) => write!(f, "vector"),
+            Self::Lob(_) => write!(f, "lob"),
         }
     }
 }

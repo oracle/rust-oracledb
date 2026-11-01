@@ -64,7 +64,7 @@ fn test_1201(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     for row in cursor {
         let row = row?;
         let value: oracledb::OracleTimestamp = row.get(0)?;
-        assert_eq!(value.to_string(), "2025-10-31T09:46:25.000000000");
+        assert_eq!(value.to_string(), "2025-10-31T09:46:25");
     }
     Ok(())
 }
@@ -190,22 +190,22 @@ fn test_1207(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     let low: oracledb::OracleTimestamp = row.get(0)?;
     let high: oracledb::OracleTimestamp = row.get(1)?;
     assert!(!low.is_utc() && !high.is_utc());
-    assert_eq!(low.to_string(), "0001-01-01T00:00:00.000000000");
-    assert_eq!(high.to_string(), "9999-12-31T00:00:00.000000000");
+    assert_eq!(low.to_string(), "0001-01-01T00:00:00");
+    assert_eq!(high.to_string(), "9999-12-31T00:00:00");
     Ok(())
 }
 
 #[rstest]
 /// test invalid DATE values return database errors
-fn test_1208(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
-    for value in ["0000-01-01", "10000-01-01"] {
-        let sql = format!("select to_date('{value}', 'YYYY-MM-DD') from dual");
-        let err = match conn.query(&sql, &[]) {
-            Ok(_) => panic!("expected invalid DATE value to fail: {value}"),
-            Err(err) => err,
-        };
-        assert!(matches!(err.kind(), oracledb::ErrorKind::DbError(_)));
-    }
+#[case("0000-01-01")]
+#[case("10000-01-01")]
+fn test_1208(
+    conn: oracledb::Connection,
+    #[case] value: &str,
+) -> Result<(), oracledb::Error> {
+    let sql = format!("select to_date('{value}', 'YYYY-MM-DD') from dual");
+    let error = conn.query(&sql, &[]).unwrap_err();
+    assert!(error.db_error_code().is_some());
     Ok(())
 }
 

@@ -28,8 +28,46 @@
 // Defines a number of utility functions.
 //-----------------------------------------------------------------------------
 
+use std::fmt;
+
 use crate::error::Error;
 use crate::parser::Parser;
+
+const MAX_DEBUG_LENGTH: usize = 40;
+
+pub(crate) fn bytes_debug_fmt(
+    f: &mut fmt::Formatter<'_>,
+    name: &str,
+    value: &[u8],
+) -> fmt::Result {
+    if value.len() > MAX_DEBUG_LENGTH {
+        let hex = base16ct::upper::encode_string(&value[..MAX_DEBUG_LENGTH]);
+        f.debug_tuple(name)
+            .field(&format_args!("{:?}... ({} bytes)", hex, value.len()))
+            .finish()
+    } else {
+        let hex = base16ct::upper::encode_string(value);
+        f.debug_tuple(name).field(&hex.to_string()).finish()
+    }
+}
+
+pub(crate) fn string_debug_fmt(
+    f: &mut fmt::Formatter<'_>,
+    name: &str,
+    value: &str,
+) -> fmt::Result {
+    match value.char_indices().nth(MAX_DEBUG_LENGTH) {
+        Some((idx, _)) => f
+            .debug_tuple(name)
+            .field(&format_args!(
+                "{:?}... ({} bytes)",
+                &value[..idx],
+                value.len()
+            ))
+            .finish(),
+        None => f.debug_tuple(name).field(&value).finish(),
+    }
+}
 
 /// Encodes a Rust string as big-endian UTF-16 bytes.
 pub(crate) fn string_to_utf16be_bytes(value: &str) -> Vec<u8> {

@@ -37,7 +37,7 @@ use crate::write_buffer::ToBuf;
 use crate::write_buffer::WriteBuffer;
 
 /// Represents the value of INTERVAL YEAR TO MONTH columns in the database.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 pub struct OracleIntervalYM {
     years: i32,
     months: i8,
@@ -63,6 +63,12 @@ impl OracleIntervalYM {
 impl fmt::Display for OracleIntervalYM {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "P{}Y{}M", self.years, self.months)
+    }
+}
+
+impl fmt::Debug for OracleIntervalYM {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_tuple("OracleIntervalYM").field(&self.to_string()).finish()
     }
 }
 

@@ -232,11 +232,9 @@ fn test_3513(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
 #[rstest]
 /// q-string without a closing quote
 fn test_3514(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
-    let err = match conn.statement("select q'[something from dual")?.build() {
-        Ok(_) => panic!("expected failure"),
-        Err(err) => err,
-    };
-    assert!(matches!(err.kind(), oracledb::ErrorKind::ParseError(_, _)));
+    let error =
+        conn.statement("select q'[something from dual")?.build().unwrap_err();
+    assert!(matches!(error.kind(), oracledb::ErrorKind::ParseError(_, _)));
     Ok(())
 }
 
@@ -279,22 +277,18 @@ fn test_3516(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
 #[rstest]
 /// query with a missing end quote
 fn test_3517(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
-    let err = match conn.statement("select 'abc, :a from dual")?.build() {
-        Ok(_) => panic!("expected failure"),
-        Err(err) => err,
-    };
-    assert!(matches!(err.kind(), oracledb::ErrorKind::ParseError(_, _)));
+    let error =
+        conn.statement("select 'abc, :a from dual")?.build().unwrap_err();
+    assert!(matches!(error.kind(), oracledb::ErrorKind::ParseError(_, _)));
     Ok(())
 }
 
 #[rstest]
 /// q-string with incorrect closing symbols
 fn test_3518(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
-    let err = match conn.statement("select q'[abc'], 5 from dual")?.build() {
-        Ok(_) => panic!("expected failure"),
-        Err(err) => err,
-    };
-    assert!(matches!(err.kind(), oracledb::ErrorKind::ParseError(_, _)));
+    let error =
+        conn.statement("select q'[abc'], 5 from dual")?.build().unwrap_err();
+    assert!(matches!(error.kind(), oracledb::ErrorKind::ParseError(_, _)));
     Ok(())
 }
 

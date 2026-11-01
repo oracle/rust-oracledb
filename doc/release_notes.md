@@ -12,6 +12,8 @@
     ([issue 63](https://github.com/oracle/rust-oracledb/issues/63)).
 1.  Added [Error::db_error_code()](crate::Error::db_error_code()) as a
     convenience when processing database errors.
+1.  Added debug formatting to public structures and enumerations in order to
+    ease testing and debugging.
 1.  Fixed bug when binding UTC timestamps.
 
 

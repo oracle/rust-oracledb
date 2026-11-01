@@ -92,11 +92,11 @@ fn test_3301(
     value: &str,
 ) -> Result<(), oracledb::Error> {
     let config = oracledb::Config::default();
-    let err = match method(config, value.to_string()) {
-        Ok(_) => panic!("expected failure"),
-        Err(err) => err,
-    };
-    assert!(matches!(err.kind(), oracledb::ErrorKind::InvalidNetworkName(_)));
+    let error = method(config, value.to_string()).unwrap_err();
+    assert!(matches!(
+        error.kind(),
+        oracledb::ErrorKind::InvalidNetworkName(_)
+    ));
     Ok(())
 }
 
@@ -218,13 +218,10 @@ fn test_3302(
 #[case("(DESCRIPTION_LIST=(ADRESS_LIST=(KEY=VALUE)))")]
 /// Tests parsing invalid connect strings.
 fn test_3303(#[case] value: &str) -> Result<(), oracledb::Error> {
-    let err = match oracledb::Config::default().set_connect_string(value) {
-        Ok(_) => panic!("expected failure"),
-        Err(err) => err,
-    };
-    println!("error kind is {:?}", err.kind());
+    let error =
+        oracledb::Config::default().set_connect_string(value).unwrap_err();
     assert!(matches!(
-        err.kind(),
+        error.kind(),
         oracledb::ErrorKind::InvalidConnectString(_, _)
             | oracledb::ErrorKind::ParseError(_, _)
     ));

@@ -57,34 +57,28 @@ fn test_3000() {
 #[test]
 /// Tests pool-size validation occurs before connection configuration is used.
 fn test_3001() {
-    let err = match oracledb::create_pool(
+    let error = oracledb::create_pool(
         oracledb::PoolConfig::default()
             .set_min_connections(2)
             .set_max_connections(1),
-    ) {
-        Ok(_) => panic!("max_connections below min_connections must fail"),
-        Err(err) => err,
-    };
-    assert!(matches!(err.kind(), oracledb::ErrorKind::PoolMaxInvalid));
+    )
+    .unwrap_err();
+    assert!(matches!(error.kind(), oracledb::ErrorKind::PoolMaxInvalid));
 
-    let err = match oracledb::create_pool(
+    let error = oracledb::create_pool(
         oracledb::PoolConfig::default()
             .set_min_connections(0)
             .set_max_connections(0),
-    ) {
-        Ok(_) => panic!("max_connections = 0 must fail"),
-        Err(err) => err,
-    };
-    assert!(matches!(err.kind(), oracledb::ErrorKind::PoolMaxInvalid));
+    )
+    .unwrap_err();
+    assert!(matches!(error.kind(), oracledb::ErrorKind::PoolMaxInvalid));
 
-    let err = match oracledb::create_pool(
+    let error = oracledb::create_pool(
         oracledb::PoolConfig::default()
             .set_min_connections(1)
             .set_max_connections(2)
             .set_connection_increment(0),
-    ) {
-        Ok(_) => panic!("zero increment with a variable-sized pool must fail"),
-        Err(err) => err,
-    };
-    assert!(matches!(err.kind(), oracledb::ErrorKind::PoolIncrementZero));
+    )
+    .unwrap_err();
+    assert!(matches!(error.kind(), oracledb::ErrorKind::PoolIncrementZero));
 }

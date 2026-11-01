@@ -207,14 +207,13 @@ fn test_2707(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     let duplicate: &[&dyn oracledb::ToDbValue] = &[&1, &"duplicate"];
     let third: &[&dyn oracledb::ToDbValue] = &[&2, &"third"];
     let params = oracledb::BindParameters::Slice(&[first, duplicate, third]);
-    let error = match conn.execute_batch(
-        "insert into test_2707 (id, value) values (:1, :2)",
-        params,
-    ) {
-        Ok(_) => panic!("duplicate primary key must fail execute_batch"),
-        Err(error) => error,
-    };
-    assert!(matches!(error.kind(), oracledb::ErrorKind::DbError(_)));
+    let error = conn
+        .execute_batch(
+            "insert into test_2707 (id, value) values (:1, :2)",
+            params,
+        )
+        .expect_err("duplicate primary key must fail execute_batch");
+    assert_eq!(error.db_error_code(), Some(1));
     conn.rollback()?;
 
     let row = conn.query_row("select count(*) from test_2707", &[])?;
@@ -271,35 +270,30 @@ fn test_2709(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
 /// Tests named and positional bind validation errors without relying on a
 /// server-side SQL error.
 fn test_2710(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
-    let wrong_count = match conn.query("select :1, :2 from dual", &[&1]) {
-        Ok(_) => panic!("an incorrect positional bind count must fail"),
-        Err(err) => err,
-    };
+    let error = conn
+        .query("select :1, :2 from dual", &[&1])
+        .expect_err("an incorrect positional bind count must fail");
     assert!(matches!(
-        wrong_count.kind(),
+        error.kind(),
         oracledb::ErrorKind::WrongNumPositionalBinds(2, 1)
     ));
 
-    let missing = match conn
+    let error = conn
         .query_named("select :expected from dual", &[("other", &1)])
-    {
-        Ok(_) => panic!("a missing named bind must fail"),
-        Err(err) => err,
-    };
+        .expect_err("a missing named bind must fail");
     assert!(matches!(
-        missing.kind(),
+        error.kind(),
         oracledb::ErrorKind::MissingBindValue(name) if name == "EXPECTED"
     ));
 
-    let invalid = match conn.query_named(
-        "select :expected from dual",
-        &[("expected", &1), ("unexpected", &2)],
-    ) {
-        Ok(_) => panic!("an unknown named bind must fail"),
-        Err(err) => err,
-    };
+    let error = conn
+        .query_named(
+            "select :expected from dual",
+            &[("expected", &1), ("unexpected", &2)],
+        )
+        .expect_err("an unknown named bind must fail");
     assert!(matches!(
-        invalid.kind(),
+        error.kind(),
         oracledb::ErrorKind::InvalidBindName(name) if name == "UNEXPECTED"
     ));
     Ok(())
@@ -313,24 +307,20 @@ fn test_2711(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     let first: &[&dyn oracledb::ToDbValue] = &[&"first"];
     let second: &[&dyn oracledb::ToDbValue] = &[&42];
     let params = oracledb::BindParameters::Slice(&[first, second]);
-    let err = match conn
+    let error = conn
         .execute_batch("insert into test_2711 values (:1)", params)
-    {
-        Ok(_) => panic!("mixed bind types in a batch must fail"),
-        Err(err) => err,
-    };
-    assert!(matches!(err.kind(), oracledb::ErrorKind::DifferentTypes(_, _)));
+        .expect_err("mixed bind types in a batch must fail");
+    assert!(matches!(error.kind(), oracledb::ErrorKind::DifferentTypes(_, _)));
     Ok(())
 }
 
 #[rstest]
 /// Tests no-data, invalid-column-index, and multi-fetch cursor paths.
 fn test_2712(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
-    let no_data = match conn.query_row("select 1 from dual where 1 = 0", &[]) {
-        Ok(_) => panic!("query_row without rows must fail"),
-        Err(err) => err,
-    };
-    assert!(matches!(no_data.kind(), oracledb::ErrorKind::NoDataFound));
+    let error = conn
+        .query_row("select 1 from dual where 1 = 0", &[])
+        .expect_err("query_row without rows must fail");
+    assert!(matches!(error.kind(), oracledb::ErrorKind::NoDataFound));
 
     let row = conn.query_row("select 1 from dual", &[])?;
     let invalid_index = row.get::<i32>(1).unwrap_err();
@@ -684,10 +674,9 @@ fn test_2724(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     statement.execute(&[&1, &"first"])?;
     conn.commit()?;
 
-    let error = match statement.execute(&[&1, &"duplicate"]) {
-        Ok(_) => panic!("a duplicate primary key must be rejected"),
-        Err(error) => error,
-    };
+    let error = statement
+        .execute(&[&1, &"duplicate"])
+        .expect_err("a duplicate primary key must be rejected");
     assert_eq!(error.db_error_code(), Some(1));
 
     statement.execute(&[&2, &"after-error"])?;
@@ -746,12 +735,8 @@ fn test_2726(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
 /// Tests re-execution of statements with an error.
 fn test_2727(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     let sql = "select * from test_2727";
-    match conn.query(sql, &[]) {
-        Ok(_) => panic!("expected failure"),
-        Err(error) => {
-            assert!(matches!(error.kind(), oracledb::ErrorKind::DbError(_)));
-        }
-    };
+    let error = conn.query(sql, &[]).expect_err("expected failure");
+    assert_eq!(error.db_error_code(), Some(942));
     let _guard =
         common::create_table(&conn, "test_2727", "data varchar2(30)")?;
     let _ = conn.query(sql, &[])?;

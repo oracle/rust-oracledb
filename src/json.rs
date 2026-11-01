@@ -30,6 +30,7 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::fmt;
 
 use crate::constants;
 use crate::db_type::DbType;
@@ -91,7 +92,7 @@ const OSON_VERSION_MAX_FNAME_255: u8 = 1;
 const OSON_VERSION_MAX_FNAME_65535: u8 = 3;
 
 /// Types of JSON values supported.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum JsonValue {
     BinaryDouble(f64),
     BinaryFloat(f32),
@@ -952,6 +953,42 @@ impl ToBuf for JsonValue {
         _write_length: bool,
     ) {
         buf.write_qlocator(&OsonEncoder::new().encode(self))
+    }
+}
+
+impl fmt::Debug for JsonValue {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::BinaryDouble(v) => {
+                f.debug_tuple("BinaryDouble").field(v).finish()
+            }
+            Self::BinaryFloat(v) => {
+                f.debug_tuple("BinaryFloat").field(v).finish()
+            }
+            Self::Boolean(v) => f.debug_tuple("Boolean").field(v).finish(),
+            Self::IntervalDS(v) => {
+                f.debug_tuple("IntervalDS").field(&v.to_string()).finish()
+            }
+            Self::IntervalYM(v) => {
+                f.debug_tuple("IntervalYM").field(&v.to_string()).finish()
+            }
+            Self::JsonArray(v) => f.debug_tuple("JsonArray").field(v).finish(),
+            Self::JsonId(v) => f
+                .debug_tuple("JsonId")
+                .field(&base16ct::upper::encode_string(v))
+                .finish(),
+            Self::JsonObject(v) => {
+                f.debug_tuple("JsonObject").field(v).finish()
+            }
+            Self::Null => write!(f, "Null"),
+            Self::Number(v) => f.debug_tuple("Number").field(v).finish(),
+            Self::Raw(v) => crate::utils::bytes_debug_fmt(f, "Raw", v),
+            Self::String(v) => crate::utils::string_debug_fmt(f, "String", v),
+            Self::Timestamp(v) => {
+                f.debug_tuple("Timestamp").field(&v.to_string()).finish()
+            }
+            Self::Vector(v) => f.debug_tuple("Vector").field(v).finish(),
+        }
     }
 }
 

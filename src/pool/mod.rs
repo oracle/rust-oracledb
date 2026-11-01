@@ -31,6 +31,7 @@
 mod contents;
 mod manager;
 
+use std::fmt;
 use std::sync::mpsc;
 use std::thread;
 
@@ -114,6 +115,18 @@ impl Pool {
     pub fn open_count(&self) -> Result<usize, Error> {
         self.check_open()?;
         Ok(self.contents_ref.lock()?.open_count())
+    }
+}
+
+impl fmt::Debug for Pool {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut s = f.debug_struct("Pool");
+        s.field("bg_task", &self.bg_task);
+        match self.contents_ref.try_lock() {
+            Ok(guard) => s.field("contents", &*guard),
+            Err(_) => s.field("contents", &format_args!("<locked>")),
+        };
+        s.finish()
     }
 }
 

@@ -35,6 +35,7 @@ use crate::response::Response;
 use crate::row::{DbRow, Row};
 use crate::statement::CachedStatement;
 
+#[derive(Debug)]
 /// Represents the result returned by the database when calling
 /// [Connection::execute()](`crate::Connection::execute()`),
 /// [Connection::execute_named()](`crate::Connection::execute_named()`).
@@ -96,6 +97,7 @@ impl ExecResult {
     }
 }
 
+#[derive(Debug)]
 /// Represents the result returned by the database when calling
 /// [Connection::execute_batch()](`crate::Connection::execute_batch()`).
 pub struct ExecBatchResult {

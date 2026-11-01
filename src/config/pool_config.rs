@@ -37,7 +37,7 @@ use crate::error::Error;
 
 /// Represents configuration used to create a connection pool using
 /// [create_pool()](`crate::create_pool`).
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PoolConfig {
     connection_config: Config,
     min_connections: Option<usize>,

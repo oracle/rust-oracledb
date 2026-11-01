@@ -45,7 +45,7 @@ use crate::write_buffer::WriteBuffer;
 
 /// Represents the value of DATE, TIMESTAMP, TIMESTAMP WITH LOCAL TIME ZONE and
 /// TIMESTAMP WITH TIME ZONE columns in the database.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 pub struct OracleTimestamp {
     year: i16,
     month: u8,
@@ -196,19 +196,27 @@ impl fmt::Display for OracleTimestamp {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}.{:09}",
+            "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}",
             self.year,
             self.month,
             self.day,
             self.hour,
             self.minute,
             self.second,
-            self.nanoseconds
         )?;
+        if self.nanoseconds != 0 {
+            write!(f, ".{:09}", self.nanoseconds)?;
+        }
         if self.is_utc {
             f.write_char('Z')?;
         }
         Ok(())
+    }
+}
+
+impl fmt::Debug for OracleTimestamp {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_tuple("OracleTimestamp").field(&self.to_string()).finish()
     }
 }
 

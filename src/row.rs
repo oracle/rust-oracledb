@@ -28,6 +28,7 @@
 // Defines the structure containing row data.
 //-----------------------------------------------------------------------------
 
+use std::fmt;
 use std::sync::Arc;
 
 use crate::client::Client;
@@ -37,6 +38,7 @@ use crate::db_value::{DbValue, FromDbValue, PendingDbValue};
 use crate::error::Error;
 use crate::metadata::Metadata;
 
+#[derive(Debug)]
 pub struct DbRow {
     column_values: Vec<Option<DbValue>>,
 }
@@ -259,5 +261,31 @@ impl Row {
         let index = col_index.resolve(&self.column_info)?;
         let value_opt = self.column_values.take(index)?;
         <T>::from_db_value_array(ColumnData::Owned(value_opt))
+    }
+}
+
+// helper struct used strictly for clean debug formatting
+struct DebugColumn<'a> {
+    metadata: &'a Metadata,
+    value: &'a Option<DbValue>,
+}
+
+impl<'a> fmt::Debug for DebugColumn<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "type: {}, val: {:?}", self.metadata.data_type(), self.value)
+    }
+}
+
+impl fmt::Debug for Row {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut s = f.debug_struct("Row");
+        for (metadata, value) in self
+            .column_info
+            .iter()
+            .zip(self.column_values.column_values.iter())
+        {
+            s.field(metadata.name(), &DebugColumn { metadata, value });
+        }
+        s.finish()
     }
 }

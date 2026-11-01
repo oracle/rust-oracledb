@@ -39,7 +39,7 @@ fn test_1600(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     for row in cursor {
         let row = row?;
         let value: oracledb::OracleIntervalDS = row.get(0)?;
-        assert_eq!(value.to_string(), "P5DT3H4M6.000000000S");
+        assert_eq!(value.to_string(), "P5DT3H4M6S");
     }
     Ok(())
 }

@@ -41,7 +41,7 @@ use crate::secret_value::SecretValue;
 
 /// Represents configuration used to establish a standalone connection to the
 /// database using [connect()](`crate::connect`).
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Config {
     user: Option<String>,
     password: Option<SecretValue>,

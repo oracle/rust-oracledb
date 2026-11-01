@@ -82,7 +82,7 @@ impl EndUserIdentity {
 }
 
 /// Validated, pre-serialized Deep Data Security payload.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct EndUserSecurityContext {
     oson_bytes: SecretValue,
 }

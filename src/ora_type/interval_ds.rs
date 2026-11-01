@@ -29,6 +29,7 @@
 //-----------------------------------------------------------------------------
 
 use std::fmt;
+use std::fmt::Write;
 
 use crate::constants;
 use crate::db_type::DbType;
@@ -37,7 +38,7 @@ use crate::write_buffer::ToBuf;
 use crate::write_buffer::WriteBuffer;
 
 /// Represents the value of INTERVAL DAY TO SECOND columns in the database.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 pub struct OracleIntervalDS {
     days: i32,
     hours: i8,
@@ -88,13 +89,19 @@ impl fmt::Display for OracleIntervalDS {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "P{}DT{}H{}M{}.{:09}S",
-            self.days,
-            self.hours,
-            self.minutes,
-            self.seconds,
-            self.nanoseconds
-        )
+            "P{}DT{}H{}M{}",
+            self.days, self.hours, self.minutes, self.seconds,
+        )?;
+        if self.nanoseconds != 0 {
+            write!(f, ".{:09}", self.nanoseconds)?;
+        }
+        f.write_char('S')
+    }
+}
+
+impl fmt::Debug for OracleIntervalDS {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_tuple("OracleIntervalDS").field(&self.to_string()).finish()
     }
 }
 

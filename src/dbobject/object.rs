@@ -49,6 +49,7 @@ const TTC_OBJ_IS_DEGENERATE: u8 = 0x10;
 const TTC_OBJ_NO_PREFIX_SEG: u8 = 0x04;
 const TTC_OBJ_PLSQL_INDEX_TABLE: u8 = 1;
 
+#[derive(Debug)]
 /// A fetched database collection.
 pub struct DbCollection {
     object_type: Arc<DbObjectType>,
@@ -56,6 +57,7 @@ pub struct DbCollection {
 }
 
 /// A fetched database object.
+#[derive(Debug)]
 pub struct DbObject {
     object_type: Arc<DbObjectType>,
     data: Row,

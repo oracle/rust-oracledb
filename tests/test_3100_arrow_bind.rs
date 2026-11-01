@@ -596,7 +596,7 @@ fn test_3110(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
 #[case::milliseconds_min(TimeUnit::Millisecond, i64::MIN)]
 #[case::microseconds_max(TimeUnit::Microsecond, i64::MAX)]
 #[case::microseconds_min(TimeUnit::Microsecond, i64::MIN)]
-/// test out-of-range Arrow timestamp binds return an error instead of panicking
+/// test out-of-range Arrow timestamp binds return an error
 fn test_3111(
     conn: oracledb::Connection,
     #[case] unit: TimeUnit,

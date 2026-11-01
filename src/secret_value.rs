@@ -29,6 +29,8 @@
 // and should not be visible in memory dumps.
 //-----------------------------------------------------------------------------
 
+use std::fmt;
+
 use rand::RngExt;
 
 #[derive(Clone, Eq, PartialEq)]
@@ -48,6 +50,12 @@ impl SecretValue {
         let mut obfuscator = vec![0u8; value.len()];
         rand::rng().fill(&mut obfuscator[..]);
         Self { obfuscated_value: xor_bytes(value, &obfuscator), obfuscator }
+    }
+}
+
+impl fmt::Debug for SecretValue {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "SecretValue")
     }
 }
 

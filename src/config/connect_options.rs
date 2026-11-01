@@ -45,7 +45,7 @@ use std::net::ToSocketAddrs;
 use std::thread;
 use std::time::Duration;
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct Address {
     host: Option<String>,
     port: Option<u16>,
@@ -145,7 +145,7 @@ impl Address {
     }
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct AddressList {
     source_route: Option<bool>,
     load_balance: Option<bool>,
@@ -253,7 +253,7 @@ impl AddressList {
     }
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct Description {
     source_route: Option<bool>,
     load_balance: Option<bool>,
@@ -656,7 +656,7 @@ impl Description {
     }
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct DescriptionList {
     source_route: Option<bool>,
     load_balance: Option<bool>,

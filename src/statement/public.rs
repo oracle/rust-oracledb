@@ -29,6 +29,8 @@
 // publicly.
 //-----------------------------------------------------------------------------
 
+use std::fmt;
+
 use super::CachedStatement;
 
 #[cfg(feature = "arrow")]
@@ -285,5 +287,15 @@ impl Drop for Statement {
             let mut client = self.client_ref.lock().unwrap();
             client.return_statement(&self.statement);
         }
+    }
+}
+
+impl fmt::Debug for Statement {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("Statement")
+            .field("sql", &self.sql())
+            .field("cursor_id", &self.statement.cursor_id())
+            .field("bind_names", &self.bind_names())
+            .finish()
     }
 }

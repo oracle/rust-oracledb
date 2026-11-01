@@ -35,7 +35,7 @@ use crate::error::Error;
 use crate::read_buffer::ReadBuffer;
 use crate::response::Response;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Rowid {
     rba: u32,
     partition_id: u16,
@@ -72,6 +72,12 @@ impl fmt::Display for Rowid {
         convert_base64(&mut output[9..15], self.block_num.try_into().unwrap());
         convert_base64(&mut output[15..18], self.slot_num.into());
         f.write_str(std::str::from_utf8(&output).unwrap())
+    }
+}
+
+impl fmt::Debug for Rowid {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("Rowid").field(&self.to_string()).finish()
     }
 }
 
