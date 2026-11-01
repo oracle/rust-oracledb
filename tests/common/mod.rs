@@ -135,6 +135,14 @@ impl Drop for TypeGuard<'_> {
     }
 }
 
+#[allow(dead_code)]
+#[fixture]
+/// Fixture that returns an admin connection to use for performing tests.
+pub fn admin_conn() -> oracledb::Connection {
+    let config = oracledb::get_test_config().admin_config.clone();
+    oracledb::connect(config).unwrap()
+}
+
 /// Returns a boolean indicating if the database to which the connection has
 /// been established is at the specified minimum version.
 fn is_db_min_version(

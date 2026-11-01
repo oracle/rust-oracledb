@@ -167,7 +167,7 @@ impl Client {
                     }
                     constants::PACKET_TYPE_MARKER => {
                         let packet = self
-                            .reset()
+                            .reset(packet.has_reset_marker())
                             .map_err(|_| self.unrecoverable_error())?;
                         return Ok((packet, false));
                     }
@@ -238,7 +238,7 @@ impl Client {
     /// and the connection closed and an error returned.
     fn recover_from_error(&mut self, err: Error) -> Result<Packet, Error> {
         self.send_marker(constants::MARKER_TYPE_INTERRUPT)
-            .and_then(|_| self.reset())
+            .and_then(|_| self.reset(false))
             .map_err(|_| self.unrecoverable_error())
             .and_then(|_| Err(err))
     }
@@ -248,9 +248,9 @@ impl Client {
     /// The packet received after the reset has completed is returned to the
     /// caller. Note that some databases return multiple reset markers so
     /// these are also accommodated.
-    fn reset(&mut self) -> Result<Packet, Error> {
+    fn reset(&mut self, reset_received: bool) -> Result<Packet, Error> {
         self.send_marker(constants::MARKER_TYPE_RESET)?;
-        let mut reset_received = false;
+        let mut reset_received = reset_received;
         loop {
             let packet = self.transport.receive_packet()?;
             if packet.has_reset_marker() {

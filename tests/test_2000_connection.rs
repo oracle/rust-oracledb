@@ -28,6 +28,7 @@
 
 mod common;
 
+use common::admin_conn;
 use common::conn;
 use rstest::*;
 use std::time::{Duration, Instant};
@@ -259,5 +260,39 @@ fn test_2009(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     conn.set_call_timeout(None)?;
     let row = conn.query_row("select 2009 from dual", &[])?;
     assert_eq!(row.get::<i32>(0)?, 2009);
+    Ok(())
+}
+
+#[rstest]
+/// Tests that a call cancelled by the server (using ALTER SYSTEM CANCEL SQL,
+/// available in Oracle Database 18c and higher) fails with error ORA-01013
+/// and leaves the connection reusable after protocol reset.
+fn test_2010(
+    admin_conn: oracledb::Connection,
+    conn: oracledb::Connection,
+) -> Result<(), oracledb::Error> {
+    if conn.version()?.0 < 18 {
+        common::skip_test("test requires Oracle Database 18 or higher");
+        return Ok(());
+    }
+    let session_id = conn.session_id()?;
+    let serial_num = conn.serial_num()?;
+    let thread = std::thread::spawn(move || {
+        let result = conn.query_row(
+            "select count(*) from all_objects cross join all_objects",
+            &[],
+        );
+        (result, conn)
+    });
+    std::thread::sleep(Duration::from_millis(1000));
+    admin_conn.execute(
+        &format!("alter system cancel sql '{session_id},{serial_num}'"),
+        &[],
+    )?;
+    let (result, conn) = thread.join().unwrap();
+    let error = result.unwrap_err();
+    assert_eq!(error.db_error_code(), Some(1013));
+    let row = conn.query_row("select 2010 from dual", &[])?;
+    assert_eq!(row.get::<usize>(0)?, 2010);
     Ok(())
 }
