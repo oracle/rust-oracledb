@@ -38,8 +38,8 @@ arrow = ["dep:arrow-array", "dep:arrow-schema"]
 
 [dependencies]
 aes = "0.9.1"
-arrow-array = { version = "59.1.0", optional = true }
-arrow-schema = { version = "59.1.0", optional = true }
+arrow-array = { version = "60.1.0", optional = true }
+arrow-schema = { version = "60.1.0", optional = true }
 base16ct = { version = "1.0.0", features = ["alloc"] }
 base64ct = { version = "1.8.3", features = ["alloc"] }
 cbc = "0.2.1"
