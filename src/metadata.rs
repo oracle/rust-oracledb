@@ -419,8 +419,9 @@ impl Metadata {
             constants::ORA_TYPE_NUM_NUMBER => {
                 match (self.precision, self.scale) {
                     (0, _) => self.db_type.ora_name.to_string(),
-                    (p, 0) => format!("NUMBER({})", p),
-                    (p, s) => format!("NUMBER({},{})", p, s),
+                    (p, -127) => format!("FLOAT({p})"),
+                    (p, 0) => format!("NUMBER({p})"),
+                    (p, s) => format!("NUMBER({p},{s})"),
                 }
             }
             constants::ORA_TYPE_NUM_TIMESTAMP => {

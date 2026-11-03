@@ -41,109 +41,210 @@ fn assert_column(
 }
 
 #[rstest]
+#[case::varchar(
+    "VARCHAR_COL",
+    "'abc'",
+    "VARCHAR2(30)",
+    30,
+    0,
+    0,
+    oracledb::DB_TYPE_VARCHAR
+)]
+#[case::char("CHAR_COL", "'abc'", "CHAR(5)", 5, 0, 0, oracledb::DB_TYPE_CHAR)]
+#[case::nvarchar(
+    "VARCHAR_COL",
+    "'abc'",
+    "NVARCHAR2(20)",
+    20,
+    0,
+    0,
+    oracledb::DB_TYPE_NVARCHAR
+)]
+#[case::nchar(
+    "NCHAR_COL",
+    "'abc'",
+    "NCHAR(4)",
+    4,
+    0,
+    0,
+    oracledb::DB_TYPE_NCHAR
+)]
+#[case::unconstrained_number(
+    "UNCONSTRAINED_NUMBER_COL",
+    "123.45",
+    "NUMBER",
+    0,
+    0,
+    -127,
+    oracledb::DB_TYPE_NUMBER
+)]
+#[case::number_with_precision(
+    "NUMBER_WITH_PRECISION_COL",
+    "12345",
+    "NUMBER(9)",
+    0,
+    9,
+    0,
+    oracledb::DB_TYPE_NUMBER
+)]
+#[case::constrained_number(
+    "CONSTRAINED_NUMBER_COL",
+    "123.45",
+    "NUMBER(5,2)",
+    0,
+    5,
+    2,
+    oracledb::DB_TYPE_NUMBER
+)]
+#[case::binary_float(
+    "BINARY_FLOAT_COL",
+    "1.25",
+    "BINARY_FLOAT",
+    0,
+    0,
+    0,
+    oracledb::DB_TYPE_BINARY_FLOAT
+)]
+#[case::binary_double(
+    "BINARY_DOUBLE_COL",
+    "1.25",
+    "BINARY_DOUBLE",
+    0,
+    0,
+    0,
+    oracledb::DB_TYPE_BINARY_DOUBLE
+)]
+#[case::date(
+    "DATE_COL",
+    "date '2024-02-29'",
+    "DATE",
+    0,
+    0,
+    0,
+    oracledb::DB_TYPE_DATE
+)]
+#[case::timestamp(
+    "TIMESTAMP_COL",
+    "timestamp '2024-02-29 23:59:25.123456789'",
+    "TIMESTAMP(9)",
+    0,
+    0,
+    9,
+    oracledb::DB_TYPE_TIMESTAMP
+)]
+#[case::timestamp_ltz(
+    "TIMESTAMP_LTZ_COL",
+    "timestamp '2024-02-29 23:59:25.123456'",
+    "TIMESTAMP(6) WITH LOCAL TIME ZONE",
+    0,
+    0,
+    6,
+    oracledb::DB_TYPE_TIMESTAMP_LTZ
+)]
+#[case::timestamp_tz(
+    "TIMESTAMP_TZ_COL",
+    "timestamp '2024-02-29 23:59:25.123 +05:30'",
+    "TIMESTAMP(3) WITH TIME ZONE",
+    0,
+    0,
+    3,
+    oracledb::DB_TYPE_TIMESTAMP_TZ
+)]
+#[case::interval_ds(
+    "INTERVAL_DS_COL",
+    "interval '12 01:02:03.123456789' day to second",
+    "INTERVAL DAY(2) TO SECOND(9)",
+    0,
+    2,
+    9,
+    oracledb::DB_TYPE_INTERVAL_DS
+)]
+#[case::interval_ym(
+    "INTERVAL_YM_COL",
+    "interval '10-11' year to month",
+    "INTERVAL YEAR(2) TO MONTH",
+    0,
+    2,
+    0,
+    oracledb::DB_TYPE_INTERVAL_YM
+)]
+#[case::raw(
+    "RAW_COL",
+    "hextoraw('DEADBEEF')",
+    "RAW(4)",
+    4,
+    0,
+    0,
+    oracledb::DB_TYPE_RAW
+)]
+#[case::float_col(
+    "FLOAT_COL",
+    "123.45",
+    "FLOAT(10)",
+    0,
+    10,
+    -127,
+    oracledb::DB_TYPE_NUMBER
+)]
 /// test metadata for supported scalar data types
-fn test_2600(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
-    let cursor = conn.query(
-        r#"
-        select
-            cast('abc' as varchar2(30)) as varchar_col,
-            cast('abc' as char(5)) as char_col,
-            cast(n'abc' as nvarchar2(30)) as nvarchar_col,
-            cast(n'abc' as nchar(5)) as nchar_col,
-            cast(123.45 as number) as number_col,
-            cast(1.25 as binary_float) as binary_float_col,
-            cast(1.25 as binary_double) as binary_double_col,
-            cast(date '2024-02-29' as date) as date_col,
-            cast(timestamp '2024-02-29 23:59:59.123456789' as timestamp)
-                as timestamp_col,
-            cast(
-                timestamp '2024-02-29 23:59:59.123456789 +05:30'
-                as timestamp with time zone
-            ) as timestamp_tz_col,
-            cast(
-                timestamp '2024-02-29 23:59:59.123456789'
-                as timestamp with local time zone
-            ) as timestamp_ltz_col,
-            interval '12 01:02:03.123456789' day to second
-                as interval_ds_col,
-            interval '10-11' year to month as interval_ym_col,
-            cast(hextoraw('DEADBEEF') as raw(4)) as raw_col
-        from dual
-        where 1 = 0
-        "#,
-        &[],
-    )?;
-
-    let columns = cursor.columns();
-    assert_column(&columns[0], "VARCHAR_COL", oracledb::DB_TYPE_VARCHAR);
-    assert_eq!(columns[0].max_size(), 30);
-    assert_column(&columns[1], "CHAR_COL", oracledb::DB_TYPE_CHAR);
-    assert_eq!(columns[1].max_size(), 5);
-    assert_column(&columns[2], "NVARCHAR_COL", oracledb::DB_TYPE_NVARCHAR);
-    assert_eq!(columns[2].max_size(), 30);
-    assert_column(&columns[3], "NCHAR_COL", oracledb::DB_TYPE_NCHAR);
-    assert_eq!(columns[3].max_size(), 5);
-    assert_column(&columns[4], "NUMBER_COL", oracledb::DB_TYPE_NUMBER);
-    assert_column(
-        &columns[5],
-        "BINARY_FLOAT_COL",
-        oracledb::DB_TYPE_BINARY_FLOAT,
-    );
-    assert_column(
-        &columns[6],
-        "BINARY_DOUBLE_COL",
-        oracledb::DB_TYPE_BINARY_DOUBLE,
-    );
-    assert_column(&columns[7], "DATE_COL", oracledb::DB_TYPE_DATE);
-    assert_column(&columns[8], "TIMESTAMP_COL", oracledb::DB_TYPE_TIMESTAMP);
-    assert_column(
-        &columns[9],
-        "TIMESTAMP_TZ_COL",
-        oracledb::DB_TYPE_TIMESTAMP_TZ,
-    );
-    assert_column(
-        &columns[10],
-        "TIMESTAMP_LTZ_COL",
-        oracledb::DB_TYPE_TIMESTAMP_LTZ,
-    );
-    assert_column(
-        &columns[11],
-        "INTERVAL_DS_COL",
-        oracledb::DB_TYPE_INTERVAL_DS,
-    );
-    assert_column(
-        &columns[12],
-        "INTERVAL_YM_COL",
-        oracledb::DB_TYPE_INTERVAL_YM,
-    );
-    assert_column(&columns[13], "RAW_COL", oracledb::DB_TYPE_RAW);
-    assert_eq!(columns[13].max_size(), 4);
+fn test_2600(
+    conn: oracledb::Connection,
+    #[case] name: &str,
+    #[case] value: &str,
+    #[case] data_type: &str,
+    #[case] max_size: u32,
+    #[case] precision: u8,
+    #[case] scale: i8,
+    #[case] db_type: &'static oracledb::DbType,
+) -> Result<(), oracledb::Error> {
+    let sql =
+        format!("select cast({value} as {data_type}) as {name} from dual");
+    let cursor = conn.query(&sql, &[])?;
+    let column = &cursor.columns()[0];
+    assert_eq!(column.name(), name);
+    assert_eq!(column.data_type(), data_type);
+    assert_eq!(column.max_size(), max_size);
+    assert_eq!(column.precision(), precision);
+    assert_eq!(column.scale(), scale);
+    assert_eq!(column.db_type(), db_type);
     Ok(())
 }
 
 #[rstest]
+#[case::clob(
+    "CLOB_COL",
+    "to_clob('abc')",
+    oracledb::DB_TYPE_CLOB,
+    oracledb::DB_TYPE_LONG
+)]
+#[case::nclob(
+    "NCLOB_COL",
+    "to_nclob('abc')",
+    oracledb::DB_TYPE_NCLOB,
+    oracledb::DB_TYPE_LONG_NVARCHAR
+)]
+#[case::blob(
+    "BLOB_COL",
+    "to_blob(hextoraw('DEADBEEF'))",
+    oracledb::DB_TYPE_BLOB,
+    oracledb::DB_TYPE_LONG_RAW
+)]
 /// test metadata for supported large LOB data types
-fn test_2601(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
-    let sql = r#"
-        select
-            to_clob('abc') as clob_col,
-            to_nclob('abc') as nclob_col,
-            to_blob(hextoraw('DEADBEEF')) as blob_col
-        from dual
-        where 1 = 0
-        "#;
-
-    let cursor = conn.query(sql, &[])?;
-    let columns = cursor.columns();
-    assert_eq!(columns[0].db_type(), oracledb::DB_TYPE_LONG);
-    assert_eq!(columns[1].db_type(), oracledb::DB_TYPE_LONG_NVARCHAR);
-    assert_eq!(columns[2].db_type(), oracledb::DB_TYPE_LONG_RAW);
-
-    let cursor = conn.statement(sql)?.fetch_lobs().build()?.query(&[])?;
-    let columns = cursor.columns();
-    assert_eq!(columns[0].db_type(), oracledb::DB_TYPE_CLOB);
-    assert_eq!(columns[1].db_type(), oracledb::DB_TYPE_NCLOB);
-    assert_eq!(columns[2].db_type(), oracledb::DB_TYPE_BLOB);
+fn test_2601(
+    conn: oracledb::Connection,
+    #[case] name: &str,
+    #[case] value: &str,
+    #[case] db_type_with_lobs: &'static oracledb::DbType,
+    #[case] db_type_without_lobs: &'static oracledb::DbType,
+) -> Result<(), oracledb::Error> {
+    let sql = format!("select {value} as {name} from dual");
+    let cursor = conn.query(&sql, &[])?;
+    let column = &cursor.columns()[0];
+    assert_eq!(column.name(), name);
+    assert_eq!(column.db_type(), db_type_without_lobs);
+    let cursor = conn.statement(&sql)?.fetch_lobs().build()?.query(&[])?;
+    let column = &cursor.columns()[0];
+    assert_eq!(column.db_type(), db_type_with_lobs);
     Ok(())
 }
 
