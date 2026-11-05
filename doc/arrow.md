@@ -133,18 +133,56 @@ id=1, name=Anna
 id=2, name=John
 ```
 
+To process results incrementally, use
+[Connection::query_arrow_batches()](crate::Connection::query_arrow_batches)
+or [Statement::query_arrow_batches()](crate::Statement::query_arrow_batches).
+They return an [ArrowBatchReader](crate::ArrowBatchReader), which implements
+Arrow's `RecordBatchReader` interface: a schema and a sequence of `RecordBatch`
+values. This lets Arrow consumers process results incrementally without
+collecting the entire query result into one batch. For example:
+
+```rust
+let mut batches = connection
+    .statement("select id, name from arrow_table order by id")?
+    .build()?
+    .query_arrow_batches(oracledb::BindParameters::default())?;
+
+println!("Schema: {:?}", batches.schema());
+println!("Columns: {}", batches.columns().len());
+
+for result in &mut batches {
+    let batch = result?;
+    println!("Fetched {} rows", batch.num_rows());
+    // Process the batch here. Break to stop before fetching further batches.
+}
+```
+
 To control the output types or schema metadata, execute the query through a
 `StatementBuilder` and call
 [StatementBuilder::with_requested_schema()](crate::StatementBuilder::with_requested_schema).
 See [Requesting an Arrow Schema](#arrowrequestedschema).
+
+By default, each set of 1,024 rows produces one Arrow batch. Use
+[StatementBuilder::arrow_batch_size()](crate::StatementBuilder::arrow_batch_size)
+to specify a different number of rows for each Arrow batch:
+
+```rust
+let batches = connection
+    .statement("select id, name from arrow_table order by id")?
+    .arrow_batch_size(50)
+    .build()?
+    .query_arrow_batches(oracledb::BindParameters::default())?;
+```
 
 ### <a name="arrowfetchtypemapping"></a> 13.2.1 Arrow Fetch Type Mapping
 
 Rust-oracledb maps Oracle Database column types to Arrow array types when
 fetching query results as Arrow data.
 
-When query results are fetched with `Connection.query_arrow()`, rust-oracledb
-derives the Arrow schema from the query result metadata.
+When query results are fetched with
+[Connection::query_arrow()](crate::Connection::query_arrow) or
+[Connection::query_arrow_batches()](crate::Connection::query_arrow_batches),
+rust-oracledb derives the Arrow schema from the query result metadata.
 
 The following table shows how oracledb database types are mapped to Apache
 Arrow Rust array data types when fetching query results as an Arrow

@@ -263,6 +263,16 @@ impl ConnImpl {
         self.statement(sql).build()?.query_arrow(params)
     }
 
+    #[cfg(feature = "arrow")]
+    /// Executes a query and returns an Arrow record batch reader.
+    pub fn query_arrow_batches<'params>(
+        &self,
+        sql: &str,
+        params: BindParameters<'params>,
+    ) -> Result<crate::ArrowBatchReader<'params>, Error> {
+        self.statement(sql).build()?.query_arrow_batches(params)
+    }
+
     /// Executes a query against the database using named parameters.
     pub fn query_named(
         &self,

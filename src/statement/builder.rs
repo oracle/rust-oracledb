@@ -54,6 +54,18 @@ impl<'sql> StatementBuilder<'sql> {
         }
     }
 
+    /// Specifies the output row count for query_arrow_batches(). Responses
+    /// are split or combined across bind executions to fill each batch; the
+    /// final batch may be smaller. Without this option, each nonempty response
+    /// produces one batch. The value must be non-zero or the function will
+    /// panic.
+    #[cfg(feature = "arrow")]
+    pub fn arrow_batch_size(mut self, value: usize) -> Self {
+        assert!(value > 0, "Arrow batch size must be a positive integer");
+        self.options.set_arrow_batch_size(value);
+        self
+    }
+
     /// Builds the statement from the SQL and the options.
     pub fn build(self) -> Result<Statement, Error> {
         let statement = {
@@ -94,7 +106,8 @@ impl<'sql> StatementBuilder<'sql> {
 
     /// Specifies the Arrow schema to use for query results. Fields map to
     /// query columns by position. The schema must have one field per column
-    /// and use supported fetch types. This option only affects query_arrow().
+    /// and use supported fetch types. Applies to query_arrow() and
+    /// query_arrow_batches().
     #[cfg(feature = "arrow")]
     pub fn with_requested_schema(mut self, schema: SchemaRef) -> Self {
         self.options.set_requested_schema(schema);

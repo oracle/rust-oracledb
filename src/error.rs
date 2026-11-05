@@ -489,6 +489,12 @@ impl fmt::Display for Error {
     }
 }
 
+impl error::Error for Error {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        self.0.cause.as_deref().map(|cause| cause as &dyn error::Error)
+    }
+}
+
 impl Error {
     fn new(
         kind: ErrorKind,

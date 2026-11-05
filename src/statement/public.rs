@@ -103,6 +103,11 @@ impl Statement {
         Self { client_ref, statement, return_on_drop: true }
     }
 
+    #[cfg(feature = "arrow")]
+    pub(crate) fn options(&self) -> &super::StatementOptions {
+        self.statement.options()
+    }
+
     /// Returns the bind names used by the statement.
     pub fn bind_names(&self) -> &[String] {
         self.statement.bind_names()
@@ -220,17 +225,24 @@ impl Statement {
     /// Performs a query against the database and returns an Arrow RecordBatch
     /// structure containing the data.
     pub fn query_arrow(
-        mut self,
+        self,
         params: BindParameters,
     ) -> Result<arrow_array::RecordBatch, Error> {
+        self.query_arrow_batches(params)?.into_single_batch()
+    }
+
+    #[cfg(feature = "arrow")]
+    /// Executes a query and returns Arrow's standard record batch reader.
+    ///
+    /// The reader exposes a schema and yields results one batch at a time,
+    /// allowing callers to process results incrementally. Each set of
+    /// bind parameters is executed in order. See [crate::ArrowBatchReader].
+    pub fn query_arrow_batches<'params>(
+        mut self,
+        params: BindParameters<'params>,
+    ) -> Result<arrow::ArrowBatchReader<'params>, Error> {
         self.statement.check_binds(&params)?;
-        let mut client = self.client_ref.lock()?;
-        arrow::query_single_batch(
-            &mut client,
-            &mut self.statement,
-            &self.client_ref,
-            params,
-        )
+        arrow::ArrowBatchReader::new(self, params)
     }
 
     /// Executes the statement with the given parameters and returns a Cursor

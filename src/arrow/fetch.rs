@@ -28,7 +28,7 @@
 // Defines support for fetching query results as Arrow record batches.
 //-----------------------------------------------------------------------------
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use arrow_array::builder::ArrayBuilder;
@@ -44,19 +44,188 @@ use arrow_array::builder::{
 use arrow_array::types::{
     Decimal128Type, Decimal256Type, validate_decimal_precision_and_scale,
 };
-use arrow_schema::{DataType, Field, Schema, SchemaRef, TimeUnit};
+use arrow_array::{RecordBatch, RecordBatchReader};
+use arrow_schema::{ArrowError, DataType, Field, Schema, SchemaRef, TimeUnit};
 
 use crate::bind_params::BindParameters;
-use crate::client::Client;
-use crate::client::ClientRef;
 use crate::constants;
 use crate::error::Error;
 use crate::metadata::Metadata;
 use crate::ora_type::OracleNumber;
 use crate::ora_type::OracleTimestamp;
+use crate::response::Response;
 use crate::row::DbRow;
 use crate::row::Row;
-use crate::statement::CachedStatement;
+use crate::statement::Statement;
+
+/// Streams query results as Arrow record batches.
+///
+/// Created by
+/// [Connection::query_arrow_batches()](crate::Connection::query_arrow_batches)
+/// or [Statement::query_arrow_batches()].
+///
+/// Implements Arrow's [RecordBatchReader] interface, which exposes a schema
+/// and yields one [RecordBatch] at a time. Use it to process query results
+/// incrementally instead of collecting the full result into one batch.
+///
+/// The schema is available before iteration. Use
+/// [crate::StatementBuilder::arrow_batch_size()] to control output batch size.
+/// The default output batch size is 1,024 rows. Errors are returned as
+/// [ArrowError::ExternalError] containing the original [Error].
+pub struct ArrowBatchReader<'params> {
+    statement: Statement,
+    params: BindParameters<'params>,
+    param_index: usize,
+    pending_rows: std::vec::IntoIter<DbRow>,
+    column_info: Arc<Vec<Metadata>>,
+    creator: RecordBatchCreator,
+    last_row: Option<DbRow>,
+    end_of_fetch: bool,
+}
+
+impl<'params> ArrowBatchReader<'params> {
+    /// Fills an output batch with fetched rows. There are three possibilities
+    /// for how output batches are determined:
+    ///     - all rows from all inputs are placed in one batch
+    ///     - all rows from one input are placed in one batch
+    ///     - rows from all inputs are split into chunks corresponding to the
+    ///       specified batch size
+    fn get_next_batch(
+        &mut self,
+        single_batch: bool,
+    ) -> Result<RecordBatch, Error> {
+        let mut num_rows = 0;
+        let batch_size = if single_batch {
+            usize::MAX
+        } else {
+            self.statement.options().arrow_batch_size()
+        };
+        while num_rows < batch_size {
+            // consume all of the rows that are in the buffer, up to the
+            // maximum specified
+            for row in self.pending_rows.by_ref().take(batch_size - num_rows) {
+                self.creator.add_row(&Row::new(&self.column_info, row))?;
+                num_rows += 1;
+            }
+
+            // if no rows remain, attempt to get more rows, either from the
+            // current input or from the next input, if one is available
+            if self.pending_rows.len() == 0 {
+                let response = if !self.end_of_fetch {
+                    self.statement.fetch(self.last_row.take())?
+                } else if self.param_index < self.params.num_rows() {
+                    let response = self.statement.get_execute_response(
+                        self.params.slice(self.param_index, 1),
+                        false,
+                    )?;
+                    self.param_index += 1;
+                    response
+                } else {
+                    break;
+                };
+                self.process_response(response);
+            }
+        }
+        self.creator.create_batch()
+    }
+
+    /// Returns whether any more batches remain. This is true if there are
+    /// pending rows, pending fetches or pending inputs.
+    fn has_more_batches(&self) -> bool {
+        self.pending_rows.len() > 0
+            || !self.end_of_fetch
+            || self.param_index < self.params.num_rows()
+    }
+
+    /// Processes a response from the database.
+    fn process_response(&mut self, mut response: Response) {
+        self.end_of_fetch = response.is_end_of_fetch();
+        if let Some(rows) = response.take_rows() {
+            if self.end_of_fetch {
+                self.last_row = None;
+            } else {
+                self.last_row = rows.last().cloned();
+            }
+            self.pending_rows = rows.into_iter();
+        }
+    }
+
+    /// Collects all responses into one batch without concatenating arrays.
+    pub(crate) fn into_single_batch(mut self) -> Result<RecordBatch, Error> {
+        self.get_next_batch(true)
+    }
+
+    /// Executes the first set of parameters and determines the schema.
+    pub(crate) fn new(
+        mut statement: Statement,
+        params: BindParameters<'params>,
+    ) -> Result<Self, Error> {
+        let response =
+            statement.get_execute_response(params.slice(0, 1), false)?;
+        let column_info = Arc::new(statement.out_metadata().to_vec());
+        let schema = if let Some(schema) =
+            statement.options().requested_schema()
+        {
+            if schema.fields().len() != column_info.len() {
+                return Err(Error::wrong_arrow_schema_length(
+                    schema.fields().len(),
+                    column_info.len(),
+                ));
+            }
+            for (column, field) in column_info.iter().zip(schema.fields()) {
+                validate_fetch_type(column, field)?;
+            }
+            schema.clone()
+        } else {
+            Arc::new(default_schema(&column_info)?)
+        };
+        let creator = RecordBatchCreator::new(schema)?;
+        let mut reader = Self {
+            statement,
+            params,
+            param_index: 1,
+            pending_rows: Vec::new().into_iter(),
+            column_info,
+            creator,
+            last_row: None,
+            end_of_fetch: false,
+        };
+        reader.process_response(response);
+        Ok(reader)
+    }
+
+    /// Returns the database column metadata, available before the first batch.
+    pub fn columns(&self) -> &[Metadata] {
+        &self.column_info
+    }
+
+    /// Returns the Arrow schema, available before the first batch.
+    pub fn schema(&self) -> SchemaRef {
+        self.creator.schema.clone()
+    }
+}
+
+impl Iterator for ArrowBatchReader<'_> {
+    type Item = Result<RecordBatch, ArrowError>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.has_more_batches() {
+            Some(self.get_next_batch(false).map_err(|error| {
+                self.end_of_fetch = true;
+                self.param_index = self.params.num_rows();
+                ArrowError::ExternalError(Box::new(error))
+            }))
+        } else {
+            None
+        }
+    }
+}
+
+impl RecordBatchReader for ArrowBatchReader<'_> {
+    fn schema(&self) -> SchemaRef {
+        ArrowBatchReader::schema(self)
+    }
+}
 
 /// Returns the default schema to use for fetching data in the Arrow format.
 fn default_schema(columns: &[Metadata]) -> Result<Schema, Error> {
@@ -125,63 +294,6 @@ fn default_type(col: &Metadata) -> Result<DataType, Error> {
             _ => Err(Error::unsupported_db_type(col.db_type())),
         }
     }
-}
-
-/// Performs a query with one or more sets of parameters and returns a single
-/// RecordBatch containing all of the data.
-pub(crate) fn query_single_batch(
-    client: &mut Client,
-    statement: &mut CachedStatement,
-    client_ref: &ClientRef,
-    params: BindParameters,
-) -> Result<arrow_array::RecordBatch, Error> {
-    // perform first query to determine the schema
-    let mut last_row: Option<DbRow> = None;
-    let mut response =
-        client.execute(statement, client_ref, params.slice(0, 1), false)?;
-    let metadata = statement.out_metadata().to_vec();
-    let schema = if let Some(schema) = statement.options().requested_schema() {
-        if schema.fields().len() != metadata.len() {
-            return Err(Error::wrong_arrow_schema_length(
-                schema.fields().len(),
-                metadata.len(),
-            ));
-        }
-        for (column, field) in metadata.iter().zip(schema.fields()) {
-            validate_fetch_type(column, field)?;
-        }
-        schema.clone()
-    } else {
-        Arc::new(default_schema(&metadata)?)
-    };
-    let mut creator = RecordBatchCreator::new(schema)?;
-    let column_info = Arc::new(metadata);
-    for index in 0..params.num_rows() {
-        if index > 0 {
-            response = client.execute(
-                statement,
-                client_ref,
-                params.slice(index, 1),
-                false,
-            )?;
-        }
-        loop {
-            if let Some(rows) = response.take_rows() {
-                let mut rows: VecDeque<DbRow> = rows.into();
-                while let Some(row) = rows.pop_front() {
-                    if rows.is_empty() {
-                        last_row = Some(row.clone());
-                    }
-                    creator.add_row(&Row::new(&column_info, row))?;
-                }
-            }
-            if response.is_end_of_fetch() {
-                break;
-            }
-            response = client.fetch(statement, client_ref, last_row.take())?;
-        }
-    }
-    creator.create_batch()
 }
 
 /// Validates that an Oracle result column supports the requested Arrow type.
@@ -423,10 +535,10 @@ impl RecordBatchCreator {
     }
 
     /// Creates the RecordBatch and returns it.
-    fn create_batch(&mut self) -> Result<arrow_array::RecordBatch, Error> {
+    fn create_batch(&mut self) -> Result<RecordBatch, Error> {
         let arrays: Vec<arrow_array::ArrayRef> =
             self.builders.iter_mut().map(|b| b.finish()).collect();
-        Ok(arrow_array::RecordBatch::try_new(self.schema.clone(), arrays)?)
+        Ok(RecordBatch::try_new(self.schema.clone(), arrays)?)
     }
 
     /// Creates a new structure for creating a RecordBatch

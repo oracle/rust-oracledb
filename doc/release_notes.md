@@ -7,6 +7,12 @@
 1.  Added support for binding Arrow timestamp arrays with non-empty timezone
     metadata as `TIMESTAMP WITH TIME ZONE`. Values are normalized to UTC; the
     input timezone name is not retained.
+1.  Added methods
+    [Connection::query_arrow_batches()](crate::Connection::query_arrow_batches),
+    [Statement::query_arrow_batches()](crate::Statement::query_arrow_batches),
+    and [StatementBuilder::arrow_batch_size()](crate::StatementBuilder::arrow_batch_size)
+    for processing query results incrementally with Arrow
+    ([issue 52](https://github.com/oracle/rust-oracledb/issues/52)).
 1.  Added support for authentication with the Oracle Database 11g password
     verifier. An error is returned for any unknown password verifiers
     ([issue 63](https://github.com/oracle/rust-oracledb/issues/63)).

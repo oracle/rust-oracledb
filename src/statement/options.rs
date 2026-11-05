@@ -38,18 +38,14 @@ pub(crate) struct StatementOptions {
     fetch_lobs: bool,
     #[cfg(feature = "arrow")]
     requested_schema: Option<SchemaRef>,
+    #[cfg(feature = "arrow")]
+    arrow_batch_size: Option<usize>,
 }
 
 impl StatementOptions {
-    /// Creates a new structure and returns it.
-    pub(crate) fn new() -> StatementOptions {
-        StatementOptions {
-            prefetch_rows: 2,
-            fetch_array_size: 100,
-            fetch_lobs: false,
-            #[cfg(feature = "arrow")]
-            requested_schema: None,
-        }
+    #[cfg(feature = "arrow")]
+    pub(crate) fn arrow_batch_size(&self) -> usize {
+        self.arrow_batch_size.unwrap_or(1024)
     }
 
     /// Returns the configured fetch array size.
@@ -63,6 +59,19 @@ impl StatementOptions {
         self.fetch_lobs
     }
 
+    /// Creates a new structure and returns it.
+    pub(crate) fn new() -> StatementOptions {
+        StatementOptions {
+            prefetch_rows: 2,
+            fetch_array_size: 100,
+            fetch_lobs: false,
+            #[cfg(feature = "arrow")]
+            requested_schema: None,
+            #[cfg(feature = "arrow")]
+            arrow_batch_size: None,
+        }
+    }
+
     /// Returns the configured number of rows to prefetch with the initial
     /// execution of the statement.
     pub(crate) fn prefetch_rows(&self) -> u32 {
@@ -73,6 +82,11 @@ impl StatementOptions {
     #[cfg(feature = "arrow")]
     pub(crate) fn requested_schema(&self) -> Option<&SchemaRef> {
         self.requested_schema.as_ref()
+    }
+
+    #[cfg(feature = "arrow")]
+    pub(crate) fn set_arrow_batch_size(&mut self, value: usize) {
+        self.arrow_batch_size = Some(value);
     }
 
     /// Sets the number of rows to fetch each time rows are fetched.

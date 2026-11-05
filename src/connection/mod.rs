@@ -226,6 +226,20 @@ impl Connection {
         self.get_impl()?.query_arrow(sql, params.into())
     }
 
+    #[cfg(feature = "arrow")]
+    /// Executes a query and returns Arrow's standard record batch reader.
+    ///
+    /// The reader exposes a schema and yields results one record batch at a
+    /// time. Use it to process results incrementally instead of collecting
+    /// them into one batch. See [crate::ArrowBatchReader] for details.
+    pub fn query_arrow_batches<'params>(
+        &self,
+        sql: &str,
+        params: impl Into<BindParameters<'params>>,
+    ) -> Result<crate::ArrowBatchReader<'params>, Error> {
+        self.get_impl()?.query_arrow_batches(sql, params.into())
+    }
+
     /// Executes a query against the database using named parameters.
     pub fn query_named(
         &self,
