@@ -1,7 +1,6 @@
 name: run-tests
 on:
   push:
-    branches: [ "enh-run-tests-action" ]
   workflow_dispatch:
 permissions:
   contents: read
