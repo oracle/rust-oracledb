@@ -1,0 +1,63 @@
+name: run-tests
+on:
+  push:
+    branches: [ "enh-run-tests-action" ]
+  workflow_dispatch:
+permissions:
+  contents: read
+
+env:
+  RSO_TEST_ADMIN_USER: rsotest_admin
+  RSO_TEST_MAIN_USER: rsotest
+
+jobs:
+  run_tests:
+    runs-on: [ self-hosted, Linux, X64, OracleTestPilot ]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rdbms: base-database-service-19c
+          - rdbms: base-database-service-21c
+          - rdbms: base-database-service-26ai
+          - rdbms: autonomous-transaction-processing-serverless-19c
+          - rdbms: autonomous-transaction-processing-serverless-26ai
+          - rdbms: base-database-service-26ai-rac
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1r
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.89.0
+
+      - name: Generate password for test user
+        id: secure-string
+        run: |
+          RANDOM_STR=$(openssl rand -base64 16)
+          echo "::add-mask::$RANDOM_STR"
+          echo "value=$RANDOM_STR" >> $GITHUB_OUTPUT
+
+      - name: Create test database
+        id: create-database
+        uses: oracle-actions/setup-testpilot@ad55a0d7294112c44a9cc9a38f4b3d293da8fcf0 # 1.0.31
+        with:
+          oci-service: ${{ matrix.rdbms }}
+          action: create
+          user: ${{ env.RSO_TEST_ADMIN_USER }}
+          fully-qualified-names: true
+
+      - name: Run tests
+        env:
+          RSO_TEST_CONNECT_STRING: ${{ steps.create-database.outputs.connection_string_suffix }}
+          RSO_TEST_ADMIN_PASSWORD: ${{ steps.create-database.outputs.database_password }}
+          RSO_TEST_MAIN_PASSWORD: ${{ steps.secure-string.outputs.value }}
+        run: |
+          cargo run --bin create_test_schema
+          cargo test --all-features
+          cargo run --bin drop_test_schema
+
+      - uses: oracle-actions/setup-testpilot@ad55a0d7294112c44a9cc9a38f4b3d293da8fcf0 # 1.0.31
+        if: always()
+        with:
+          oci-service: ${{ matrix.rdbms }}
+          action: delete
+          user: ${{ env.RSO_TEST_ADMIN_USER }}
