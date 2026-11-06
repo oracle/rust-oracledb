@@ -66,8 +66,6 @@ impl PoolContents {
         let min_connections = self.config.min_connections();
         self.num_being_created = if num_in_pool < min_connections {
             min_connections - num_in_pool
-        } else if self.pending_requests.is_empty() {
-            0
         } else {
             let max_connections = self.config.max_connections();
             let increment = self.config.connection_increment();
@@ -108,7 +106,10 @@ impl PoolContents {
             self.send_manager_request(PoolManagerRequest::PingConnection(
                 conn_impl,
             ));
-        } else if self.num_being_created == 0 && self.can_pool_grow() {
+        } else if self.num_being_created == 0
+            && !self.pending_requests.is_empty()
+            && self.can_pool_grow()
+        {
             self.send_manager_request(PoolManagerRequest::GrowPool);
         } else if let Some(conn_impl) = self.connections_requiring_drop.pop() {
             self.send_manager_request(PoolManagerRequest::DropConnection(

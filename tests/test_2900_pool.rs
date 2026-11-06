@@ -183,3 +183,14 @@ fn test_2906() -> Result<(), oracledb::Error> {
     pool.close()?;
     Ok(())
 }
+
+#[test]
+/// Verifies that the number of open connections in the pool increases by the
+/// pool increment, but only when needed.
+fn test_2907() -> Result<(), oracledb::Error> {
+    let mut pool = oracledb::create_pool(pool_config(1, 5, 1)?)?;
+    std::thread::sleep(Duration::from_millis(1000));
+    assert_eq!(pool.open_count()?, 1);
+    pool.close()?;
+    Ok(())
+}
