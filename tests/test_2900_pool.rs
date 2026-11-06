@@ -163,3 +163,23 @@ fn test_2905() -> Result<(), oracledb::Error> {
     assert_eq!(call_timeout, None);
     Ok(())
 }
+
+#[test]
+/// Verifies that when creating a connection fails, that the busy count is not
+/// incremented.
+fn test_2906() -> Result<(), oracledb::Error> {
+    let listener = std::net::TcpListener::bind("127.0.0.1:0")?;
+    let address = listener.local_addr()?;
+    drop(listener);
+    let config = oracledb::PoolConfig::default()
+        .set_credentials("unused", "unused")
+        .set_connect_string(&format!("{address}/unused"))?
+        .set_min_connections(0)
+        .set_max_connections(1);
+    let mut pool = oracledb::create_pool(config)?;
+    let _error = pool.acquire().unwrap_err();
+    assert_eq!(pool.busy_count()?, 0);
+    assert_eq!(pool.open_count()?, 0);
+    pool.close()?;
+    Ok(())
+}
