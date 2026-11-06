@@ -42,6 +42,9 @@ jobs:
           user: ${{ env.RSO_TEST_ADMIN_USER }}
           fully-qualified-names: true
 
+      - name: Add Cargo to PATH
+        run: echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
       - name: Run tests
         env:
           RSO_TEST_CONNECT_STRING: ${{ steps.create-database.outputs.connection_string_suffix }}
