@@ -22,6 +22,9 @@
     convenience when processing database errors.
 1.  Added debug formatting to public structures and enumerations in order to
     ease testing and debugging.
+1.  The trait `ToDbValue` used for sending parameters to the database is now
+    marked with the `Send` and `Sync` marker traits in order to facilitate use
+    across thread boundaries.
 1.  Fixed bug when the database initiates the reset instead of rust-oracledb
     ([issue 23](https://github.com/oracle/rust-oracledb/issues/23)).
 1.  Fixed bug when binding UTC timestamps.
