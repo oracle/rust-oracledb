@@ -82,13 +82,14 @@ impl ReadBuffer {
         ReadBuffer { buf: bytes.to_vec(), pos: 0 }
     }
 
-    /// Creates and returns a new ReadBuffer struct given a series of packets.
-    pub(crate) fn from_packets(packets: &[Packet]) -> ReadBuffer {
-        let mut buf = Vec::<u8>::new();
+    /// Appends packet payloads and rewinds for retrying the complete response.
+    pub(crate) fn append_packets(&mut self, packets: Vec<Packet>) {
+        let size: usize = packets.iter().map(|packet| packet.buf.len()).sum();
+        self.buf.reserve(size);
         for packet in packets {
-            buf.extend_from_slice(&packet.buf);
+            self.buf.extend_from_slice(&packet.buf);
         }
-        ReadBuffer { buf, pos: 0 }
+        self.pos = 0;
     }
 
     /// Gets the current position in the buffer.
