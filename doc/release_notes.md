@@ -2,6 +2,8 @@
 
 ## rust-oracledb 26.0.0-beta.6 (TBD)
 
+1.  Compilation is now deliberately restricted to 64-bit architectures in order
+    to simplify handling of usize and u64.
 1.  Added support for binding Arrow Decimal256 arrays to NUMBER and fetching
     NUMBER values as Decimal256 using a requested Arrow schema.
 1.  Added support for binding Arrow timestamp arrays with non-empty timezone
