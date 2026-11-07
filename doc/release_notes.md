@@ -22,6 +22,7 @@
     [Metadata::data_type()](crate::Metadata::data_type()).
 1.  Added [Error::db_error_code()](crate::Error::db_error_code()) as a
     convenience when processing database errors.
+1.  Added support for seeking within LOBs.
 1.  Added debug formatting to public structures and enumerations in order to
     ease testing and debugging.
 1.  The trait `ToDbValue` used for sending parameters to the database is now
