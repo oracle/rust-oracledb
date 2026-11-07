@@ -28,6 +28,7 @@
 
 mod common;
 
+use common::admin_conn;
 use common::conn;
 use rstest::*;
 use std::io::{Read, Seek, SeekFrom, Write};
@@ -343,5 +344,31 @@ fn test_2517(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     lob.seek(SeekFrom::Start(i64::MAX as u64))?;
     lob.seek(SeekFrom::Current(256))?;
     assert!(lob.seek(SeekFrom::Current(i64::MAX)).is_err());
+    Ok(())
+}
+
+#[rstest]
+/// Tests that errors returned by LOB operations retain those details.
+fn test_2518(
+    admin_conn: oracledb::Connection,
+    conn: oracledb::Connection,
+) -> Result<(), oracledb::Error> {
+    let session_id = conn.session_id()?;
+    let serial_num = conn.serial_num()?;
+    let text = "test_2518 - Data".to_string();
+    let mut row = conn
+        .statement("select to_clob(:1) from dual")?
+        .fetch_lobs()
+        .build()?
+        .query_row(&[&text])?;
+    let mut lob: oracledb::Lob = row.take(0)?;
+    admin_conn.execute(
+        &format!("alter system kill session '{session_id},{serial_num}'"),
+        &[],
+    )?;
+    let io_error = lob.read_to_string(&mut String::new()).unwrap_err();
+    let error =
+        io_error.get_ref().unwrap().downcast_ref::<oracledb::Error>().unwrap();
+    assert_eq!(error.db_error_code(), Some(28));
     Ok(())
 }

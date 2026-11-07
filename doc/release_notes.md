@@ -25,6 +25,9 @@
 1.  Added support for seeking within LOBs.
 1.  Added debug formatting to public structures and enumerations in order to
     ease testing and debugging.
+1.  IO errors that wrap module Error instances are now preserved instead of
+    converted to string
+    ([issue 70](https://github.com/oracle/rust-oracledb/issues/70)).
 1.  The trait `ToDbValue` used for sending parameters to the database is now
     marked with the `Send` and `Sync` marker traits in order to facilitate use
     across thread boundaries.

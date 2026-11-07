@@ -134,7 +134,7 @@ impl Lob {
 
     /// Converts a driver error into an I/O error for trait implementations.
     fn io_error(error: Error) -> io::Error {
-        io::Error::other(error.to_string())
+        io::Error::other(error)
     }
 
     /// Returns whether this LOB is a BFILE.
@@ -375,10 +375,7 @@ impl io::Read for Lob {
             let encoding = self.string_encoding();
             let value =
                 Self::decode_string(&bytes, encoding).map_err(|error| {
-                    io::Error::new(
-                        io::ErrorKind::InvalidData,
-                        error.to_string(),
-                    )
+                    io::Error::new(io::ErrorKind::InvalidData, error)
                 })?;
             let amount = value.encode_utf16().count();
             (value.into_bytes(), amount)
@@ -457,7 +454,7 @@ impl io::Write for Lob {
 
         let (data, amount) = if self.is_character_lob() {
             let value = std::str::from_utf8(buf).map_err(|error| {
-                io::Error::new(io::ErrorKind::InvalidData, error.to_string())
+                io::Error::new(io::ErrorKind::InvalidData, error)
             })?;
             let amount = value.encode_utf16().count();
             let data = match self.string_encoding() {
