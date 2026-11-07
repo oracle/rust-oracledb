@@ -281,7 +281,8 @@ fn test_2514(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     let lob = conn.create_lob(oracledb::DB_TYPE_CLOB)?;
     assert_eq!(common::temporary_lob_count(&conn)?, 1);
     drop(lob);
-    // The next query piggybacks the queued cleanup and confirms the LOB was freed.
+    // The next query piggybacks the queued cleanup and confirms the LOB was
+    // freed.
     assert_eq!(common::temporary_lob_count(&conn)?, 0);
     Ok(())
 }
@@ -293,7 +294,8 @@ fn test_2515(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     let lob = conn.create_lob(oracledb::DB_TYPE_NCLOB)?;
     assert_eq!(common::temporary_lob_count(&conn)?, 1);
     drop(lob);
-    // The next query piggybacks the queued cleanup and confirms the LOB was freed.
+    // The next query piggybacks the queued cleanup and confirms the LOB was
+    // freed.
     assert_eq!(common::temporary_lob_count(&conn)?, 0);
     Ok(())
 }
