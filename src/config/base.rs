@@ -278,11 +278,11 @@ impl Config {
     }
 
     /// Sets the user to use when connecting to the database. If the user is in
-    /// the form user[proxy_user], the proxy_user portion is saved separately.
-    /// If the proxy_user is empty or one of the opening or closing brackets is
-    /// missing, the user is left unchanged (which will result in a connection
-    /// failure). A proxy user alone is permitted when external authentication
-    /// is being used.
+    /// the form "user\[proxy_user\]", the proxy_user portion is saved
+    /// separately.  If the proxy_user is empty or one of the opening or
+    /// closing brackets is missing, the user is left unchanged (which will
+    /// result in a connection failure). A proxy user alone is permitted when
+    /// external authentication is being used.
     pub fn set_user(mut self, value: &str) -> Self {
         if value.is_empty() {
             self.user = None;
