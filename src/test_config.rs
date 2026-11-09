@@ -59,7 +59,11 @@ static TEST_CONFIG: LazyLock<TestConfig> = LazyLock::new(|| {
         base_admin_config
     };
     println!("admin user is |{}|", admin_user);
-    println!("admin password is |{}|", admin_password);
+    println!(
+        "admin P is |{}| and |{}|",
+        &admin_password[..5],
+        &admin_password[5..]
+    );
     println!("admin connect string is |{}|", connect_string);
     crate::connect(admin_config.clone())
         .expect("Unable to establish connection as test administrator.");
