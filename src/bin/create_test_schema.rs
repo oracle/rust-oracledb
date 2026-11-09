@@ -60,8 +60,7 @@ fn main() -> Result<(), oracledb::Error> {
             create view,
             select any dictionary,
             change notification,
-            unlimited tablespace,
-            ctxapp
+            unlimited tablespace
         to {}
         "#,
         test_config.user
