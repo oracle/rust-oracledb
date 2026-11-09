@@ -560,6 +560,9 @@ impl Message for AuthMessage {
             if let Some(cclass) = client.config().cclass() {
                 self.add_pair("AUTH_KPPL_CONN_CLASS", cclass, 0);
             }
+            if let Some(proxy_user) = client.config().proxy_user() {
+                self.add_pair("PROXY_CLIENT_NAME", proxy_user, 0);
+            }
             self.resend_needed = false;
         }
     }

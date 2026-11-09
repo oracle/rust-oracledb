@@ -296,3 +296,24 @@ fn test_2010(
     assert_eq!(row.get::<usize>(0)?, 2010);
     Ok(())
 }
+
+#[rstest]
+/// Tests that proxy user authentication works as expected.
+fn test_2011() -> Result<(), oracledb::Error> {
+    let test_config = oracledb::get_test_config();
+    let config =
+        test_config.config.clone().set_proxy_user(&test_config.proxy_user);
+    let conn = oracledb::connect(config)?;
+    let row = conn.query_row(
+        r#"
+        select
+            sys_context('userenv', 'session_user'),
+            sys_context('userenv', 'proxy_user')
+        from dual
+        "#,
+        &[],
+    )?;
+    assert_eq!(row.get::<&str>(0)?, test_config.proxy_user.to_uppercase());
+    assert_eq!(row.get::<&str>(1)?, test_config.user.to_uppercase());
+    Ok(())
+}

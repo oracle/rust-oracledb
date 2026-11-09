@@ -606,7 +606,7 @@ where
 
 /// Trait which transforms values used by applications into the format required
 /// by the database.
-pub trait ToDbValue: ToBuf {
+pub trait ToDbValue: ToBuf + Send + Sync {
     fn db_type(&self) -> &'static DbType;
     fn max_size(&self) -> usize {
         0

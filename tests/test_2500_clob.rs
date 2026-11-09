@@ -28,9 +28,10 @@
 
 mod common;
 
+use common::admin_conn;
 use common::conn;
 use rstest::*;
-use std::io::{Read, Write};
+use std::io::{Read, Seek, SeekFrom, Write};
 
 #[rstest]
 /// Validates reading a CLOB locator using 'Read::read_to_string()'.
@@ -281,7 +282,8 @@ fn test_2514(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     let lob = conn.create_lob(oracledb::DB_TYPE_CLOB)?;
     assert_eq!(common::temporary_lob_count(&conn)?, 1);
     drop(lob);
-    // The next query piggybacks the queued cleanup and confirms the LOB was freed.
+    // The next query piggybacks the queued cleanup and confirms the LOB was
+    // freed.
     assert_eq!(common::temporary_lob_count(&conn)?, 0);
     Ok(())
 }
@@ -293,7 +295,80 @@ fn test_2515(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     let lob = conn.create_lob(oracledb::DB_TYPE_NCLOB)?;
     assert_eq!(common::temporary_lob_count(&conn)?, 1);
     drop(lob);
-    // The next query piggybacks the queued cleanup and confirms the LOB was freed.
+    // The next query piggybacks the queued cleanup and confirms the LOB was
+    // freed.
     assert_eq!(common::temporary_lob_count(&conn)?, 0);
+    Ok(())
+}
+
+#[rstest]
+/// Validates seeking into a LOB.
+fn test_2516(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let text = "test_2516 - Data".to_string();
+    let mut row = conn
+        .statement("select to_clob(:1) from dual")?
+        .fetch_lobs()
+        .build()?
+        .query_row(&[&text])?;
+    let mut lob: oracledb::Lob = row.take(0)?;
+    lob.seek(SeekFrom::Start(6))?;
+    let mut read_back = String::new();
+    lob.read_to_string(&mut read_back)?;
+    assert_eq!(read_back, &text[5..]);
+    lob.seek(SeekFrom::Start(8))?;
+    lob.seek(SeekFrom::Current(-4))?;
+    let mut read_back = String::new();
+    lob.read_to_string(&mut read_back)?;
+    assert_eq!(read_back, &text[3..]);
+    lob.seek(SeekFrom::End(-2))?;
+    let mut read_back = String::new();
+    lob.read_to_string(&mut read_back)?;
+    assert_eq!(read_back, &text[text.len() - 3..]);
+    Ok(())
+}
+
+#[rstest]
+/// Negative test cases for seeking into a LOB.
+fn test_2517(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let text = "test_2517 - Data".to_string();
+    let mut row = conn
+        .statement("select to_clob(:1) from dual")?
+        .fetch_lobs()
+        .build()?
+        .query_row(&[&text])?;
+    let mut lob: oracledb::Lob = row.take(0)?;
+    assert!(lob.seek(SeekFrom::Current(-5)).is_err());
+    assert!(lob.seek(SeekFrom::End(-100)).is_err());
+    lob.seek(SeekFrom::Start(u64::MAX))?;
+    assert!(lob.seek(SeekFrom::Current(1)).is_err());
+    lob.seek(SeekFrom::Start(i64::MAX as u64))?;
+    lob.seek(SeekFrom::Current(256))?;
+    assert!(lob.seek(SeekFrom::Current(i64::MAX)).is_err());
+    Ok(())
+}
+
+#[rstest]
+/// Tests that errors returned by LOB operations retain those details.
+fn test_2518(
+    admin_conn: oracledb::Connection,
+    conn: oracledb::Connection,
+) -> Result<(), oracledb::Error> {
+    let session_id = conn.session_id()?;
+    let serial_num = conn.serial_num()?;
+    let text = "test_2518 - Data".to_string();
+    let mut row = conn
+        .statement("select to_clob(:1) from dual")?
+        .fetch_lobs()
+        .build()?
+        .query_row(&[&text])?;
+    let mut lob: oracledb::Lob = row.take(0)?;
+    admin_conn.execute(
+        &format!("alter system kill session '{session_id},{serial_num}'"),
+        &[],
+    )?;
+    let io_error = lob.read_to_string(&mut String::new()).unwrap_err();
+    let error =
+        io_error.get_ref().unwrap().downcast_ref::<oracledb::Error>().unwrap();
+    assert_eq!(error.db_error_code(), Some(28));
     Ok(())
 }

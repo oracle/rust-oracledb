@@ -50,7 +50,7 @@ const VECTOR_FLAG_NORM_RESERVED: u16 = 0x0010;
 const VECTOR_FLAG_SPARSE: u16 = 0x0020;
 
 /// Storage formats possible for vectors.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum VectorStorageFormat {
     Float32 = 0x02,
     Float64 = 0x03,

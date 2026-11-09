@@ -30,19 +30,32 @@
 
 extern crate oracledb;
 
+fn drop_user(
+    admin_conn: &oracledb::Connection,
+    user: &str,
+) -> Result<(), oracledb::Error> {
+    let drop_statement = format!("drop user {user} cascade");
+    match admin_conn.execute(&drop_statement, &[]) {
+        Ok(_) => {
+            println!("Schema {user} successfully dropped.");
+            Ok(())
+        }
+        Err(error) => {
+            if error.db_error_code() == Some(1918) {
+                Ok(())
+            } else {
+                Err(error)
+            }
+        }
+    }
+}
+
 fn main() -> Result<(), oracledb::Error> {
     let test_config = oracledb::get_test_config();
-    println!("Dropping test schema {}...", test_config.user);
+    println!("Dropping test schemas...");
     let admin_conn = oracledb::connect(test_config.admin_config.clone())?;
-    let drop_statement = format!("drop user {} cascade", test_config.user);
-    if let Err(err) = admin_conn.execute(&drop_statement, &[]) {
-        if err.to_string().starts_with("ORA-01918") {
-            println!("Schema already dropped.");
-        } else {
-            panic!("{err}");
-        }
-    } else {
-        println!("Schema successfully dropped.");
+    for user in [&test_config.user, &test_config.proxy_user] {
+        drop_user(&admin_conn, user)?;
     }
     Ok(())
 }

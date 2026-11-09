@@ -134,7 +134,7 @@ impl Lob {
 
     /// Converts a driver error into an I/O error for trait implementations.
     fn io_error(error: Error) -> io::Error {
-        io::Error::other(error.to_string())
+        io::Error::other(error)
     }
 
     /// Returns whether this LOB is a BFILE.
@@ -375,10 +375,7 @@ impl io::Read for Lob {
             let encoding = self.string_encoding();
             let value =
                 Self::decode_string(&bytes, encoding).map_err(|error| {
-                    io::Error::new(
-                        io::ErrorKind::InvalidData,
-                        error.to_string(),
-                    )
+                    io::Error::new(io::ErrorKind::InvalidData, error)
                 })?;
             let amount = value.encode_utf16().count();
             (value.into_bytes(), amount)
@@ -396,6 +393,43 @@ impl io::Read for Lob {
         buf[..data.len()].copy_from_slice(&data);
         self.offset += offset_increment;
         Ok(data.len())
+    }
+}
+
+/// Helper for performing safe math on offsets.
+fn seek_offset_helper(initial_value: u64, offset: i64) -> io::Result<u64> {
+    if offset >= 0 {
+        initial_value.checked_add(offset as u64).ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "seek overflows u64 bounds",
+            )
+        })
+    } else {
+        let abs_offset = offset.unsigned_abs();
+        initial_value.checked_sub(abs_offset).ok_or_else(|| {
+            io::Error::new(io::ErrorKind::InvalidInput, "seek drops below 0")
+        })
+    }
+}
+
+/// Adjusts the offset at which to read or write data. Note that LOBs require a
+/// one-based offset so zero is invalid and will be adjusted to one if
+/// requested.
+impl io::Seek for Lob {
+    fn seek(&mut self, pos: io::SeekFrom) -> io::Result<u64> {
+        let new_offset: u64 = match pos {
+            io::SeekFrom::Start(offset) => offset,
+            io::SeekFrom::Current(offset) => {
+                seek_offset_helper(self.offset as u64, offset)?
+            }
+            io::SeekFrom::End(offset) => {
+                let size = self.get_size().map_err(Self::io_error)?;
+                seek_offset_helper(size as u64, offset)?
+            }
+        };
+        self.offset = if new_offset == 0 { 1 } else { new_offset as usize };
+        Ok(self.offset as u64)
     }
 }
 
@@ -420,7 +454,7 @@ impl io::Write for Lob {
 
         let (data, amount) = if self.is_character_lob() {
             let value = std::str::from_utf8(buf).map_err(|error| {
-                io::Error::new(io::ErrorKind::InvalidData, error.to_string())
+                io::Error::new(io::ErrorKind::InvalidData, error)
             })?;
             let amount = value.encode_utf16().count();
             let data = match self.string_encoding() {

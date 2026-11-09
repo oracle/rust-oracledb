@@ -32,10 +32,19 @@ extern crate oracledb;
 
 fn main() -> Result<(), oracledb::Error> {
     let test_config = oracledb::get_test_config();
-    println!("Creating test schema {}...", test_config.user);
     let admin_conn = oracledb::connect(test_config.admin_config.clone())?;
-    let drop_statement = format!("drop user {} cascade", test_config.user);
-    let _ = admin_conn.execute(&drop_statement, &[]);
+    println!(
+        "Creating test schemas {} and {}...",
+        test_config.user, test_config.proxy_user
+    );
+
+    // drop existing users
+    for user in [&test_config.user, &test_config.proxy_user] {
+        let drop_statement = format!("drop user {user} cascade");
+        let _ = admin_conn.execute(&drop_statement, &[]);
+    }
+
+    // create main user and add needed grants
     let create_statement = format!(
         "create user {} identified by {}",
         test_config.user, test_config.password
@@ -58,6 +67,23 @@ fn main() -> Result<(), oracledb::Error> {
         test_config.user
     );
     admin_conn.execute(&grant_statement, &[])?;
+
+    // create proxy user and add needed grants
+    let create_statement = format!(
+        "create user {} identified by {}",
+        test_config.proxy_user, test_config.proxy_password
+    );
+    admin_conn.execute(&create_statement, &[])?;
+    let alter_statement = format!(
+        "alter user {} grant connect through {}",
+        test_config.proxy_user, test_config.user
+    );
+    admin_conn.execute(&alter_statement, &[])?;
+    let grant_statement =
+        format!("grant create session to {}", test_config.proxy_user);
+    admin_conn.execute(&grant_statement, &[])?;
+
+    // grant read and write on the supplied directory
     if let Ok(directory) = std::env::var("RSO_TEST_DIRECTORY_NAME") {
         let grant_statement = format!(
             "grant read, write on directory {} to {}",
@@ -65,6 +91,7 @@ fn main() -> Result<(), oracledb::Error> {
         );
         admin_conn.execute(&grant_statement, &[])?;
     }
-    println!("Schema successfully created.");
+
+    println!("Schemas successfully created.");
     Ok(())
 }

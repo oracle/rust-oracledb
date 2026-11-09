@@ -321,8 +321,7 @@ fn test_2605(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
 }
 
 #[rstest]
-/// Tests metadata for JSON and VECTOR expressions on supported server
-/// versions.
+/// Tests metadata for JSON expressions on supported server versions.
 fn test_2606(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     if common::skip_unless_native_json_supported(&conn) {
         return Ok(());
@@ -336,14 +335,45 @@ fn test_2606(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
 }
 
 #[rstest]
-/// Tests metadata for JSON and VECTOR expressions on supported server
-/// versions.
-fn test_2607(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+#[case::fixed_dimensions_and_format(
+    "vector('[1,2]', 2, float32)",
+    "VECTOR(2,float32)",
+    Some(2),
+    Some(oracledb::VectorStorageFormat::Float32)
+)]
+#[rstest]
+#[case::flexible_dimensions(
+    "vector('[1,2]', *, float64)",
+    "VECTOR(*,float64)",
+    None,
+    Some(oracledb::VectorStorageFormat::Float64)
+)]
+#[case::flexible_format("vector('[1,2]', 2, *)", "VECTOR(2)", Some(2), None)]
+#[rstest]
+#[case::flexible_dimensions_and_format(
+    "vector('[1,2]', *, *)",
+    "VECTOR",
+    None,
+    None
+)]
+/// Tests metadata for VECTOR expressions on supported server versions.
+fn test_2607(
+    conn: oracledb::Connection,
+    #[case] expression: &str,
+    #[case] data_type: &str,
+    #[case] dimensions: Option<usize>,
+    #[case] storage_format: Option<oracledb::VectorStorageFormat>,
+) -> Result<(), oracledb::Error> {
     if common::skip_unless_vectors_supported(&conn) {
         return Ok(());
     }
-    let cursor = conn.query("select to_vector('[1, 2]', 2, float32)", &[])?;
-    assert_eq!(cursor.columns()[0].db_type(), oracledb::DB_TYPE_VECTOR);
+    let sql = format!("select {expression}");
+    let cursor = conn.query(&sql, &[])?;
+    let metadata = &cursor.columns()[0];
+    assert_eq!(metadata.db_type(), oracledb::DB_TYPE_VECTOR);
+    assert_eq!(metadata.data_type(), data_type);
+    assert_eq!(metadata.vector_dimensions(), dimensions);
+    assert_eq!(metadata.vector_storage_format(), storage_format);
     Ok(())
 }
 

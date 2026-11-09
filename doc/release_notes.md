@@ -2,6 +2,8 @@
 
 ## rust-oracledb 26.0.0-beta.6 (TBD)
 
+1.  Compilation is now deliberately restricted to 64-bit architectures in order
+    to simplify handling of usize and u64.
 1.  Added support for binding Arrow Decimal256 arrays to NUMBER and fetching
     NUMBER values as Decimal256 using a requested Arrow schema.
 1.  Added support for binding Arrow timestamp arrays with non-empty timezone
@@ -13,6 +15,8 @@
     and [StatementBuilder::arrow_batch_size()](crate::StatementBuilder::arrow_batch_size)
     for processing query results incrementally with Arrow
     ([issue 52](https://github.com/oracle/rust-oracledb/issues/52)).
+1.  Added support for proxy user authentication
+    ([issue 56](https://github.com/oracle/rust-oracledb/issues/56)).
 1.  Added support for authentication with the Oracle Database 11g password
     verifier. An error is returned for any unknown password verifiers
     ([issue 63](https://github.com/oracle/rust-oracledb/issues/63)).
@@ -20,10 +24,29 @@
     [Metadata::data_type()](crate::Metadata::data_type()).
 1.  Added [Error::db_error_code()](crate::Error::db_error_code()) as a
     convenience when processing database errors.
+1.  Added support for seeking within LOBs.
 1.  Added debug formatting to public structures and enumerations in order to
     ease testing and debugging.
+1.  IO errors that wrap module Error instances are now preserved instead of
+    converted to string
+    ([issue 70](https://github.com/oracle/rust-oracledb/issues/70)).
+1.  The trait `ToDbValue` used for sending parameters to the database is now
+    marked with the `Send` and `Sync` marker traits in order to facilitate use
+    across thread boundaries.
 1.  Fixed bug when the database initiates the reset instead of rust-oracledb
     ([issue 23](https://github.com/oracle/rust-oracledb/issues/23)).
+1.  Fixed bug which caused a pool to grow up to the capacity of the pool
+    without any pending requests
+    ([issue 66](https://github.com/oracle/rust-oracledb/issues/66)).
+1.  Fixed bug causing failed acquisition of a connection from a pool to consume
+    the capacity of the pool and prevent pool closure
+    ([issue 67](https://github.com/oracle/rust-oracledb/issues/67)).
+1.  Eliminated rendering of the cause in the `Error::Display` trait since it is
+    already returned by `Error::source()`
+    ([issue 76](https://github.com/oracle/rust-oracledb/issues/76)).
+1.  Fixed bug in
+    [Metadata::vector_dimensions()](crate::Metadata::vector_dimensions)
+    ([issue 78](https://github.com/oracle/rust-oracledb/issues/78)).
 1.  Fixed bug when binding UTC timestamps.
 1.  Upgraded `arrow-array` and `arrow-schema` dependencies to version 60.1.0.
 

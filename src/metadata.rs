@@ -519,7 +519,7 @@ impl Metadata {
     /// refer to a vector or the vector data is flexible, None is returned.
     pub fn vector_dimensions(&self) -> Option<usize> {
         if self.db_type == crate::DB_TYPE_VECTOR
-            && self.vector_flags & VECTOR_META_FLAG_FLEXIBLE_DIM != 0
+            && self.vector_flags & VECTOR_META_FLAG_FLEXIBLE_DIM == 0
         {
             Some(self.vector_dimensions as usize)
         } else {
