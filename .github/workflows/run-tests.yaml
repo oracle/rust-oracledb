@@ -44,12 +44,13 @@ jobs:
       - name: Run tests
         env:
           RSO_TEST_CONNECT_STRING: ${{ steps.create-database.outputs.connection_string_suffix }}
-          RSO_TEST_ADMIN_USER: ${{ steps.create-database.outputs.dastabase_user }}
+          RSO_TEST_ADMIN_USER: ${{ steps.create-database.outputs.database_user }}
           RSO_TEST_ADMIN_PASSWORD: ${{ steps.create-database.outputs.database_password }}
           RSO_TEST_MAIN_USER: rsotest_${{ github.run_id }}
           RSO_TEST_MAIN_PASSWORD: ${{ steps.secure-string.outputs.value }}
           RSO_TEST_PROXY_USER: rsotestproxy_${{ github.run_id }}
           RSO_TEST_PROXY_PASSWORD: ${{ steps.secure-string.outputs.value }}
+          RUST_BACKTRACE: 1
         run: |
           cargo +1.99.1 run --bin create_test_schema
           cargo +1.99.1 test --all-features
