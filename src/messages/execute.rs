@@ -306,6 +306,13 @@ impl ExecuteMessage<'_, '_> {
 }
 
 impl Message for ExecuteMessage<'_, '_> {
+    fn pre_deserialize(&mut self, _client: &mut Client, resp: &mut Response) {
+        // A bit vector has one bit per column of the statement. A response
+        // to an already-parsed statement carries no describe info, so the
+        // column count must come from the statement, as for a fetch.
+        resp.set_num_columns(self.statement.out_metadata().len());
+    }
+
     fn deserialize_describe_info(
         &mut self,
         client: &Client,
