@@ -35,7 +35,7 @@ jobs:
         with:
           oci-service: ${{ matrix.rdbms }}
           action: create
-          user: rsotest_admin
+          user: RSOTEST_ADMIN
           fully-qualified-names: true
 
       - name: Add Cargo to PATH
@@ -46,9 +46,9 @@ jobs:
           RSO_TEST_CONNECT_STRING: ${{ steps.create-database.outputs.connection_string_suffix }}
           RSO_TEST_ADMIN_USER: ${{ steps.create-database.outputs.database_user }}
           RSO_TEST_ADMIN_PASSWORD: ${{ steps.create-database.outputs.database_password }}
-          RSO_TEST_MAIN_USER: rsotest_${{ github.run_id }}
+          RSO_TEST_MAIN_USER: RSOTEST_${{ github.run_id }}
           RSO_TEST_MAIN_PASSWORD: ${{ steps.secure-string.outputs.value }}
-          RSO_TEST_PROXY_USER: rsotestproxy_${{ github.run_id }}
+          RSO_TEST_PROXY_USER: RSOTESTPROXY_${{ github.run_id }}
           RSO_TEST_PROXY_PASSWORD: ${{ steps.secure-string.outputs.value }}
           RUST_BACKTRACE: 1
         run: |
