@@ -13,11 +13,11 @@ jobs:
       matrix:
         rdbms:
           - base-database-service-19c
-#          - rdbms: base-database-service-21c
-#          - rdbms: base-database-service-26ai
-#          - rdbms: autonomous-transaction-processing-serverless-19c
-#          - rdbms: autonomous-transaction-processing-serverless-26ai
-#          - rdbms: base-database-service-26ai-rac
+          - rdbms: base-database-service-21c
+          - rdbms: base-database-service-26ai
+          - rdbms: autonomous-transaction-processing-serverless-19c
+          - rdbms: autonomous-transaction-processing-serverless-26ai
+          - rdbms: base-database-service-26ai-rac
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1r
