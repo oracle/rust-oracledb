@@ -58,7 +58,6 @@ fn main() -> Result<(), oracledb::Error> {
             create procedure,
             create type,
             create view,
-            select any dictionary,
             unlimited tablespace
         to {}
         "#,
