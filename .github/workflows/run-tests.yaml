@@ -61,4 +61,4 @@ jobs:
         with:
           oci-service: ${{ matrix.rdbms }}
           action: delete
-          user: ${{ env.RSO_TEST_ADMIN_USER }}
+          user: RSOTEST_ADMIN
