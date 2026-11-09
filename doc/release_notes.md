@@ -41,6 +41,9 @@
 1.  Fixed bug causing failed acquisition of a connection from a pool to consume
     the capacity of the pool and prevent pool closure
     ([issue 67](https://github.com/oracle/rust-oracledb/issues/67)).
+1.  Eliminated rendering of the cause in the `Error::Display` trait since it is
+    already returned by `Error::source()`
+    ([issue 76](https://github.com/oracle/rust-oracledb/issues/76)).
 1.  Fixed bug when binding UTC timestamps.
 1.  Upgraded `arrow-array` and `arrow-schema` dependencies to version 60.1.0.
 

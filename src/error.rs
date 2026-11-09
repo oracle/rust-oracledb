@@ -482,9 +482,6 @@ impl fmt::Display for Error {
                 )?
             }
         };
-        if let Some(ref cause) = self.0.cause {
-            write!(fmt, ": {}", cause)?;
-        }
         Ok(())
     }
 }
