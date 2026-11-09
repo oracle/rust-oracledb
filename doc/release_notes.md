@@ -15,6 +15,8 @@
     and [StatementBuilder::arrow_batch_size()](crate::StatementBuilder::arrow_batch_size)
     for processing query results incrementally with Arrow
     ([issue 52](https://github.com/oracle/rust-oracledb/issues/52)).
+1.  Added support for proxy user authentication
+    ([issue 56](https://github.com/oracle/rust-oracledb/issues/56)).
 1.  Added support for authentication with the Oracle Database 11g password
     verifier. An error is returned for any unknown password verifiers
     ([issue 63](https://github.com/oracle/rust-oracledb/issues/63)).

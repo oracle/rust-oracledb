@@ -45,6 +45,7 @@ use crate::secret_value::SecretValue;
 pub struct Config {
     user: Option<String>,
     password: Option<SecretValue>,
+    proxy_user: Option<String>,
     new_password: Option<SecretValue>,
     config_dir: Option<String>,
     description_list: Option<DescriptionList>,
@@ -136,6 +137,11 @@ impl Config {
     /// the name of the program that is running.
     pub fn program(&self) -> &str {
         self.program.as_deref().unwrap_or(defaults::default_program())
+    }
+
+    /// Returns the proxy user associated with the configuration.
+    pub fn proxy_user(&self) -> Option<&str> {
+        self.proxy_user.as_deref()
     }
 
     /// Sets the authorization mode that should be used to establish a
@@ -237,6 +243,16 @@ impl Config {
         Ok(self)
     }
 
+    /// Sets the proxy user to use when connecting to the database.
+    pub fn set_proxy_user(mut self, value: &str) -> Self {
+        if value.is_empty() {
+            self.proxy_user = None;
+        } else {
+            self.proxy_user = Some(value.into());
+        }
+        self
+    }
+
     /// Sets the size to use for the statement cache associated with the
     /// connection to the database.
     pub fn set_stmtcachesize(mut self, value: usize) -> Self {
@@ -261,10 +277,27 @@ impl Config {
         self
     }
 
-    /// Sets the user to use when connecting to the database.
+    /// Sets the user to use when connecting to the database. If the user is in
+    /// the form user[proxy_user], the proxy_user portion is saved separately.
+    /// If the proxy_user is empty or one of the opening or closing brackets is
+    /// missing, the user is left unchanged (which will result in a connection
+    /// failure). A proxy user alone is permitted when external authentication
+    /// is being used.
     pub fn set_user(mut self, value: &str) -> Self {
         if value.is_empty() {
             self.user = None;
+        } else if let Some(start_pos) = value.find('[')
+            && value.ends_with(']')
+            && value.len() > start_pos + 2
+        {
+            let proxy_user = &value[start_pos + 1..value.len() - 1];
+            self.proxy_user = Some(proxy_user.into());
+            if start_pos == 0 {
+                self.user = None;
+            } else {
+                let user = &value[..start_pos];
+                self.user = Some(user.into());
+            }
         } else {
             self.user = Some(value.into());
         }
@@ -323,6 +356,7 @@ impl Default for Config {
         Self {
             user: None,
             password: None,
+            proxy_user: None,
             new_password: None,
             config_dir: defaults::default_config_dir().clone(),
             description_list: None,

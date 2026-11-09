@@ -256,3 +256,20 @@ fn test_3304() {
         )
     ));
 }
+
+#[rstest]
+#[case::valid_proxy_user("user[proxy_user]", Some("user"), Some("proxy_user"))]
+#[case::external_auth("[proxy_user]", None, Some("proxy_user"))]
+#[case::no_opening_bracket("userproxy_user]", Some("userproxy_user]"), None)]
+#[case::no_closing_bracket("user[proxy_user", Some("user[proxy_user"), None)]
+#[case::invalid_proxy_user("user[]", Some("user[]"), None)]
+/// Verifies parsing of proxy user from an encoded string.
+fn test_3305(
+    #[case] value: &str,
+    #[case] user: Option<&str>,
+    #[case] proxy_user: Option<&str>,
+) {
+    let config = oracledb::Config::default().set_user(value);
+    assert_eq!(config.user(), user);
+    assert_eq!(config.proxy_user(), proxy_user);
+}
