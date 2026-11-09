@@ -53,9 +53,9 @@ jobs:
           RSO_TEST_MAIN_PASSWORD: ${{ steps.secure-string.outputs.value }}
           RSO_TEST_PROXY_PASSWORD: ${{ steps.secure-string.outputs.value }}
         run: |
-          cargo run --bin create_test_schema
-          cargo test --all-features
-          cargo run --bin drop_test_schema
+          cargo +1.99.1 run --bin create_test_schema
+          cargo +1.99.1 test --all-features
+          cargo +1.99.1 run --bin drop_test_schema
 
       - uses: oracle-actions/setup-testpilot@ad55a0d7294112c44a9cc9a38f4b3d293da8fcf0 # 1.0.31
         if: always()
