@@ -59,7 +59,6 @@ fn main() -> Result<(), oracledb::Error> {
             create type,
             create view,
             select any dictionary,
-            change notification,
             unlimited tablespace
         to {}
         "#,
