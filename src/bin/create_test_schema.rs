@@ -46,7 +46,7 @@ fn main() -> Result<(), oracledb::Error> {
 
     // create main user and add needed grants
     let create_statement = format!(
-        "create user {} identified by {}",
+        "create user {} identified by \"{}\"",
         test_config.user, test_config.password
     );
     admin_conn.execute(&create_statement, &[])?;
@@ -70,7 +70,7 @@ fn main() -> Result<(), oracledb::Error> {
 
     // create proxy user and add needed grants
     let create_statement = format!(
-        "create user {} identified by {}",
+        "create user {} identified by \"{}\"",
         test_config.proxy_user, test_config.proxy_password
     );
     admin_conn.execute(&create_statement, &[])?;
