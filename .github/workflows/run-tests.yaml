@@ -8,6 +8,7 @@ permissions:
 env:
   RSO_TEST_ADMIN_USER: rsotest_admin
   RSO_TEST_MAIN_USER: rsotest
+  RSO_TEST_PROXY_USER: rsotestproxy
 
 jobs:
   run_tests:
@@ -26,7 +27,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1r
 
-      - name: Generate password for test user
+      - name: Generate password for test users
         id: secure-string
         run: |
           RANDOM_STR=$(openssl rand -base64 16)
@@ -50,6 +51,7 @@ jobs:
           RSO_TEST_CONNECT_STRING: ${{ steps.create-database.outputs.connection_string_suffix }}
           RSO_TEST_ADMIN_PASSWORD: ${{ steps.create-database.outputs.database_password }}
           RSO_TEST_MAIN_PASSWORD: ${{ steps.secure-string.outputs.value }}
+          RSO_TEST_PROXY_PASSWORD: ${{ steps.secure-string.outputs.value }}
         run: |
           cargo run --bin create_test_schema
           cargo test --all-features
