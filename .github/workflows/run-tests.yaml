@@ -6,9 +6,9 @@ permissions:
   contents: read
 
 env:
-  RSO_TEST_ADMIN_USER: rsotest_admin
-  RSO_TEST_MAIN_USER: rsotest
-  RSO_TEST_PROXY_USER: rsotestproxy
+  RSO_TEST_ADMIN_USER: RSOTEST_ADMIN
+  RSO_TEST_MAIN_USER: RSOTEST
+  RSO_TEST_PROXY_USER: RSOTESTPROXY
 
 jobs:
   run_tests:
