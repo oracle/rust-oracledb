@@ -742,3 +742,45 @@ fn test_2727(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     let _ = conn.query(sql, &[])?;
     Ok(())
 }
+
+#[rstest]
+/// Tests executing a query that contains more than 8 columns with repeated
+/// values twice (validating handling of the bit vector used to represent
+/// repeated values).
+fn test_2728(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let _guard = common::create_table(
+        &conn,
+        "test_2728",
+        r#"
+        c1 number,
+        c2 number,
+        c3 number,
+        c4 number,
+        c5 number,
+        c6 number,
+        c7 number,
+        c8 number,
+        c9 number
+        "#,
+    )?;
+    for i in 1..5 {
+        conn.execute("insert into test_2728 (c1) values (:1)", &[&i])?;
+    }
+    conn.commit()?;
+    for _ in 0..2 {
+        let statement = conn
+            .statement("select * from test_2728 order by c1")?
+            .prefetch_rows(5)
+            .build()?;
+        let mut expected_value: usize = 1;
+        for row_result in statement.query(&[])? {
+            let row = row_result?;
+            assert_eq!(row.get::<usize>(0)?, expected_value);
+            for column_num in 1..9 {
+                assert_eq!(row.get::<Option<usize>>(column_num)?, None);
+            }
+            expected_value += 1;
+        }
+    }
+    Ok(())
+}

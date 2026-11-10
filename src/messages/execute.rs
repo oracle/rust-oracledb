@@ -384,6 +384,14 @@ impl Message for ExecuteMessage<'_, '_> {
         resp.check_for_statement_error(client, self.statement)
     }
 
+    /// Runs before deserialization takes place. Ensures that the size of the
+    /// bit vector used for repeated values is correct, even when no describe
+    /// info is returned (which is true for statements that have already been
+    /// parsed before).
+    fn pre_deserialize(&mut self, _client: &mut Client, resp: &mut Response) {
+        resp.set_num_columns(self.statement.out_metadata().len());
+    }
+
     fn resend_needed(&self) -> bool {
         self.statement.requires_define()
     }

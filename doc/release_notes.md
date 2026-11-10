@@ -49,6 +49,9 @@
     ([issue 78](https://github.com/oracle/rust-oracledb/issues/78)).
 1.  Fixed bug when binding JSON and VECTOR data before scalar data
     ([issue 79](https://github.com/oracle/rust-oracledb/issues/79)).
+1.  Fixed bug when a query fetching more than 8 columns and containing repeated
+    data is re-executed
+    ([issue 80](https://github.com/oracle/rust-oracledb/issues/80)).
 1.  Fixed bug which caused all queries to be closed when completely fetched.
 1.  Fixed bug when binding UTC timestamps.
 1.  Upgraded `arrow-array` and `arrow-schema` dependencies to version 60.1.0.
