@@ -153,15 +153,15 @@ impl Response {
         statement: &mut CachedStatement,
     ) -> Result<(), Error> {
         if let Some(db_error) = self.take_db_error() {
-            if db_error.should_close_cursor() {
-                client.close_cursor(statement);
-            }
             if statement.is_query()
                 && db_error.code() == constants::DB_ERR_NUM_NO_DATA_FOUND
             {
                 self.end_of_fetch = true;
                 Ok(())
             } else {
+                if db_error.should_close_cursor() {
+                    client.close_cursor(statement);
+                }
                 Err(Error::db_error(db_error))
             }
         } else {
