@@ -48,6 +48,11 @@
 1.  Eliminated rendering of the cause in the `Error::Display` trait since it is
     already returned by `Error::source()`
     ([issue 76](https://github.com/oracle/rust-oracledb/issues/76)).
+1.  Fixed bug which caused
+    [Connection::set_call_timeout()](crate::Connection::set_call_timeout)
+    to apply only to socket reads. The timeout now also applies to socket
+    writes, preventing stalled sends from blocking indefinitely
+    ([issue 77](https://github.com/oracle/rust-oracledb/issues/77)).
 1.  Fixed bug in
     [Metadata::vector_dimensions()](crate::Metadata::vector_dimensions)
     ([issue 78](https://github.com/oracle/rust-oracledb/issues/78)).

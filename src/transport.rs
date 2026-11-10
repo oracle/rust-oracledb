@@ -123,8 +123,8 @@ impl LowLevelTransport {
         }
     }
 
-    /// Sets the read timeout for the low level transport.
-    pub(crate) fn set_read_timeout(
+    /// Sets the read and write timeouts for the low level transport.
+    pub(crate) fn set_timeout(
         &self,
         duration: Option<std::time::Duration>,
     ) -> Result<(), Error> {
@@ -132,7 +132,8 @@ impl LowLevelTransport {
             Self::Tcp(s) => s,
             Self::Tls(s) => &s.sock,
         };
-        Ok(stream.set_read_timeout(duration)?)
+        stream.set_read_timeout(duration)?;
+        Ok(stream.set_write_timeout(duration)?)
     }
 
     /// Shuts down the low-level transport.
@@ -338,6 +339,7 @@ impl Transport {
     ) -> Result<(), Error> {
         stream.set_nodelay(true)?;
         stream.set_read_timeout(None)?;
+        stream.set_write_timeout(None)?;
         self.socket_num = get_socket_num(&stream);
         self.low_level_transport = Some(LowLevelTransport::Tcp(stream));
         if address.protocol() == "tcps" {
@@ -467,15 +469,15 @@ impl Transport {
         self.max_packet_size = size;
     }
 
-    /// Sets the read timeout for the transport.
-    pub(crate) fn set_read_timeout(
+    /// Sets the read and write timeouts for the transport.
+    pub(crate) fn set_timeout(
         &self,
         duration: Option<std::time::Duration>,
     ) -> Result<(), Error> {
         self.low_level_transport
             .as_ref()
             .ok_or_else(Error::not_connected)
-            .and_then(|t| t.set_read_timeout(duration))
+            .and_then(|t| t.set_timeout(duration))
     }
 
     /// Indicates that the full packet size should be used for all subsequent

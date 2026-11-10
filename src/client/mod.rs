@@ -743,7 +743,7 @@ impl Client {
     pub(crate) fn end_request(&mut self) -> Result<(), Error> {
         self.security_context = None;
         self.last_warning = None;
-        self.transport.set_read_timeout(None)?;
+        self.transport.set_timeout(None)?;
         if self.in_request && self.pending_session_state != 0 {
             self.in_request = false;
         }
@@ -1005,7 +1005,7 @@ impl Client {
         &self,
         duration: Option<std::time::Duration>,
     ) -> Result<(), Error> {
-        self.transport.set_read_timeout(duration)
+        self.transport.set_timeout(duration)
     }
 
     /// Sets the ids of the character sets in use by the database. The first

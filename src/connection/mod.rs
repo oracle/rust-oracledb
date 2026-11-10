@@ -104,8 +104,8 @@ impl Connection {
 
     /// Returns the "call timeout" value currently in effect by the connection
     /// or an error if the connection is closed. A value of None means that
-    /// there is no limit to the amount of time the client will wait for a
-    /// database response and is the initial default value.
+    /// there is no timeout on socket reads or writes and is the initial
+    /// default value.
     pub fn call_timeout(&self) -> Result<Option<std::time::Duration>, Error> {
         self.get_impl()?.get_call_timeout()
     }
@@ -296,9 +296,8 @@ impl Connection {
     }
 
     /// Sets the "call timeout" value which is the length of time that is
-    /// permitted for the database response to be returned to a request sent by
-    /// the client. If None, there is no limit and the client will wait
-    /// indefinitely.
+    /// permitted for socket reads and writes. If None, there is no limit and
+    /// the client will wait indefinitely.
     pub fn set_call_timeout(
         &self,
         duration: Option<std::time::Duration>,
