@@ -25,7 +25,12 @@ jobs:
       - name: Generate password for test users
         id: secure-string
         run: |
-          RANDOM_STR=$(openssl rand -base64 16)
+          while true; do
+            RANDOM_STR=$(openssl rand -base64 20 | head -c 16)
+            if [[ "$RANDOM_STR" =~ [0-9] ]]; then
+              break
+            fi
+          done
           echo "::add-mask::$RANDOM_STR"
           echo "value=$RANDOM_STR" >> $GITHUB_OUTPUT
 
