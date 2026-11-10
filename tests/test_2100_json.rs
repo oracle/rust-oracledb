@@ -614,9 +614,10 @@ fn test_2110(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     let oracledb::JsonValue::JsonObject(output_map) = output else {
         panic!("expected JSON object");
     };
-    assert!(
-        matches!(output_map.get("short"), Some(oracledb::JsonValue::String(value)) if value == "shared value")
-    );
+    assert!(matches!(
+        output_map.get("short"),
+        Some(oracledb::JsonValue::String(value)) if value == "shared value"
+    ));
     assert!(output_map.contains_key(&long_name));
     assert!(matches!(
         output_map.get("nested"),
@@ -628,5 +629,24 @@ fn test_2110(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     };
     assert_eq!(values.len(), 3);
     assert!(matches!(values[1], oracledb::JsonValue::Null));
+    Ok(())
+}
+
+/// Test insertion of a JSON value with other data.
+#[rstest]
+fn test_2111(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    if common::skip_unless_native_json_supported(&conn) {
+        return Ok(());
+    }
+    let _table_guard =
+        common::create_table(&conn, "test_2111", "j json, n number")?;
+    let mut map: HashMap<String, oracledb::JsonValue> = HashMap::new();
+    map.insert("bool_val".to_string(), oracledb::JsonValue::Boolean(true));
+    let j = oracledb::JsonValue::JsonObject(map);
+    let n = 7_i64;
+    conn.execute("insert into test_2111 values (:1, :2)", &[&j, &n])?;
+    let row = conn.query_row("select j, n from test_2111", &[])?;
+    assert_eq!(row.get::<oracledb::JsonValue>(0)?, j);
+    assert_eq!(row.get::<i64>(1)?, n);
     Ok(())
 }

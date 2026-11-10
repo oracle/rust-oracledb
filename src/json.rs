@@ -92,7 +92,7 @@ const OSON_VERSION_MAX_FNAME_255: u8 = 1;
 const OSON_VERSION_MAX_FNAME_65535: u8 = 3;
 
 /// Types of JSON values supported.
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum JsonValue {
     BinaryDouble(f64),
     BinaryFloat(f32),

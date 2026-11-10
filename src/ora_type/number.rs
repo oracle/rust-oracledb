@@ -46,7 +46,7 @@ use arrow_array::types::{ArrowPrimitiveType, Decimal256Type, DecimalType};
 type Decimal256Value = <Decimal256Type as ArrowPrimitiveType>::Native;
 
 /// Represents the value of NUMBER columns in the database.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub struct OracleNumber {
     is_positive: bool,
     decimal_point_index: i16,

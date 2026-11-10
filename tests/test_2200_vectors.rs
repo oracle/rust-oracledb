@@ -542,3 +542,25 @@ fn test_2220(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     assert!(matches!(error.kind(), oracledb::ErrorKind::DbError(_)));
     Ok(())
 }
+
+/// Test insertion of a vector with other data.
+#[rstest]
+fn test_2221(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    if common::skip_unless_vectors_supported(&conn) {
+        return Ok(());
+    }
+    let _table_guard = common::create_table(
+        &conn,
+        "test_2221",
+        "v vector(3, float64), n number",
+    )?;
+    let v = oracledb::Vector::Dense(oracledb::VectorData::Float64(vec![
+        1.0, 2.0, 3.0,
+    ]));
+    let n = 7_i64;
+    conn.execute("insert into test_2221 values (:1, :2)", &[&v, &n])?;
+    let row = conn.query_row("select v, n from test_2221", &[])?;
+    assert_eq!(row.get::<oracledb::Vector>(0)?, v);
+    assert_eq!(row.get::<i64>(1)?, n);
+    Ok(())
+}

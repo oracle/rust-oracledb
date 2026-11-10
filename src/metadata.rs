@@ -39,6 +39,9 @@ use crate::response::Response;
 use crate::vector::VectorStorageFormat;
 use crate::write_buffer::WriteBuffer;
 
+// LOB prefetch flag
+const LOB_PREFETCH_FLAG: u64 = 0x2000000;
+
 // vector metadata flags
 const VECTOR_META_FLAG_FLEXIBLE_DIM: u8 = 0x01;
 const VECTOR_META_FLAG_SPARSE_VECTOR: u8 = 0x02;
@@ -338,17 +341,26 @@ impl Metadata {
     pub(crate) fn write_to_buf(&self, buf: &mut WriteBuffer, client: &Client) {
         let mut cont_flag: u64 = 0;
         let mut lob_prefetch_length: u32 = 0;
+        let mut buffer_size = self.buffer_size();
         match self.db_type.ora_type_num {
             // For LOB locators the protocol expects the LOB prefetch flag
             // to be set even when no prefetching is requested (length = 0).
             constants::ORA_TYPE_NUM_BLOB | constants::ORA_TYPE_NUM_CLOB => {
-                cont_flag = 0x2000000; // LOB prefetch flag
+                cont_flag = LOB_PREFETCH_FLAG;
             }
-            // Value-based LOBs (JSON/VECTOR) use this flag and include a
-            // prefetched value payload (length = buffer_size()).
-            constants::ORA_TYPE_NUM_JSON | constants::ORA_TYPE_NUM_VECTOR => {
-                cont_flag = 0x2000000; // LOB prefetch flag
-                lob_prefetch_length = self.buffer_size();
+            // For JSON (value-based LOB), this flag is used and the maximum
+            // size of JSON (32 MB) is used for the buffer size
+            constants::ORA_TYPE_NUM_JSON => {
+                cont_flag = LOB_PREFETCH_FLAG;
+                buffer_size = 32 * 1024 * 1024;
+                lob_prefetch_length = buffer_size;
+            }
+            // For Vector (value-based LOB), this flag is used and the maximum
+            // size of VECTOR (1 MB) is used for the buffer size
+            constants::ORA_TYPE_NUM_VECTOR => {
+                cont_flag = LOB_PREFETCH_FLAG;
+                buffer_size = 1024 * 1024;
+                lob_prefetch_length = buffer_size;
             }
             _ => {}
         };
@@ -357,7 +369,7 @@ impl Metadata {
         buf.write_u8(constants::TTC_BIND_FLAG_USE_INDICATORS);
         buf.write_u8(0); // precision must always be zero
         buf.write_u8(0); // scale must always be zero
-        buf.write_ub4(self.buffer_size());
+        buf.write_ub4(buffer_size);
         buf.write_ub4(0); // max number of elements
         buf.write_ub8(cont_flag);
         if let Some(MetadataObjectType::Resolved(typ)) = &self.object_type {
