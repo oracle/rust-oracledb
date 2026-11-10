@@ -39,6 +39,7 @@ use pkcs8::DecodePrivateKey;
 use rustls::ClientConfig as TlsClientConfig;
 use rustls::ClientConnection as TlsClientConnection;
 use rustls::StreamOwned as TlsStream;
+use rustls::crypto::CryptoProvider;
 use rustls::pki_types::CertificateDer;
 use rustls::pki_types::PrivateKeyDer;
 use rustls::pki_types::pem::PemObject;
@@ -95,7 +96,7 @@ impl LowLevelTransport {
                 config.get_wallet_password_bytes(),
             )?;
         }
-        let tls_config = resolver.get_tls_config();
+        let tls_config = resolver.get_tls_config()?;
         let tls_server_name: rustls::pki_types::ServerName =
             server_name.to_string().try_into().unwrap();
         let conn = rustls::ClientConnection::new(
@@ -175,6 +176,7 @@ pub(crate) struct Transport {
 // not accept anything less than v3 certificates
 #[derive(Debug)]
 struct CustomClientCertResolver {
+    provider: Arc<CryptoProvider>,
     key: Option<Arc<CertifiedKey>>,
     root_store: Option<rustls::RootCertStore>,
 }
@@ -492,6 +494,9 @@ impl CustomClientCertResolver {
     /// Creates a new empty structure and returns it.
     fn new() -> Self {
         Self {
+            provider: CryptoProvider::get_default().cloned().unwrap_or_else(
+                || Arc::new(rustls::crypto::aws_lc_rs::default_provider()),
+            ),
             key: None,
             root_store: Some(rustls::RootCertStore {
                 roots: webpki_roots::TLS_SERVER_ROOTS.into(),
@@ -500,11 +505,12 @@ impl CustomClientCertResolver {
     }
 
     /// Returns the TLS configuration to use when connecting to the database.
-    fn get_tls_config(mut self) -> TlsClientConfig {
+    fn get_tls_config(mut self) -> Result<TlsClientConfig, Error> {
         let root_store = self.root_store.take().unwrap();
-        TlsClientConfig::builder()
+        Ok(TlsClientConfig::builder_with_provider(self.provider.clone())
+            .with_safe_default_protocol_versions()?
             .with_root_certificates(root_store)
-            .with_client_cert_resolver(Arc::new(self))
+            .with_client_cert_resolver(Arc::new(self)))
     }
 
     /// Populates the certified key with the contents of the wallet defined in
@@ -569,9 +575,8 @@ impl CustomClientCertResolver {
         // if a private key was found, setup the certified key to pass to the
         // server
         if let Some(key) = private_key {
-            let builder = TlsClientConfig::builder();
-            let provider = builder.crypto_provider();
-            let signing_key = provider.key_provider.load_private_key(key)?;
+            let signing_key =
+                self.provider.key_provider.load_private_key(key)?;
             self.key = Some(Arc::new(CertifiedKey::new(certs, signing_key)));
         } else {
             let root_store: &mut rustls::RootCertStore =
