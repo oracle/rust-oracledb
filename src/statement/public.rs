@@ -115,8 +115,13 @@ impl Statement {
 
     /// Ensures that the statement is fully parsed by the database. If the
     /// statement has not been fully parsed by the database, a round trip will
-    /// be performed to ask the database to parse the statement. Note that DDL
-    /// statements will also result in execution.
+    /// be performed to ask the database to parse the statement. If a round
+    /// trip is desired regardless of whether the statement has been parsed
+    /// before, use
+    /// [exclude_from_cache()](crate::StatementBuilder::exclude_from_cache())
+    /// when building the statement.
+    ///
+    /// Note that DDL statements will also result in execution.
     pub fn ensure_fully_parsed(&mut self) -> Result<(), Error> {
         if !self.is_fully_parsed() {
             self.get_execute_response(BindParameters::default(), true)?;
