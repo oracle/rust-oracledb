@@ -92,6 +92,7 @@ const CCAP_VAL_LOB2_QUASI: u8 = 0x01;
 const CCAP_VAL_LOB2_2GB_PREFETCH: u8 = 0x04;
 const CCAP_VAL_DRCP: u8 = 0x10;
 const CCAP_VAL_ZLNP: u8 = 0x04;
+const CCAP_VAL_FAST_RENEGOTIATION: u8 = 0x02;
 const CCAP_VAL_INBAND_NOTIFICATION: u8 = 0x04;
 const CCAP_VAL_EXPLICIT_BOUNDARY: u8 = 0x40;
 const CCAP_VAL_END_OF_RESPONSE: u8 = 0x20;
@@ -227,8 +228,9 @@ impl Capabilities {
         self.compile_caps[CCAP_IX_CLIENT_FN] = CCAP_VAL_CLIENT_FN_MAX;
         self.compile_caps[CCAP_IX_SESS_SIGNATURE_VERSION] =
             constants::TTC_FIELD_VERSION_12_2;
-        self.compile_caps[CCAP_IX_TTC4] =
-            CCAP_VAL_INBAND_NOTIFICATION | CCAP_VAL_EXPLICIT_BOUNDARY;
+        self.compile_caps[CCAP_IX_TTC4] = CCAP_VAL_INBAND_NOTIFICATION
+            | CCAP_VAL_EXPLICIT_BOUNDARY
+            | CCAP_VAL_FAST_RENEGOTIATION;
         self.compile_caps[CCAP_IX_TTC5] = CCAP_VAL_VECTOR_SUPPORT
             | CCAP_VAL_TOKEN_SUPPORTED
             | CCAP_VAL_PIPELINING_SUPPORT

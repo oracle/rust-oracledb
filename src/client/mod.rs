@@ -149,7 +149,11 @@ impl Client {
         message: &mut impl Message,
     ) -> Result<Response, Error> {
         let mut response = self.perform_round_trip(message)?;
-        if message.resend_needed() {
+        if message.renegotiation_needed() {
+            let mut data_types_message = DataTypesMessage::new();
+            response = self.perform_round_trip(&mut data_types_message)?;
+            message.deserialize(self, &mut response)?;
+        } else if message.resend_needed() {
             response = self.perform_round_trip(message)?;
         }
         Ok(response)

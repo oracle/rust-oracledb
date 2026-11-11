@@ -33,6 +33,7 @@ use crate::client::Client;
 use crate::constants;
 use crate::error::Error;
 use crate::messages::Message;
+use crate::messages::ProtocolMessage;
 use crate::response::Response;
 use crate::rowid::Rowid;
 use crate::statement::CachedStatement;
@@ -43,6 +44,7 @@ pub struct ExecuteMessage<'statement, 'params> {
     parse_only: bool,
     batch_errors: bool,
     array_dml_row_counts: bool,
+    renegotiation_needed: bool,
     num_execs: u32,
     num_fetch_columns: u32,
     autocommit: bool,
@@ -294,6 +296,7 @@ impl ExecuteMessage<'_, '_> {
             scroll_operation: false,
             batch_errors: false,
             array_dml_row_counts: false,
+            renegotiation_needed: false,
             num_execs: params.num_rows().try_into().unwrap(),
             num_fetch_columns: 0,
             autocommit: false,
@@ -335,6 +338,18 @@ impl Message for ExecuteMessage<'_, '_> {
             if num_bytes == 0 { None } else { Some(Rowid::deserialize(resp)?) }
         };
         self.statement.set_bind_directions(resp)
+    }
+
+    /// Deserialize the renegotiation that takes place when an ALTER SESSION
+    /// SET CONTAINER statement is executed and the new PDB has different
+    /// characteristics requiring renegotiation.
+    fn deserialize_renegotiate(
+        &mut self,
+        client: &Client,
+        resp: &mut Response,
+    ) -> Result<(), Error> {
+        self.renegotiation_needed = true;
+        ProtocolMessage::new().deserialize(client, resp)
     }
 
     fn deserialize_return_parameters(
@@ -390,6 +405,11 @@ impl Message for ExecuteMessage<'_, '_> {
     /// parsed before).
     fn pre_deserialize(&mut self, _client: &mut Client, resp: &mut Response) {
         resp.set_num_columns(self.statement.out_metadata().len());
+    }
+
+    /// Returns whether or not renegotiation is needed.
+    fn renegotiation_needed(&self) -> bool {
+        self.renegotiation_needed
     }
 
     fn resend_needed(&self) -> bool {

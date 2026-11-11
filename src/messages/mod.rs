@@ -103,6 +103,16 @@ pub(crate) trait Message {
     }
 
     /// Deserializes a TTC return parameters message.
+    fn deserialize_renegotiate(
+        &mut self,
+        _client: &Client,
+        _resp: &mut Response,
+    ) -> Result<(), Error> {
+        let feature = "deserializing renegotiation".to_string();
+        Err(Error::not_implemented(feature))
+    }
+
+    /// Deserializes a TTC return parameters message.
     fn deserialize_return_parameters(
         &mut self,
         _client: &Client,
@@ -166,6 +176,9 @@ pub(crate) trait Message {
             constants::TTC_MSG_TYPE_PARAMETER => {
                 self.deserialize_return_parameters(client, resp)
             }
+            constants::TTC_MSG_TYPE_RENEGOTIATE => {
+                self.deserialize_renegotiate(client, resp)
+            }
             constants::TTC_MSG_TYPE_ROW_DATA => {
                 self.deserialize_row_data(client, resp)
             }
@@ -213,7 +226,9 @@ pub(crate) trait Message {
         client: &Client,
         message_type: u8,
     ) -> bool {
-        if message_type == constants::TTC_MSG_TYPE_FLUSH_OUT_BINDS {
+        if message_type == constants::TTC_MSG_TYPE_FLUSH_OUT_BINDS
+            || message_type == constants::TTC_MSG_TYPE_RENEGOTIATE
+        {
             true
         } else if client.supports_end_of_response() {
             message_type == constants::TTC_MSG_TYPE_END_OF_RESPONSE
@@ -242,6 +257,11 @@ pub(crate) trait Message {
 
     /// Returns whether or not a message needs to be sent a second time.
     fn resend_needed(&self) -> bool {
+        false
+    }
+
+    /// Returns whether or not renegotiation is needed.
+    fn renegotiation_needed(&self) -> bool {
         false
     }
 

@@ -39,11 +39,14 @@ pub(crate) struct Packet {
 
 impl Packet {
     /// Returns a boolean indicating if the packet contains the end of response
-    /// marker.
+    /// marker. When the server sends a renegotiation request, however, the end
+    /// of response marker is not sent so this must be caught separately.
     pub(crate) fn has_end_of_response(&self) -> bool {
         if self.packet_type != constants::PACKET_TYPE_DATA
             || self.data_flags & constants::TTC_DATA_FLAGS_END_OF_RESPONSE != 0
             || self.data_flags & constants::TTC_DATA_FLAGS_EOF != 0
+            || (self.buf.len() > 1
+                && self.buf[0] == constants::TTC_MSG_TYPE_RENEGOTIATE)
         {
             true
         } else if let Some(last_byte) = self.buf.last() {

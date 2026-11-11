@@ -20,6 +20,9 @@
 1.  Added support for authentication with the Oracle Database 11g password
     verifier. An error is returned for any unknown password verifiers
     ([issue 63](https://github.com/oracle/rust-oracledb/issues/63)).
+1.  Added support for processing `ALTER SESSION SET CONTAINER` statements which
+    cause a renegotiation to take place, avoiding the ORA-24964 error
+    ([issue 82](https://github.com/oracle/rust-oracledb/issues/82)).
 1.  Added support for FLOAT(p) columns in
     [Metadata::data_type()](crate::Metadata::data_type()).
 1.  Added [Error::db_error_code()](crate::Error::db_error_code()) as a
