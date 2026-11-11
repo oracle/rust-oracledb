@@ -67,9 +67,14 @@ fn test_3400() {
     let dir_str = dir.to_str().unwrap();
     let main = oracledb::Config::default()
         .set_config_dir(dir_str)
-        .set_connect_string("main_alias")
+        .set_connect_string("main")
         .unwrap();
     assert_eq!(main.get_connect_descriptor(), main_descriptor);
+    let main_alias = oracledb::Config::default()
+        .set_config_dir(dir_str)
+        .set_connect_string("main_alias")
+        .unwrap();
+    assert_eq!(main_alias.get_connect_descriptor(), main_descriptor);
     let child = oracledb::Config::default()
         .set_config_dir(dir_str)
         .set_connect_string("ChIlD")

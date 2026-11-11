@@ -193,8 +193,11 @@ fn skip_whitespace_and_comments(parser: &mut Parser) -> bool {
         if ch == '\n' {
             passed_line_boundary = true;
         } else if ch == '#' {
+            // this consumes the line break, so the next character is the first
+            // one of the following line
             parser.skip_to_end_of_line();
             passed_line_boundary = true;
+            continue;
         } else if !ch.is_whitespace() {
             break;
         }
