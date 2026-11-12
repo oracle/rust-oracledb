@@ -108,10 +108,12 @@ const CCAP_VAL_TTC6_HA_READINESS: u8 = 0x04;
 
 // runtime capability indexes
 const RCAP_IX_COMPAT: usize = 0;
+const RCAP_IX_TZ: usize = 1;
 const RCAP_IX_TTC: usize = 6;
 
 // runtime capbility values
 const RCAP_VAL_COMPAT_81: u8 = 2;
+const RCAP_VAL_TZ_EX: u8 = 0x01;
 const RCAP_VAL_TTC_ZERO_COPY: u8 = 0x01;
 const RCAP_VAL_TTC_32K: u8 = 0x04;
 const RCAP_VAL_TTC_SESSION_STATE_OPS: u8 = 0x10;
@@ -244,6 +246,7 @@ impl Capabilities {
 
     fn init_runtime_caps(&mut self) {
         self.runtime_caps[RCAP_IX_COMPAT] = RCAP_VAL_COMPAT_81;
+        self.runtime_caps[RCAP_IX_TZ] = RCAP_VAL_TZ_EX;
         self.runtime_caps[RCAP_IX_TTC] =
             RCAP_VAL_TTC_ZERO_COPY | RCAP_VAL_TTC_32K;
     }

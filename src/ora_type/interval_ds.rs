@@ -38,7 +38,7 @@ use crate::write_buffer::ToBuf;
 use crate::write_buffer::WriteBuffer;
 
 /// Represents the value of INTERVAL DAY TO SECOND columns in the database.
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, Default, PartialEq)]
 pub struct OracleIntervalDS {
     days: i32,
     hours: i8,

@@ -62,6 +62,7 @@ use crate::messages::Message;
 use crate::messages::PingMessage;
 use crate::messages::ProtocolMessage;
 use crate::messages::RollbackMessage;
+use crate::ora_type::OracleIntervalDS;
 use crate::packet::Packet;
 use crate::response::Response;
 use crate::row::DbRow;
@@ -102,6 +103,7 @@ pub struct Client {
     last_warning: Option<String>,
     security_context: Option<EndUserSecurityContext>,
     temp_lobs_to_close: Vec<Vec<u8>>,
+    db_timezone_offset: OracleIntervalDS,
 }
 
 pub(crate) type ClientRef = std::sync::Arc<std::sync::Mutex<Client>>;
@@ -741,6 +743,19 @@ impl Client {
         }
     }
 
+    /// Returns the database time zone offset.
+    pub(crate) fn db_timezone_offset(
+        &self,
+    ) -> Result<chrono::Duration, Error> {
+        if self.db_timezone_offset.days() != 0 {
+            Err(Error::not_implemented("named database time zone".to_string()))
+        } else {
+            let offset = self.db_timezone_offset;
+            Ok(chrono::Duration::hours(offset.hours().into())
+                + chrono::Duration::minutes(offset.minutes().into()))
+        }
+    }
+
     /// Ends the current request against the database.This clears any end user
     /// security context and warnings, rolls back any open transactions and
     /// releases any session to the DRCP pool, if applicable.
@@ -936,6 +951,7 @@ impl Client {
             transaction_in_progress: false,
             pool_id,
             temp_lobs_to_close: Vec::new(),
+            db_timezone_offset: OracleIntervalDS::default(),
         }
     }
 
@@ -1010,6 +1026,11 @@ impl Client {
         duration: Option<std::time::Duration>,
     ) -> Result<(), Error> {
         self.transport.set_timeout(duration)
+    }
+
+    /// Sets the database time zone offset.
+    pub(crate) fn set_db_timezone_offset(&mut self, value: OracleIntervalDS) {
+        self.db_timezone_offset = value;
     }
 
     /// Sets the ids of the character sets in use by the database. The first

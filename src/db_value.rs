@@ -164,10 +164,21 @@ impl DbValue {
             }
             constants::ORA_TYPE_NUM_DATE
             | constants::ORA_TYPE_NUM_TIMESTAMP
-            | constants::ORA_TYPE_NUM_TIMESTAMP_LTZ
             | constants::ORA_TYPE_NUM_TIMESTAMP_TZ => Ok(resp
                 .read_value::<OracleTimestamp>()?
                 .map(DbValue::Timestamp)),
+            constants::ORA_TYPE_NUM_TIMESTAMP_LTZ => {
+                if let Some(mut value) =
+                    resp.read_value::<OracleTimestamp>()?
+                {
+                    value.adjust_timestamp_ltz_to_utc(
+                        client.db_timezone_offset()?,
+                    )?;
+                    Ok(Some(DbValue::Timestamp(value)))
+                } else {
+                    Ok(None)
+                }
+            }
             constants::ORA_TYPE_NUM_INTERVAL_DS => Ok(resp
                 .read_value::<OracleIntervalDS>()?
                 .map(DbValue::IntervalDS)),

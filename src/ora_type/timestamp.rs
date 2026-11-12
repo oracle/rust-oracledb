@@ -73,6 +73,54 @@ impl Default for OracleTimestamp {
 }
 
 impl OracleTimestamp {
+    /// Adjusts the timestamp to be UTC based on the database time zone offset.
+    /// An error is returned if the database timezone offset is a named time
+    /// zone or if the conversion to chrono::NaiveDate is unsuccessful.
+    pub(crate) fn adjust_timestamp_ltz_to_utc(
+        &mut self,
+        db_timezone_offset: chrono::Duration,
+    ) -> Result<(), Error> {
+        if !db_timezone_offset.is_zero() {
+            let date = chrono::NaiveDate::from_ymd_opt(
+                self.year.into(),
+                self.month.into(),
+                self.day.into(),
+            )
+            .ok_or_else(|| {
+                Error::out_of_range(format!(
+                    "invalid date: {}-{}-{}",
+                    self.year, self.month, self.day
+                ))
+            })?
+            .and_hms_opt(
+                self.hour.into(),
+                self.minute.into(),
+                self.second.into(),
+            )
+            .ok_or_else(|| {
+                Error::out_of_range(format!(
+                    "invalid time: {}:{}:{}",
+                    self.hour, self.minute, self.second,
+                ))
+            })?;
+            let new_date = date
+                .checked_sub_signed(db_timezone_offset)
+                .ok_or_else(|| {
+                    Error::out_of_range(format!(
+                        "overflow adding offset {} to date {}",
+                        date, db_timezone_offset
+                    ))
+                })?;
+            self.year = new_date.year().try_into().unwrap();
+            self.month = new_date.month().try_into().unwrap();
+            self.day = new_date.day().try_into().unwrap();
+            self.hour = new_date.hour().try_into().unwrap();
+            self.minute = new_date.minute().try_into().unwrap();
+        }
+        self.is_utc = true;
+        Ok(())
+    }
+
     #[cfg(feature = "arrow")]
     /// Returns the timestamp in the specified Arrow time unit.
     pub(crate) fn to_timestamp(

@@ -102,7 +102,7 @@ fn test_1203(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     for row in cursor {
         let row = row?;
         let value: oracledb::OracleTimestamp = row.get(0)?;
-        assert_eq!(value.to_string(), "2025-10-31T11:46:01.987654000");
+        assert_eq!(value.to_string(), "2025-10-31T11:46:01.987654000Z");
     }
     Ok(())
 }
