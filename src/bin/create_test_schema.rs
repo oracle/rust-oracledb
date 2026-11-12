@@ -57,7 +57,8 @@ fn main() -> Result<(), oracledb::Error> {
             create table,
             create procedure,
             create type,
-            create view
+            create view,
+            unlimited tablespace
         to {}
         "#,
         test_config.user
