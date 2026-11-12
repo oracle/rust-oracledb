@@ -73,6 +73,8 @@
 1.  Fixed bug which caused all queries to be closed when completely fetched.
 1.  Fixed bug when binding UTC timestamps.
 1.  Upgraded `arrow-array` and `arrow-schema` dependencies to version 60.1.0.
+1.  Arrow fetch schemas now include UTC timezone metadata for `TIMESTAMP WITH
+    TIME ZONE` and `TIMESTAMP WITH LOCAL TIME ZONE` columns.
 
 
 ## rust-oracledb 26.0.0-beta.5 (October 28, 2026)

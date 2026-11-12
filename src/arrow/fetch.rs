@@ -262,7 +262,12 @@ fn default_type(col: &Metadata) -> Result<DataType, Error> {
             4..=6 => TimeUnit::Microsecond,
             _ => TimeUnit::Nanosecond,
         };
-        Ok(DataType::Timestamp(unit, None))
+        let timezone = match db_type.ora_type_num {
+            constants::ORA_TYPE_NUM_TIMESTAMP_TZ
+            | constants::ORA_TYPE_NUM_TIMESTAMP_LTZ => Some("UTC".into()),
+            _ => None,
+        };
+        Ok(DataType::Timestamp(unit, timezone))
     } else {
         match col.db_type().ora_type_num {
             constants::ORA_TYPE_NUM_BINARY_DOUBLE => Ok(DataType::Float64),

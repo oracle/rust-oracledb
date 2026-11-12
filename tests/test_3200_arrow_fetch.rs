@@ -634,3 +634,72 @@ fn test_3214(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     assert!(batches.next().is_none());
     Ok(())
 }
+
+#[rstest]
+/// test Arrow fetch for TIMESTAMP WITH TIME ZONE
+fn test_3215(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let batch = conn.query_arrow(
+        r#"
+        select cast(to_timestamp_tz('2025-10-31 11:52:15.456 -06:00',
+                   'YYYY-MM-DD HH24:MI:SS.FF3 TZH:TZM')
+                   as timestamp(3) with time zone)
+        from dual
+        "#,
+        oracledb::BindParameters::default(),
+    )?;
+    assert_eq!(batch.num_rows(), 1);
+    assert_eq!(
+        batch.schema().field(0).data_type(),
+        &DataType::Timestamp(TimeUnit::Millisecond, Some("UTC".into()))
+    );
+    let expected_tstz = chrono::NaiveDate::from_ymd_opt(2025, 10, 31)
+        .unwrap()
+        .and_hms_milli_opt(17, 52, 15, 456)
+        .unwrap()
+        .and_utc();
+    assert_eq!(
+        batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<TimestampMillisecondArray>()
+            .unwrap()
+            .value(0),
+        expected_tstz.timestamp_millis()
+    );
+    Ok(())
+}
+
+#[rstest]
+/// test Arrow fetch for TIMESTAMP WITH LOCAL TIME ZONE
+fn test_3216(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let batch = conn.query_arrow(
+        r#"
+        select cast(to_timestamp('2025-10-31 11:46:01.987654',
+                   'YYYY-MM-DD HH24:MI:SS.FF6')
+                   as timestamp(6) with local time zone)
+        from dual
+        "#,
+        oracledb::BindParameters::default(),
+    )?;
+    assert_eq!(batch.num_rows(), 1);
+    assert_eq!(
+        batch.schema().field(0).data_type(),
+        &DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into()))
+    );
+
+    let expected_ltz = chrono::NaiveDate::from_ymd_opt(2025, 10, 31)
+        .unwrap()
+        .and_hms_micro_opt(11, 46, 1, 987_654)
+        .unwrap()
+        .and_utc();
+    assert_eq!(
+        batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<TimestampMicrosecondArray>()
+            .unwrap()
+            .value(0),
+        expected_ltz.timestamp_micros()
+    );
+    Ok(())
+}
