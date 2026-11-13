@@ -417,8 +417,12 @@ impl Response {
     }
 
     /// Returns the rowcount returned by the database.
-    pub(crate) fn get_rowcount(&self) -> u64 {
-        self.error_info.as_ref().map(|i| i.rowcount()).unwrap_or(0)
+    pub(crate) fn get_rowcount(&self, statement: &CachedStatement) -> u64 {
+        if statement.is_plsql() {
+            0
+        } else {
+            self.error_info.as_ref().map(|i| i.rowcount()).unwrap_or(0)
+        }
     }
 
     pub(crate) fn is_duplicate_data(&self, column_num: usize) -> bool {

@@ -784,3 +784,16 @@ fn test_2728(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     }
     Ok(())
 }
+
+#[rstest]
+/// Tests rows_affected() for PL/SQL statements is zero.
+fn test_2729(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let result = conn.execute("begin null; end;", &[])?;
+    assert_eq!(result.rows_affected(), 0);
+    let result = conn.execute_batch(
+        "begin null; end;",
+        oracledb::BindParameters::default(),
+    )?;
+    assert_eq!(result.rows_affected(), 0);
+    Ok(())
+}

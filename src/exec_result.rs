@@ -67,11 +67,12 @@ impl ExecResult {
             column_info: Arc::new(statement.out_metadata().to_vec()),
             out_bind_data,
             returned_data,
-            rows_affected: resp.get_rowcount(),
+            rows_affected: resp.get_rowcount(statement),
         }
     }
 
     /// Returns the number of rows affected by the execution of the statement.
+    /// For PL/SQL statements, this value is always zero.
     pub fn rows_affected(&self) -> u64 {
         self.rows_affected
     }
@@ -132,11 +133,12 @@ impl ExecBatchResult {
             out_bind_data,
             returned_data,
             num_execs,
-            rows_affected: resp.get_rowcount(),
+            rows_affected: resp.get_rowcount(statement),
         }
     }
 
     /// Returns the number of rows affected by the execution of the statement.
+    /// For PL/SQL statements, this value is always zero.
     pub fn rows_affected(&self) -> u64 {
         self.rows_affected
     }

@@ -6,6 +6,11 @@
     and improved documentation for
     [Config::set_user()](crate::Config::set_user()) as recommended
     ([issue 92](https://github.com/oracle/rust-oracledb/issues/92)).
+1.  [ExecResult::rows_affected()](crate::ExecResult::rows_affected())
+    and
+    [ExecBatchResult::rows_affected()](crate::ExecBatchResult::rows_affected())
+    now return 0 when executing PL/SQL
+    ([issue 93](https://github.com/oracle/rust-oracledb/issues/93)).
 1.  Adjusted [Statement::execute_batch()](crate::Statement::execute_batch()),
     [Statement::query_arrow()](crate::Statement::query_arrow()) and
     [Statement::query_arrow_batches()](crate::Statement::query_arrow_batches())
