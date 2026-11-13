@@ -268,6 +268,12 @@ impl PoolConfig {
         Ok(self)
     }
 
+    /// Sets the proxy user to use when connecting to the database.
+    pub fn set_proxy_user(mut self, value: &str) -> Self {
+        self.connection_config = self.connection_config.set_proxy_user(value);
+        self
+    }
+
     /// Sets the size to use for the statement cache associated with the
     /// connection to the database.
     pub fn set_stmtcachesize(mut self, value: usize) -> Self {
@@ -282,7 +288,13 @@ impl PoolConfig {
         self
     }
 
-    /// Sets the user to use when connecting to the database.
+    /// Sets the user to use when connecting to the database. If the user is in
+    /// the form "user\[proxy_user\]", the proxy_user portion is saved
+    /// separately.  If the proxy_user is empty or one of the opening or
+    /// closing brackets is missing, the user is left unchanged (which will
+    /// result in a connection failure). A proxy user alone is permitted when
+    /// external authentication is being used. If no brackets are found in the
+    /// string, any proxy user set previously is left untouched.
     pub fn set_user(mut self, value: &str) -> Self {
         self.connection_config = self.connection_config.set_user(value);
         self

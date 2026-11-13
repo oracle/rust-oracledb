@@ -2,6 +2,11 @@
 
 ## rust-oracledb 26.0.0-beta.7 (TBD)
 
+1.  Added [PoolConfig::set_proxy_user()](crate::PoolConfig::set_proxy_user())
+    and improved documentation for
+    [Config::set_user()](crate::Config::set_user()) as recommended
+    ([issue 92](https://github.com/oracle/rust-oracledb/issues/92)).
+
 
 ## rust-oracledb 26.0.0-beta.6 (November 12, 2026)
 
