@@ -6,6 +6,9 @@
     and improved documentation for
     [Config::set_user()](crate::Config::set_user()) as recommended
     ([issue 92](https://github.com/oracle/rust-oracledb/issues/92)).
+1.  Use `debug_struct()` for `Error` so that the cause is not lost when
+    debugging errors
+    ([issue 76](https://github.com/oracle/rust-oracledb/issues/76)).
 
 
 ## rust-oracledb 26.0.0-beta.6 (November 12, 2026)

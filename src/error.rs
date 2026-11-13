@@ -128,7 +128,10 @@ pub struct Error(Box<ErrorInner>);
 
 impl fmt::Debug for Error {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(fmt, "{}", self)?;
+        fmt.debug_struct("Error")
+            .field("kind", &self.0.kind)
+            .field("cause", &self.0.cause)
+            .finish()?;
         if self.0.backtrace.status()
             == std::backtrace::BacktraceStatus::Captured
         {
