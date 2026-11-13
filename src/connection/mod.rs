@@ -156,10 +156,10 @@ impl Connection {
 
     /// Executes a SQL statement against the database multiple times in one
     /// round trip.
-    pub fn execute_batch<'a>(
+    pub fn execute_batch<'params>(
         &self,
         sql: &str,
-        params: impl Into<BindParameters<'a>>,
+        params: impl Into<BindParameters<'params>>,
     ) -> Result<ExecBatchResult, Error> {
         self.get_impl()?.execute_batch(sql, params.into())
     }
@@ -218,10 +218,10 @@ impl Connection {
     #[cfg(feature = "arrow")]
     /// Executes a query against the database and returns a single Arrow
     /// RecordBatch containing the results of the query.
-    pub fn query_arrow<'a>(
+    pub fn query_arrow<'params>(
         &self,
         sql: &str,
-        params: impl Into<BindParameters<'a>>,
+        params: impl Into<BindParameters<'params>>,
     ) -> Result<arrow_array::RecordBatch, Error> {
         self.get_impl()?.query_arrow(sql, params.into())
     }

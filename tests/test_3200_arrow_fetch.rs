@@ -551,7 +551,7 @@ fn test_3210(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
         .statement("select cast(:1 as number(9)) as ID from dual")?
         .arrow_batch_size(50)
         .build()?
-        .query_arrow_batches(params.into())?;
+        .query_arrow_batches(params)?;
     let mut sizes = Vec::new();
     let mut ids = Vec::new();
     for batch in batches {
@@ -579,7 +579,7 @@ fn test_3211(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
         .statement("select cast(10 / :1 as number(9)) as VALUE from dual")?
         .arrow_batch_size(2)
         .build()?
-        .query_arrow_batches(rows.into())?;
+        .query_arrow_batches(rows)?;
     assert_eq!(batches.next().unwrap()?.num_rows(), 2);
     let error = batches.next().unwrap().unwrap_err();
     let arrow_schema::ArrowError::ExternalError(source) = error else {

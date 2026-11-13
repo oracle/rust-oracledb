@@ -672,7 +672,7 @@ fn test_3112(
         .statement("select :1 from dual")?
         .with_requested_schema(schema)
         .build()?
-        .query_arrow(input.into())?;
+        .query_arrow(input)?;
     assert_eq!(batch.num_rows(), 4);
     let result =
         batch.column(0).as_any().downcast_ref::<StringArray>().unwrap();

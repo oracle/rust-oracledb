@@ -6,6 +6,12 @@
     and improved documentation for
     [Config::set_user()](crate::Config::set_user()) as recommended
     ([issue 92](https://github.com/oracle/rust-oracledb/issues/92)).
+1.  Adjusted [Statement::execute_batch()](crate::Statement::execute_batch()),
+    [Statement::query_arrow()](crate::Statement::query_arrow()) and
+    [Statement::query_arrow_batches()](crate::Statement::query_arrow_batches())
+    to accept `impl Into<BindParameters>>` like their equivalents on
+    [Connection](crate::Connection)
+    ([issue 94](https://github.com/oracle/rust-oracledb/issues/94)).
 1.  Use `debug_struct()` for `Error` so that the cause is not lost when
     debugging errors
     ([issue 76](https://github.com/oracle/rust-oracledb/issues/76)).

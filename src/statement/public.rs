@@ -145,10 +145,11 @@ impl Statement {
 
     /// Executes a SQL statement against the database multiple times in one
     /// round trip.
-    pub fn execute_batch(
+    pub fn execute_batch<'params>(
         &mut self,
-        params: BindParameters,
+        params: impl Into<BindParameters<'params>>,
     ) -> Result<ExecBatchResult, Error> {
+        let params = params.into();
         self.statement.check_binds(&params)?;
         let num_execs = params.num_rows();
         let mut response = self.get_execute_response(params, false)?;
@@ -229,9 +230,9 @@ impl Statement {
     #[cfg(feature = "arrow")]
     /// Performs a query against the database and returns an Arrow RecordBatch
     /// structure containing the data.
-    pub fn query_arrow(
+    pub fn query_arrow<'params>(
         self,
-        params: BindParameters,
+        params: impl Into<BindParameters<'params>>,
     ) -> Result<arrow_array::RecordBatch, Error> {
         self.query_arrow_batches(params)?.into_single_batch()
     }
@@ -244,8 +245,9 @@ impl Statement {
     /// bind parameters is executed in order. See [crate::ArrowBatchReader].
     pub fn query_arrow_batches<'params>(
         mut self,
-        params: BindParameters<'params>,
+        params: impl Into<BindParameters<'params>>,
     ) -> Result<arrow::ArrowBatchReader<'params>, Error> {
+        let params = params.into();
         self.statement.check_binds(&params)?;
         arrow::ArrowBatchReader::new(self, params)
     }
