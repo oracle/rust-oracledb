@@ -1,5 +1,8 @@
 # <a name="releasenotes"></a> rust-oracledb Release Notes
 
+## rust-oracledb 26.0.0-beta.7 (TBD)
+
+
 ## rust-oracledb 26.0.0-beta.6 (November 12, 2026)
 
 1.  Compilation is now deliberately restricted to 64-bit architectures in order
