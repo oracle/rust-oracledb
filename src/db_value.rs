@@ -199,8 +199,8 @@ impl DbValue {
                     let value = utils::utf16be_bytes_to_string(&bytes)?;
                     Ok(Some(DbValue::String(value)))
                 } else {
-                    let value = std::str::from_utf8(&bytes)?;
-                    Ok(Some(DbValue::String(value.to_string())))
+                    let value = String::from_utf8(bytes.into_owned())?;
+                    Ok(Some(DbValue::String(value)))
                 }
             }
             constants::ORA_TYPE_NUM_RAW | constants::ORA_TYPE_NUM_LONG_RAW => {
@@ -208,7 +208,7 @@ impl DbValue {
                 if bytes.is_empty() {
                     Ok(None)
                 } else {
-                    Ok(Some(DbValue::Bytes(bytes.to_vec())))
+                    Ok(Some(DbValue::Bytes(bytes.into_owned())))
                 }
             }
             constants::ORA_TYPE_NUM_ROWID => {

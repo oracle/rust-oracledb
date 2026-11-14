@@ -52,8 +52,15 @@ use crate::statement::CachedStatement;
 pub use error_info::DbError;
 use error_info::ErrorInfo;
 
+struct ResponsePacket {
+    len: usize,
+    header_size: usize,
+    packet_type: u8,
+    packet_flags: u8,
+}
+
 pub(crate) struct Response {
-    packets: Vec<Packet>,
+    packets: Vec<ResponsePacket>,
     buf: ReadBuffer,
     error_info: Option<ErrorInfo>,
     edition: Option<String>,
@@ -107,8 +114,13 @@ impl Response {
     /// contains state, that state must be reset so that it doesn't interfere
     /// with another attempt at deserializing the response.
     pub(crate) fn add_packets(&mut self, packets: Vec<Packet>) {
-        self.packets.extend(packets);
-        self.buf = ReadBuffer::from_packets(&self.packets);
+        self.packets.extend(packets.iter().map(|packet| ResponsePacket {
+            len: packet.buf.len(),
+            header_size: packet.header_size(),
+            packet_type: packet.packet_type,
+            packet_flags: packet.packet_flags,
+        }));
+        self.buf.append_packets(packets);
         self.error_info = None;
         self.edition = None;
         self.current_schema = None;
@@ -183,12 +195,12 @@ impl Response {
         let mut packet_num = 1;
         let mut offset = self.buf.get_pos();
         for packet in &self.packets {
-            if offset <= packet.buf.len() {
-                offset += packet.header_size();
+            if offset <= packet.len {
+                offset += packet.header_size;
                 break;
             }
             packet_num += 1;
-            offset -= packet.buf.len();
+            offset -= packet.len;
         }
         ResponseLocation { packet_num, offset }
     }
@@ -442,7 +454,7 @@ impl Response {
     pub(crate) fn new() -> Response {
         Response {
             packets: Vec::new(),
-            buf: ReadBuffer::from_packets(&[]),
+            buf: ReadBuffer::from_bytes(&[]),
             error_info: None,
             edition: None,
             current_schema: None,
@@ -620,6 +632,7 @@ impl Response {
     pub(crate) fn set_flush_out_binds(&mut self) {
         self.flush_out_binds = true;
         self.packets.clear();
+        self.buf = ReadBuffer::from_bytes(&[]);
     }
 
     pub(crate) fn set_prev_fetch_last_row(&mut self, last_row: Option<DbRow>) {
@@ -678,5 +691,51 @@ pub struct ResponseLocation {
 impl std::fmt::Display for ResponseLocation {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(fmt, "packet {}, offset {}", self.packet_num, self.offset)
+    }
+}
+
+#[cfg(test)]
+mod buffer_tests {
+    use super::*;
+
+    fn packet(bytes: &[u8]) -> Packet {
+        Packet {
+            packet_type: constants::PACKET_TYPE_DATA,
+            packet_flags: 7,
+            data_flags: 0,
+            buf: bytes.to_vec(),
+        }
+    }
+
+    #[test]
+    fn partial_response_rewinds_without_losing_payload_or_packet_offsets() {
+        let mut response = Response::new();
+        response.add_packets(vec![packet(&[1, 2])]);
+        assert_eq!(response.read_u8().unwrap(), 1);
+        assert_eq!(response.read_u8().unwrap(), 2);
+        assert!(response.read_u8().unwrap_err().is_out_of_data());
+        response.add_packets(vec![packet(&[3, 4])]);
+        for expected in [1, 2, 3] {
+            assert_eq!(response.read_u8().unwrap(), expected);
+        }
+        let loc = response.current_location();
+        assert_eq!((loc.packet_num, loc.offset), (2, 11));
+        assert_eq!(response.get_packet_flags(), 7);
+        assert_eq!(response.get_packet_type(), constants::PACKET_TYPE_DATA);
+        assert_eq!(response.read_u8().unwrap(), 4);
+        assert!(response.read_u8().unwrap_err().is_out_of_data());
+    }
+
+    #[test]
+    fn flushing_out_binds_discards_previous_payload() {
+        let mut response = Response::new();
+        response.add_packets(vec![packet(&[1, 2])]);
+        response.set_flush_out_binds();
+        response.add_packets(vec![packet(&[3])]);
+        assert_eq!(response.read_u8().unwrap(), 3);
+        assert!(response.read_u8().unwrap_err().is_out_of_data());
+        let loc = response.current_location();
+        assert_eq!((loc.packet_num, loc.offset), (1, 11));
+        assert!(!response.get_flush_out_binds());
     }
 }
