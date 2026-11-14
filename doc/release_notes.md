@@ -17,6 +17,10 @@
     to accept `impl Into<BindParameters>>` like their equivalents on
     [Connection](crate::Connection)
     ([issue 94](https://github.com/oracle/rust-oracledb/issues/94)).
+1.  Errors are now returned instead of panicking for unknown packet types,
+    non-numeric error codes in refuse packets and requests for Native Network
+    Encryption and Data Integrity (NNE)
+    ([issue 40](https://github.com/oracle/rust-oracledb/issues/40)).
 1.  Use `debug_struct()` for `Error` so that the cause is not lost when
     debugging errors
     ([issue 76](https://github.com/oracle/rust-oracledb/issues/76)).
