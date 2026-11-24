@@ -806,3 +806,99 @@ impl ToDbValue for &'static DbType {
         self.default_size as usize
     }
 }
+
+/// A bind value sent with a declared database type and, optionally, a
+/// declared maximum size, instead of the ones derived from the value itself.
+///
+/// The declared type lets a string be bound as
+/// [DB_TYPE_CHAR](crate::DB_TYPE_CHAR),
+/// [DB_TYPE_NCHAR](crate::DB_TYPE_NCHAR) or
+/// [DB_TYPE_NVARCHAR](crate::DB_TYPE_NVARCHAR) instead of
+/// [DB_TYPE_VARCHAR](crate::DB_TYPE_VARCHAR). `NCHAR` and `NVARCHAR2` values
+/// are sent in the national character set, which must be AL16UTF16 (the
+/// default).
+///
+/// The declared maximum size sets the size of the buffer used for OUT and
+/// IN/OUT binds, so a value returned by the database may be longer than the
+/// value sent. No padding value is sent: a NULL is still sent as NULL.
+///
+/// ```no_run
+/// # fn main() -> Result<(), oracledb::Error> {
+/// # let conn = oracledb::connect(oracledb::Config::default())?;
+/// let out_value =
+///     oracledb::BindValue::new(oracledb::DB_TYPE_VARCHAR, None::<String>)?
+///         .max_size(32767);
+/// let mut result =
+///     conn.execute("begin :1 := rpad('x', 32767, 'x'); end;", &[&out_value])?;
+/// let value: String = result.out_bind_data().get(0)?;
+/// # Ok(())
+/// # }
+/// ```
+pub struct BindValue<T> {
+    value: T,
+    db_type: &'static DbType,
+    max_size: usize,
+}
+
+impl<T: ToDbValue> BindValue<T> {
+    /// Returns a bind value that sends the given value as the given database
+    /// type. A string value can be declared as any of the types
+    /// [DB_TYPE_CHAR](crate::DB_TYPE_CHAR),
+    /// [DB_TYPE_NCHAR](crate::DB_TYPE_NCHAR),
+    /// [DB_TYPE_VARCHAR](crate::DB_TYPE_VARCHAR) and
+    /// [DB_TYPE_NVARCHAR](crate::DB_TYPE_NVARCHAR); any other value can only
+    /// be declared as its own type. An error is returned for any other
+    /// combination.
+    pub fn new(db_type: &'static DbType, value: T) -> Result<Self, Error> {
+        let value_db_type = value.db_type();
+        let is_string = |typ: &DbType| {
+            matches!(
+                typ.ora_type_num,
+                constants::ORA_TYPE_NUM_CHAR | constants::ORA_TYPE_NUM_VARCHAR
+            )
+        };
+        if value_db_type != db_type
+            && !(is_string(value_db_type) && is_string(db_type))
+        {
+            return Err(Error::unsupported_conversion(
+                value_db_type.name(),
+                db_type.name(),
+            ));
+        }
+        Ok(Self { value, db_type, max_size: 0 })
+    }
+
+    /// Sets the maximum size, in bytes, of a string or raw bind value; for
+    /// example 32767 for a PL/SQL VARCHAR2 OUT or IN/OUT parameter. The size
+    /// of the value itself is used if it is larger. Types with a fixed size
+    /// ignore it.
+    pub fn max_size(mut self, max_size: usize) -> Self {
+        self.max_size = max_size;
+        self
+    }
+}
+
+impl<T: ToDbValue> ToBuf for BindValue<T> {
+    fn to_buf(
+        &self,
+        buf: &mut WriteBuffer,
+        db_type: &'static DbType,
+        write_length: bool,
+    ) {
+        self.value.to_buf(buf, db_type, write_length)
+    }
+
+    fn to_buf_null(&self, buf: &mut WriteBuffer) {
+        self.value.to_buf_null(buf)
+    }
+}
+
+impl<T: ToDbValue> ToDbValue for BindValue<T> {
+    fn db_type(&self) -> &'static DbType {
+        self.db_type
+    }
+
+    fn max_size(&self) -> usize {
+        self.max_size.max(self.value.max_size())
+    }
+}

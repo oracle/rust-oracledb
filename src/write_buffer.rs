@@ -28,9 +28,12 @@
 // Defines the structure used for serializing data into a buffer.
 //-----------------------------------------------------------------------------
 
+use std::borrow::Cow;
+
 use crate::client::Client;
 use crate::constants;
 use crate::db_type::DbType;
+use crate::utils;
 
 pub struct WriteBuffer {
     buf: Vec<u8>,
@@ -345,14 +348,10 @@ impl ToBuf for String {
     fn to_buf(
         &self,
         buf: &mut WriteBuffer,
-        _db_type: &'static DbType,
+        db_type: &'static DbType,
         write_length: bool,
     ) {
-        if write_length {
-            buf.write_bytes_with_length(self.as_bytes());
-        } else {
-            buf.write_bytes(self.as_bytes());
-        }
+        self.as_str().to_buf(buf, db_type, write_length)
     }
 }
 
@@ -360,13 +359,19 @@ impl ToBuf for &str {
     fn to_buf(
         &self,
         buf: &mut WriteBuffer,
-        _db_type: &'static DbType,
+        db_type: &'static DbType,
         write_length: bool,
     ) {
-        if write_length {
-            buf.write_bytes_with_length(self.as_bytes());
+        // NCHAR data is sent in the national character set (AL16UTF16)
+        let bytes = if db_type.csfrm == constants::CS_FORM_NCHAR {
+            Cow::Owned(utils::string_to_utf16be_bytes(self))
         } else {
-            buf.write_bytes(self.as_bytes());
+            Cow::Borrowed(self.as_bytes())
+        };
+        if write_length {
+            buf.write_bytes_with_length(&bytes);
+        } else {
+            buf.write_bytes(&bytes);
         }
     }
 }

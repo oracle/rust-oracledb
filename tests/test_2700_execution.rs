@@ -797,3 +797,113 @@ fn test_2729(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     assert_eq!(result.rows_affected(), 0);
     Ok(())
 }
+
+#[rstest]
+/// Tests a VARCHAR2 OUT bind declared with BindValue returns 32767 bytes, from
+/// an anonymous block and from a stored procedure, without a padding value
+/// being sent.
+fn test_2730(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let _package_guard = common::create_package(
+        &conn,
+        "test_2730",
+        "procedure fill(a_value out varchar2, a_char varchar2);",
+    )?;
+    conn.execute(
+        r#"
+        create package body test_2730 as
+            procedure fill(a_value out varchar2, a_char varchar2) is
+            begin
+                a_value :=
+                    rpad(a_char, trunc(32767 / lengthb(a_char)), a_char);
+            end;
+        end;
+        "#,
+        &[],
+    )?;
+    let out_value =
+        oracledb::BindValue::new(oracledb::DB_TYPE_VARCHAR, None::<String>)?
+            .max_size(32767);
+    for (sql, value_char, expected_len) in [
+        ("begin :1 := rpad('x', 32767, 'x'); end;", "x", 32767),
+        ("begin test_2730.fill(:1, 'x'); end;", "x", 32767),
+        ("begin :1 := rpad('ç', 16383, 'ç'); end;", "ç", 16383),
+        ("begin test_2730.fill(:1, 'ç'); end;", "ç", 16383),
+    ] {
+        let mut result = conn.execute(sql, &[&out_value])?;
+        let value: String = result.out_bind_data().get(0)?;
+        assert_eq!(value, value_char.repeat(expected_len));
+    }
+    let out_value =
+        oracledb::BindValue::new(oracledb::DB_TYPE_RAW, None::<Vec<u8>>)?
+            .max_size(32767);
+    let mut result = conn.execute(
+        "begin :1 := utl_raw.copies(hextoraw('AB'), 32767); end;",
+        &[&out_value],
+    )?;
+    let value: Vec<u8> = result.out_bind_data().get(0)?;
+    assert_eq!(value, vec![0xAB; 32767]);
+    Ok(())
+}
+
+#[rstest]
+/// Tests a VARCHAR2 IN/OUT bind declared with BindValue grows from NULL and
+/// from a 1-byte value to 32767 bytes, in an anonymous block and in a stored
+/// procedure.
+fn test_2731(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let _package_guard = common::create_package(
+        &conn,
+        "test_2731",
+        "procedure grow(a_value in out varchar2);",
+    )?;
+    conn.execute(
+        r#"
+        create package body test_2731 as
+            procedure grow(a_value in out varchar2) is
+            begin
+                a_value := rpad(nvl(a_value, 'x'), 32767, 'x');
+            end;
+        end;
+        "#,
+        &[],
+    )?;
+    for sql in [
+        "begin :1 := rpad(nvl(:1, 'x'), 32767, 'x'); end;",
+        "begin test_2731.grow(:1); end;",
+    ] {
+        for (in_value, expected_first) in [(None, "x"), (Some("a"), "a")] {
+            let value =
+                oracledb::BindValue::new(oracledb::DB_TYPE_VARCHAR, in_value)?
+                    .max_size(32767);
+            let mut result = conn.execute(sql, &[&value])?;
+            let out_value: String = result.out_bind_data().get(0)?;
+            assert_eq!(out_value.len(), 32767);
+            assert_eq!(&out_value[..1], expected_first);
+            assert_eq!(out_value[1..], "x".repeat(32766));
+        }
+    }
+    Ok(())
+}
+
+#[rstest]
+/// Tests BindValue rejects a declared type the value cannot be sent as.
+fn test_2732() -> Result<(), oracledb::Error> {
+    let err =
+        oracledb::BindValue::new(oracledb::DB_TYPE_NUMBER, "1").err().unwrap();
+    assert_eq!(
+        err.kind(),
+        &oracledb::ErrorKind::UnsupportedConversion(
+            "DB_TYPE_VARCHAR".to_string(),
+            "DB_TYPE_NUMBER".to_string()
+        )
+    );
+    let err =
+        oracledb::BindValue::new(oracledb::DB_TYPE_VARCHAR, 1).err().unwrap();
+    assert_eq!(
+        err.kind(),
+        &oracledb::ErrorKind::UnsupportedConversion(
+            "DB_TYPE_NUMBER".to_string(),
+            "DB_TYPE_VARCHAR".to_string()
+        )
+    );
+    Ok(())
+}

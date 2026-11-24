@@ -182,6 +182,11 @@ let mut result = connection.execute_named(
 let out_val: i32 = result.out_bind_data().get(0)?;
 ```
 
+A string or raw OUT value bound this way can hold at most the type's default
+size. To return longer values, declare the size with
+[BindValue](crate::BindValue) as shown in
+[Binding with a Declared Type and Size](#binddeclared).
+
 ## <a name="bindnull"></a> 5.5 Binding Null Values
 
 To insert a NULL into a character column you can use `Option<T>`. The type `T`
@@ -499,3 +504,59 @@ Depending on the name provided by the user, the query results will be
 ordered either by the column DEPARTMENT_ID or the column MANAGER_ID.
 
 See [Dynamic SQL Construction and Validation](#validatingsql).
+
+## <a name="binddeclared"></a> 5.11 Binding with a Declared Type and Size
+
+By default, the database type and size of a bind variable come from the Rust
+value: a `String` is bound as `VARCHAR2` with the size of the string. Wrap the
+value in [BindValue](crate::BindValue) to declare them instead.
+
+A declared size sets the buffer for an OUT or IN/OUT bind, so the database can
+return a value longer than the one sent. No padding value is sent. For example,
+a PL/SQL `VARCHAR2` OUT parameter can return up to 32767 bytes:
+
+```rust
+let out_value =
+    oracledb::BindValue::new(oracledb::DB_TYPE_VARCHAR, None::<String>)?
+        .max_size(32767);
+let mut result =
+    connection.execute("begin myproc(:1); end;", &[&out_value])?;
+let value: String = result.out_bind_data().get(0)?;
+```
+
+An IN/OUT value can grow up to the declared size:
+
+```rust
+let value = oracledb::BindValue::new(oracledb::DB_TYPE_VARCHAR, "a")?
+    .max_size(32767);
+let mut result = connection.execute(
+    "begin :1 := rpad(:1, 32767, 'x'); end;",
+    &[&value],
+)?;
+let value: String = result.out_bind_data().get(0)?;
+```
+
+A declared type lets a string be bound as
+[DB_TYPE_CHAR](crate::DB_TYPE_CHAR), [DB_TYPE_NCHAR](crate::DB_TYPE_NCHAR) or
+[DB_TYPE_NVARCHAR](crate::DB_TYPE_NVARCHAR). A `CHAR` bind is compared with
+blank-padded semantics, so it matches a `CHAR` column without padding the
+value:
+
+```rust
+let value = oracledb::BindValue::new(oracledb::DB_TYPE_CHAR, "ab")?;
+let row = connection.query_row(
+    "select count(*) from tab where char_col = :1",
+    &[&value],
+)?;
+```
+
+`NCHAR` and `NVARCHAR2` binds are sent in the national character set, which
+must be AL16UTF16 (the default):
+
+```rust
+let value = oracledb::BindValue::new(oracledb::DB_TYPE_NVARCHAR, "ç€😀")?;
+connection.execute("insert into tab (nvarchar_col) values (:1)", &[&value])?;
+```
+
+Any other value can only be declared as its own type.
+[BindValue::new()](crate::BindValue::new) returns an error otherwise.
