@@ -816,17 +816,28 @@ impl Client {
         }
     }
 
-    /// Performs a fetch and returns the database response.
+    /// Performs a fetch and returns the database response. Note that for REF
+    /// cursors (which do not have any SQL), a full execute (with fetch) is
+    /// required instead of a plain fetch.
     pub(crate) fn fetch(
         &mut self,
         statement: &mut CachedStatement,
         client_ref: &ClientRef,
         last_row: Option<DbRow>,
     ) -> Result<Response, Error> {
-        let mut message = FetchMessage::new(statement, last_row);
-        let mut response = self.process_message(&mut message)?;
-        response.complete_values(self, client_ref, statement)?;
-        Ok(response)
+        if statement.sql().is_empty() {
+            self.execute(
+                statement,
+                client_ref,
+                BindParameters::default(),
+                false,
+            )
+        } else {
+            let mut message = FetchMessage::new(statement, last_row);
+            let mut response = self.process_message(&mut message)?;
+            response.complete_values(self, client_ref, statement)?;
+            Ok(response)
+        }
     }
 
     /// Fetches all rows from the database given the initial response returned

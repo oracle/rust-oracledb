@@ -418,6 +418,7 @@ impl Message for ExecuteMessage<'_, '_> {
 
     fn serialize(&self, client: &Client, buf: &mut WriteBuffer) {
         if !self.statement.has_cursor()
+            || self.statement.sql().is_empty()
             || self.statement.no_prefetch()
             || self.statement.binds_changed()
             || self.parse_only

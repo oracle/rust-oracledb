@@ -22,6 +22,8 @@
     Encryption and Data Integrity (NNE)
     ([issue 40](https://github.com/oracle/rust-oracledb/issues/40)).
 1.  Correct writing null boolean and DbObject values to the database.
+1.  Ensure that REF cursors use the full execute (and fetch) RPC instead of the
+    simple fetch RPC as some older databases require this.
 1.  Use `debug_struct()` for `Error` so that the cause is not lost when
     debugging errors
     ([issue 76](https://github.com/oracle/rust-oracledb/issues/76)).
