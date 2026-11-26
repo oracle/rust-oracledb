@@ -276,3 +276,66 @@ fn test_1012(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
     }
     Ok(())
 }
+
+#[rstest]
+/// Tests a string bound as CHAR with BindValue is compared with blank-padded
+/// semantics, unlike the same string bound as VARCHAR2.
+fn test_1013(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let _guard = common::create_table(&conn, "test_1013", "c char(5)")?;
+    conn.execute("insert into test_1013 values ('ab')", &[])?;
+    let sql = "select count(*) from test_1013 where c = :1";
+    let count: i32 = conn.query_row(sql, &[&"ab"])?.get(0)?;
+    assert_eq!(count, 0);
+    let value = oracledb::BindValue::new(oracledb::DB_TYPE_CHAR, "ab")?;
+    let count: i32 = conn.query_row(sql, &[&value])?.get(0)?;
+    assert_eq!(count, 1);
+    Ok(())
+}
+
+#[rstest]
+/// Tests strings with 2-, 3- and 4-byte UTF-8 characters bound as NVARCHAR2
+/// and NCHAR with BindValue reach the database in the national character set
+/// and round-trip through a table and an IN/OUT bind.
+fn test_1014(conn: oracledb::Connection) -> Result<(), oracledb::Error> {
+    let value = "ç€😀";
+    let nvarchar =
+        oracledb::BindValue::new(oracledb::DB_TYPE_NVARCHAR, value)?;
+    let nchar = oracledb::BindValue::new(oracledb::DB_TYPE_NCHAR, value)?;
+
+    // the database receives the characters themselves, in AL16UTF16
+    let row = conn.query_row_named(
+        r#"
+        select
+            dump(:nv, 1016),
+            dump(:nc, 1016),
+            case when :nv = unistr('\00E7\20AC\D83D\DE00') then 1 else 0 end
+        from dual
+        "#,
+        &[("nv", &nvarchar), ("nc", &nchar)],
+    )?;
+    let encoded = "Len=8 CharacterSet=AL16UTF16: 0,e7,20,ac,d8,3d,de,0";
+    assert_eq!(row.get::<String>(0)?, format!("Typ=1 {encoded}"));
+    assert_eq!(row.get::<String>(1)?, format!("Typ=96 {encoded}"));
+    assert_eq!(row.get::<i32>(2)?, 1);
+
+    // the value round-trips through NVARCHAR2 and NCHAR columns
+    let _guard = common::create_table(
+        &conn,
+        "test_1014",
+        "nv nvarchar2(10), nc nchar(10)",
+    )?;
+    conn.execute(
+        "insert into test_1014 values (:1, :2)",
+        &[&nvarchar, &nchar],
+    )?;
+    let row = conn.query_row("select nv, nc from test_1014", &[])?;
+    assert_eq!(row.get::<String>(0)?, value);
+    assert_eq!(row.get::<String>(1)?.trim_end(), value);
+
+    // and through an IN/OUT bind
+    let mut result = conn
+        .execute("begin :1 := :1 || unistr('\\00E7'); end;", &[&nvarchar])?;
+    let out_value: String = result.out_bind_data().get(0)?;
+    assert_eq!(out_value, format!("{value}ç"));
+    Ok(())
+}

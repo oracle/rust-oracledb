@@ -31,6 +31,12 @@
 1.  Use `debug_struct()` for `Error` so that the cause is not lost when
     debugging errors
     ([issue 76](https://github.com/oracle/rust-oracledb/issues/76)).
+1.  Added [BindValue](crate::BindValue) for binding a value with a declared
+    database type and maximum size. Strings can now be bound as `CHAR`,
+    `NCHAR` and `NVARCHAR2`, and string and raw OUT and IN/OUT binds can
+    return values longer than the value sent
+    ([issue 65](https://github.com/oracle/rust-oracledb/issues/65),
+    [issue 103](https://github.com/oracle/rust-oracledb/issues/103)).
 
 
 ## rust-oracledb 26.0.0-beta.6 (November 12, 2026)

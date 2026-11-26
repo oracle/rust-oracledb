@@ -142,6 +142,8 @@ instead of the mouse.
 
    5.10 [Binding Column and Table Names](#bindcoltblnames)
 
+   5.11 [Binding with a Declared Type and Size](#binddeclared)
+
 6. [Executing Batch Statements and Bulk Loading](#batchstmnt)
 
    6.1 [Batch Statement Execution](#batchstmntexec)
