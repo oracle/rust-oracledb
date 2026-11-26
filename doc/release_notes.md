@@ -21,6 +21,7 @@
     non-numeric error codes in refuse packets and requests for Native Network
     Encryption and Data Integrity (NNE)
     ([issue 40](https://github.com/oracle/rust-oracledb/issues/40)).
+1.  Correct writing null boolean and DbObject values to the database.
 1.  Use `debug_struct()` for `Error` so that the cause is not lost when
     debugging errors
     ([issue 76](https://github.com/oracle/rust-oracledb/issues/76)).

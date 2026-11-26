@@ -266,11 +266,6 @@ pub trait ToBuf {
         db_type: &'static DbType,
         write_length: bool,
     );
-
-    /// Writes a null value to the buffer.
-    fn to_buf_null(&self, buf: &mut WriteBuffer) {
-        buf.write_u8(0);
-    }
 }
 
 impl ToBuf for bool {
@@ -414,7 +409,7 @@ where
         if let Some(value) = self {
             <T>::to_buf(value, buf, db_type, write_length);
         } else {
-            <T>::default().to_buf_null(buf);
+            db_type.to_buf(buf, db_type, write_length);
         }
     }
 }
@@ -427,9 +422,21 @@ impl ToBuf for &'static DbType {
         _write_length: bool,
     ) {
         match *self {
+            crate::DB_TYPE_BOOLEAN => {
+                buf.write_u8(253);
+                buf.write_u8(1);
+            }
             crate::DB_TYPE_CURSOR => {
                 buf.write_u8(1); // length of integer
                 buf.write_u8(0); // value of integer (cursor number)
+            }
+            crate::DB_TYPE_OBJECT => {
+                buf.write_ub4(0); // TOID
+                buf.write_ub4(0); // OID
+                buf.write_ub4(0); // snapshot
+                buf.write_ub4(0); // version
+                buf.write_ub4(0); // packed data length
+                buf.write_ub4(1); // flags (top leve)
             }
             _ => buf.write_u8(0),
         }
