@@ -32,6 +32,7 @@ use crate::client::Client;
 use crate::constants;
 use crate::error::Error;
 use crate::messages::Message;
+use crate::read_buffer::ReadBuffer;
 use crate::response::Response;
 use crate::write_buffer::WriteBuffer;
 use std::borrow::Cow;
@@ -235,9 +236,10 @@ impl Message for LobOpMessage<'_> {
     fn deserialize_lob_data(
         &mut self,
         _client: &Client,
-        resp: &mut Response,
+        _resp: &mut Response,
+        buf: &mut ReadBuffer,
     ) -> Result<(), Error> {
-        let bytes = resp.read_bytes_with_length()?;
+        let bytes = buf.read_bytes_with_length()?;
         self.data.extend_from_slice(&bytes);
         Ok(())
     }
@@ -246,18 +248,19 @@ impl Message for LobOpMessage<'_> {
     fn deserialize_return_parameters(
         &mut self,
         _client: &Client,
-        resp: &mut Response,
+        _resp: &mut Response,
+        buf: &mut ReadBuffer,
     ) -> Result<(), Error> {
-        let new_locator = resp.read_bytes(self.source_locator.len())?.to_vec();
+        let new_locator = buf.read_bytes(self.source_locator.len())?.to_vec();
         self.returned_locator = Some(new_locator);
         if self.op.returns_charset() {
-            let _charsetid = resp.read_ub2()?;
-            let _flags = resp.read_u8()?;
+            let _charsetid = buf.read_ub2()?;
+            let _flags = buf.read_u8()?;
         } else if self.op.sends_amount() {
-            self.returned_amount = resp.read_sb8()?;
+            self.returned_amount = buf.read_sb8()?;
         }
         if self.op.returns_bool() {
-            self.returned_bool = resp.read_u8()? > 0;
+            self.returned_bool = buf.read_u8()? > 0;
         }
         Ok(())
     }

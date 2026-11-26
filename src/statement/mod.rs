@@ -44,6 +44,7 @@ use crate::constants;
 use crate::db_value::ToDbValue;
 use crate::error::Error;
 use crate::metadata::Metadata;
+use crate::read_buffer::ReadBuffer;
 use crate::response::Response;
 
 #[derive(Clone)]
@@ -279,15 +280,16 @@ impl CachedStatement {
     /// Deserializes a nested cursor statement from a database response.
     pub(crate) fn from_cursor_response(
         resp: &mut Response,
+        buf: &mut ReadBuffer,
         client: &Client,
         is_nested: bool,
         options: &StatementOptions,
     ) -> Result<Self, Error> {
         let mut statement =
             Self::create_empty(String::new(), is_nested, options);
-        let _length = resp.read_u8()?;
-        statement.populate_from_describe_info(client, resp)?;
-        statement.set_cursor_id(resp.read_ub2()?);
+        let _length = buf.read_u8()?;
+        statement.populate_from_describe_info(client, resp, buf)?;
+        statement.set_cursor_id(buf.read_ub2()?);
         Ok(statement)
     }
 
@@ -373,15 +375,16 @@ impl CachedStatement {
         &mut self,
         client: &Client,
         resp: &mut Response,
+        buf: &mut ReadBuffer,
     ) -> Result<(), Error> {
-        resp.read_ub4()?; // max row size
-        let num_columns = resp.read_ub4()?;
+        buf.read_ub4()?; // max row size
+        let num_columns = buf.read_ub4()?;
         if num_columns > 0 {
-            resp.read_u8()?;
+            buf.read_u8()?;
         }
         self.out_metadata.clear();
         for _ in 0..num_columns {
-            let mut metadata = Metadata::from_response(resp, client)?;
+            let mut metadata = Metadata::from_buf(buf, client)?;
             if metadata.requires_define() {
                 self.requires_define = true;
                 self.no_prefetch = true;
@@ -391,12 +394,12 @@ impl CachedStatement {
             }
             self.out_metadata.push(metadata);
         }
-        let _current_date = resp.read_bytes_with_double_length()?;
-        let _dcbflag = resp.read_ub4()?;
-        let _dcbmdbz = resp.read_ub4()?;
-        let _dcbmnpr = resp.read_ub4()?;
-        let _dcbmxpr = resp.read_ub4()?;
-        let _dcbqcky = resp.read_bytes_with_double_length()?;
+        let _current_date = buf.read_bytes_with_double_length()?;
+        let _dcbflag = buf.read_ub4()?;
+        let _dcbmdbz = buf.read_ub4()?;
+        let _dcbmnpr = buf.read_ub4()?;
+        let _dcbmxpr = buf.read_ub4()?;
+        let _dcbqcky = buf.read_bytes_with_double_length()?;
         resp.set_num_columns(self.out_metadata.len());
         Ok(())
     }
@@ -418,11 +421,11 @@ impl CachedStatement {
     /// Sets the bind directions from the response from the database.
     pub(crate) fn set_bind_directions(
         &mut self,
-        resp: &mut Response,
+        buf: &mut ReadBuffer,
     ) -> Result<(), Error> {
         self.out_metadata.clear();
         for bind_info in self.binds.iter_mut() {
-            bind_info.bind_direction = resp.read_u8()?;
+            bind_info.bind_direction = buf.read_u8()?;
             if bind_info.is_output_bind() {
                 let metadata = bind_info.metadata.as_ref().unwrap();
                 self.out_metadata.push(metadata.clone());

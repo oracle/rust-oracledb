@@ -48,6 +48,7 @@ mod rollback;
 use crate::client::Client;
 use crate::constants;
 use crate::error::Error;
+use crate::read_buffer::ReadBuffer;
 use crate::response::Response;
 use crate::write_buffer::WriteBuffer;
 
@@ -58,13 +59,15 @@ pub(crate) trait Message {
         &mut self,
         client: &Client,
         resp: &mut Response,
+        buf: &mut ReadBuffer,
     ) -> Result<(), Error>
     where
         Self: Message,
     {
         loop {
-            let message_type = resp.read_u8()?;
-            self.deserialize_ttc_message(client, resp, message_type)?;
+            resp.save_buf_pos(buf);
+            let message_type = buf.read_u8()?;
+            self.deserialize_ttc_message(client, resp, buf, message_type)?;
             if self.is_final_ttc_message_type(client, message_type) {
                 break;
             }
@@ -77,6 +80,7 @@ pub(crate) trait Message {
         &mut self,
         _client: &Client,
         _resp: &mut Response,
+        _buf: &mut ReadBuffer,
     ) -> Result<(), Error> {
         let feature = "deserializing describe info".to_string();
         Err(Error::not_implemented(feature))
@@ -87,6 +91,7 @@ pub(crate) trait Message {
         &mut self,
         _client: &Client,
         _resp: &mut Response,
+        _buf: &mut ReadBuffer,
     ) -> Result<(), Error> {
         let feature = "deserializing IO vector".to_string();
         Err(Error::not_implemented(feature))
@@ -97,6 +102,7 @@ pub(crate) trait Message {
         &mut self,
         _client: &Client,
         _resp: &mut Response,
+        _buf: &mut ReadBuffer,
     ) -> Result<(), Error> {
         let feature = "deserializing LOB data".to_string();
         Err(Error::not_implemented(feature))
@@ -107,6 +113,7 @@ pub(crate) trait Message {
         &mut self,
         _client: &Client,
         _resp: &mut Response,
+        _buf: &mut ReadBuffer,
     ) -> Result<(), Error> {
         let feature = "deserializing renegotiation".to_string();
         Err(Error::not_implemented(feature))
@@ -117,6 +124,7 @@ pub(crate) trait Message {
         &mut self,
         _client: &Client,
         _resp: &mut Response,
+        _buf: &mut ReadBuffer,
     ) -> Result<(), Error> {
         let feature = "deserializing return parameters".to_string();
         Err(Error::not_implemented(feature))
@@ -127,6 +135,7 @@ pub(crate) trait Message {
         &mut self,
         _client: &Client,
         _resp: &mut Response,
+        _buf: &mut ReadBuffer,
     ) -> Result<(), Error> {
         let feature = "deserializing row data".to_string();
         Err(Error::not_implemented(feature))
@@ -137,14 +146,15 @@ pub(crate) trait Message {
         &mut self,
         _client: &Client,
         resp: &mut Response,
+        buf: &mut ReadBuffer,
     ) -> Result<(), Error> {
-        let _flags = resp.read_u8()?;
-        let _num_requests = resp.read_ub2()?;
-        let _iter_num = resp.read_ub4()?;
-        let _num_iters = resp.read_ub4()?;
-        let _buffer_len = resp.read_ub2()?;
-        resp.read_bit_vector()?;
-        let _rxhrid = resp.read_bytes_with_double_length()?;
+        let _flags = buf.read_u8()?;
+        let _num_requests = buf.read_ub2()?;
+        let _iter_num = buf.read_ub4()?;
+        let _num_iters = buf.read_ub4()?;
+        let _buffer_len = buf.read_ub2()?;
+        resp.read_bit_vector(buf)?;
+        let _rxhrid = buf.read_bytes_with_double_length()?;
         Ok(())
     }
 
@@ -153,6 +163,21 @@ pub(crate) trait Message {
         &mut self,
         client: &Client,
         resp: &mut Response,
+        buf: &mut ReadBuffer,
+        message_type: u8,
+    ) -> Result<(), Error>
+    where
+        Self: Message,
+    {
+        self.deserialize_ttc_message_common(client, resp, buf, message_type)
+    }
+
+    /// Deserializes one TTC message after its type has already been read.
+    fn deserialize_ttc_message_common(
+        &mut self,
+        client: &Client,
+        resp: &mut Response,
+        buf: &mut ReadBuffer,
         message_type: u8,
     ) -> Result<(), Error>
     where
@@ -160,41 +185,41 @@ pub(crate) trait Message {
     {
         match message_type {
             constants::TTC_MSG_TYPE_BIT_VECTOR => {
-                resp.deserialize_bit_vector()
+                resp.deserialize_bit_vector(buf)
             }
             constants::TTC_MSG_TYPE_DESCRIBE_INFO => {
-                self.deserialize_describe_info(client, resp)
+                self.deserialize_describe_info(client, resp, buf)
             }
             constants::TTC_MSG_TYPE_END_OF_RESPONSE => Ok(()),
-            constants::TTC_MSG_TYPE_ERROR => resp.read_error_info(client),
+            constants::TTC_MSG_TYPE_ERROR => resp.read_error_info(buf, client),
             constants::TTC_MSG_TYPE_IO_VECTOR => {
-                self.deserialize_io_vector(client, resp)
+                self.deserialize_io_vector(client, resp, buf)
             }
             constants::TTC_MSG_TYPE_LOB_DATA => {
-                self.deserialize_lob_data(client, resp)
+                self.deserialize_lob_data(client, resp, buf)
             }
             constants::TTC_MSG_TYPE_PARAMETER => {
-                self.deserialize_return_parameters(client, resp)
+                self.deserialize_return_parameters(client, resp, buf)
             }
             constants::TTC_MSG_TYPE_RENEGOTIATE => {
-                self.deserialize_renegotiate(client, resp)
+                self.deserialize_renegotiate(client, resp, buf)
             }
             constants::TTC_MSG_TYPE_ROW_DATA => {
-                self.deserialize_row_data(client, resp)
+                self.deserialize_row_data(client, resp, buf)
             }
             constants::TTC_MSG_TYPE_ROW_HEADER => {
-                self.deserialize_row_header(client, resp)
+                self.deserialize_row_header(client, resp, buf)
             }
             constants::TTC_MSG_TYPE_SERVER_SIDE_PIGGYBACK => {
-                resp.deserialize_server_side_piggyback()
+                resp.deserialize_server_side_piggyback(buf)
             }
             constants::TTC_MSG_TYPE_FLUSH_OUT_BINDS => {
-                resp.set_flush_out_binds();
+                resp.set_flush_out_binds(buf);
                 Ok(())
             }
-            constants::TTC_MSG_TYPE_STATUS => resp.deserialize_status(),
-            constants::TTC_MSG_TYPE_WARNING => resp.deserialize_warning(),
-            _ => Err(resp.unknown_ttc_message_type(message_type)),
+            constants::TTC_MSG_TYPE_STATUS => resp.deserialize_status(buf),
+            constants::TTC_MSG_TYPE_WARNING => resp.deserialize_warning(buf),
+            _ => Err(resp.unknown_ttc_message_type(buf, message_type)),
         }
     }
 
@@ -257,11 +282,6 @@ pub(crate) trait Message {
 
     /// Returns whether or not a message needs to be sent a second time.
     fn resend_needed(&self) -> bool {
-        false
-    }
-
-    /// Returns whether or not renegotiation is needed.
-    fn renegotiation_needed(&self) -> bool {
         false
     }
 

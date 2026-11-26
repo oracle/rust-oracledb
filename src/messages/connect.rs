@@ -36,6 +36,7 @@ use crate::config::Description;
 use crate::constants;
 use crate::error::Error;
 use crate::messages::Message;
+use crate::read_buffer::ReadBuffer;
 use crate::response::Response;
 use crate::write_buffer::WriteBuffer;
 
@@ -88,24 +89,24 @@ impl ConnectMessage<'_> {
 
     fn process_accept_packet(
         &mut self,
-        resp: &mut Response,
+        buf: &mut ReadBuffer,
     ) -> Result<(), Error> {
-        self.protocol_version = resp.read_u16be()?;
+        self.protocol_version = buf.read_u16be()?;
         if self.protocol_version < constants::PROTOCOL_VERSION_12 {
             return Err(Error::server_version_not_supported());
         }
-        resp.advance(12)?;
-        let flags1: u8 = resp.read_u8()?;
+        buf.read_bytes(12)?;
+        let flags1: u8 = buf.read_u8()?;
         if flags1 & NSI_NA_REQUIRED != 0 {
             return Err(Error::not_implemented(
                 "Native Network Encryption and Data Integrity".to_string(),
             ));
         }
-        resp.advance(9)?;
-        self.sdu = resp.read_u32be()?;
+        buf.read_bytes(9)?;
+        self.sdu = buf.read_u32be()?;
         if self.protocol_version >= constants::PROTOCOL_VERSION_18 {
-            resp.advance(5)?;
-            self.protocol_flags = resp.read_u32be()?;
+            buf.read_bytes(5)?;
+            self.protocol_flags = buf.read_u32be()?;
         }
         self.accepted = true;
         Ok(())
@@ -114,13 +115,13 @@ impl ConnectMessage<'_> {
     /// Processes a refuse packet sent by the listener.
     fn process_refuse_packet(
         &mut self,
-        resp: &mut Response,
+        buf: &mut ReadBuffer,
     ) -> Result<(), Error> {
-        resp.advance(2)?;
+        buf.read_bytes(2)?;
         let mut error_num: usize = 0;
-        let message_len = resp.read_u16be()? as usize;
+        let message_len = buf.read_u16be()? as usize;
         if message_len > 0 {
-            let message = resp.read_utf8(message_len)?;
+            let message = buf.read_utf8(message_len)?;
             if let Some(start_pos) = message.find("(ERR=")
                 && let Some(end_pos) = message[start_pos..].find(")")
             {
@@ -162,15 +163,16 @@ impl Message for ConnectMessage<'_> {
         &mut self,
         _client: &Client,
         resp: &mut Response,
+        buf: &mut ReadBuffer,
     ) -> Result<(), Error> {
         self.accepted = false;
         self.tls_renegotiation_needed = false;
         match resp.get_packet_type() {
             constants::PACKET_TYPE_ACCEPT => {
-                self.process_accept_packet(resp)?;
+                self.process_accept_packet(buf)?;
             }
             constants::PACKET_TYPE_REFUSE => {
-                self.process_refuse_packet(resp)?;
+                self.process_refuse_packet(buf)?;
             }
             constants::PACKET_TYPE_RESEND => {
                 self.tls_renegotiation_needed = resp.get_packet_flags()
@@ -178,11 +180,11 @@ impl Message for ConnectMessage<'_> {
                     != 0;
             }
             constants::PACKET_TYPE_REDIRECT => {
-                self.redirect_data_len = resp.read_u16be()?;
+                self.redirect_data_len = buf.read_u16be()?;
             }
             constants::PACKET_TYPE_DATA => {
                 self.redirect_data = Some(
-                    resp.read_utf8(self.redirect_data_len as usize)?
+                    buf.read_utf8(self.redirect_data_len as usize)?
                         .to_string(),
                 );
             }

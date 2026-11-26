@@ -30,37 +30,43 @@
 
 use crate::constants;
 
-pub(crate) struct Packet {
-    pub(crate) packet_type: u8,
-    pub(crate) packet_flags: u8,
-    pub(crate) data_flags: u16,
-    pub(crate) buf: Vec<u8>,
-}
+pub(crate) struct Packet<'buf>(&'buf [u8]);
 
-impl Packet {
-    /// Returns a boolean indicating if the packet contains the end of response
-    /// marker. When the server sends a renegotiation request, however, the end
-    /// of response marker is not sent so this must be caught separately.
-    pub(crate) fn has_end_of_response(&self) -> bool {
-        if self.packet_type != constants::PACKET_TYPE_DATA
-            || self.data_flags & constants::TTC_DATA_FLAGS_END_OF_RESPONSE != 0
-            || self.data_flags & constants::TTC_DATA_FLAGS_EOF != 0
-            || (self.buf.len() > 1
-                && self.buf[0] == constants::TTC_MSG_TYPE_RENEGOTIATE)
-        {
-            true
-        } else if let Some(last_byte) = self.buf.last() {
-            *last_byte == constants::TTC_MSG_TYPE_END_OF_RESPONSE
+impl<'buf> Packet<'buf> {
+    pub(crate) fn data(&self) -> &'buf [u8] {
+        let header_size = Self::header_size(self.packet_type());
+        &self.0[header_size..]
+    }
+
+    /// Returns the data flags (bytes 9 and 10 of the header for data packets).
+    pub(crate) fn data_flags(&self) -> u16 {
+        if self.packet_type() == constants::PACKET_TYPE_DATA {
+            u16::from_be_bytes(self.0[8..10].try_into().unwrap())
         } else {
-            false
+            0
         }
+    }
+
+    /// Returns whether the packet contains the end of response marker.
+    /// marker is sent for non-data packets, nor for renegotiation packets,
+    /// nor for the case
+    pub(crate) fn has_end_of_response(&self) -> bool {
+        let data = self.data();
+        let data_flags = self.data_flags();
+        self.packet_type() != constants::PACKET_TYPE_DATA
+            || data_flags & constants::TTC_DATA_FLAGS_END_OF_RESPONSE != 0
+            || data_flags & constants::TTC_DATA_FLAGS_EOF != 0
+            || (data.len() == 1
+                && data[0] == constants::TTC_MSG_TYPE_END_OF_RESPONSE)
+            || (data.len() > 1
+                && data[0] == constants::TTC_MSG_TYPE_RENEGOTIATE)
     }
 
     /// Returns a boolean indicating if the packet refers to a marker packet
     /// containing a reset marker type.
     pub(crate) fn has_reset_marker(&self) -> bool {
-        if self.packet_type == constants::PACKET_TYPE_MARKER {
-            self.buf[2] == constants::MARKER_TYPE_RESET
+        if self.packet_type() == constants::PACKET_TYPE_MARKER {
+            self.0[10] == constants::MARKER_TYPE_RESET
         } else {
             false
         }
@@ -68,20 +74,22 @@ impl Packet {
 
     /// Returns the size of the header. Data packets are 10 bytes (because they
     /// include the data flags, unlike other packets).
-    pub(crate) fn header_size(&self) -> usize {
-        if self.packet_type == constants::PACKET_TYPE_DATA { 10 } else { 8 }
+    pub(crate) fn header_size(packet_type: u8) -> usize {
+        if packet_type == constants::PACKET_TYPE_DATA { 10 } else { 8 }
     }
 
-    /// Creates a new packet from the supplied buffer.
-    pub(crate) fn new(data: &[u8]) -> Packet {
-        let packet_type = data[4];
-        let packet_flags = data[5];
-        let mut data_flags: u16 = 0;
-        let mut buf = &data[8..];
-        if packet_type == constants::PACKET_TYPE_DATA {
-            data_flags = u16::from_be_bytes(data[8..10].try_into().unwrap());
-            buf = &data[10..];
-        }
-        Packet { packet_type, packet_flags, data_flags, buf: buf.into() }
+    /// Returns a new packet from the packet buffer.
+    pub(crate) fn new(bytes: &'buf [u8]) -> Self {
+        Self(bytes)
+    }
+
+    /// Returns the packet type (byte 5 of the header).
+    pub(crate) fn packet_type(&self) -> u8 {
+        self.0[4]
+    }
+
+    /// Returns the packet flags (byte 6 of the header).
+    pub(crate) fn packet_flags(&self) -> u8 {
+        self.0[5]
     }
 }

@@ -42,6 +42,7 @@ use crate::constants;
 use crate::error::Error;
 use crate::messages::Message;
 use crate::ora_version::OracleVersion;
+use crate::read_buffer::ReadBuffer;
 use crate::response::Response;
 use crate::write_buffer::WriteBuffer;
 
@@ -492,13 +493,14 @@ impl Message for AuthMessage {
     fn deserialize_return_parameters(
         &mut self,
         _client: &Client,
-        resp: &mut Response,
+        _resp: &mut Response,
+        buf: &mut ReadBuffer,
     ) -> Result<(), Error> {
-        let num_params = resp.read_ub2()?;
+        let num_params = buf.read_ub2()?;
         for _ in 0..num_params {
-            let key = resp.read_utf8_with_double_length()?.to_string();
-            let value = resp.read_utf8_with_double_length()?.to_string();
-            let flags = resp.read_ub4()?;
+            let key = buf.read_utf8_with_double_length()?.to_string();
+            let value = buf.read_utf8_with_double_length()?.to_string();
+            let flags = buf.read_ub4()?;
             if key == "AUTH_VFR_DATA" {
                 if !matches!(
                     flags,

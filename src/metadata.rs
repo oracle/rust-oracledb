@@ -35,7 +35,7 @@ use crate::constants;
 use crate::db_type::DbType;
 use crate::dbobject::{DbObjectType, DbObjectTypeIdentity};
 use crate::error::Error;
-use crate::response::Response;
+use crate::read_buffer::ReadBuffer;
 use crate::vector::VectorStorageFormat;
 use crate::write_buffer::WriteBuffer;
 
@@ -123,8 +123,8 @@ impl Metadata {
     }
 
     /// Returns a new structure from the metadata returned by the database.
-    pub(crate) fn from_response(
-        resp: &mut Response,
+    pub(crate) fn from_buf(
+        buf: &mut ReadBuffer,
         client: &Client,
     ) -> Result<Self, Error> {
         let mut metadata = Self {
@@ -143,32 +143,32 @@ impl Metadata {
             domain: None,
             annotations: Vec::new(),
         };
-        let ora_type_num: u16 = resp.read_u8()?.into();
-        resp.read_u8()?; // flags
-        metadata.precision = resp.read_u8()?;
-        metadata.scale = resp.read_i8()?;
-        let buffer_size = resp.read_ub4()?;
-        let _max_num_array_elements = resp.read_ub4()?;
-        let _cont_flags = resp.read_ub8()?;
-        let _oid = resp.read_bytes_with_double_length()?;
-        let _version = resp.read_ub2()?;
-        let _charset_id = resp.read_ub2()?;
-        let csfrm = resp.read_u8()?;
+        let ora_type_num: u16 = buf.read_u8()?.into();
+        buf.read_u8()?; // flags
+        metadata.precision = buf.read_u8()?;
+        metadata.scale = buf.read_i8()?;
+        let buffer_size = buf.read_ub4()?;
+        let _max_num_array_elements = buf.read_ub4()?;
+        let _cont_flags = buf.read_ub8()?;
+        let _oid = buf.read_bytes_with_double_length()?;
+        let _version = buf.read_ub2()?;
+        let _charset_id = buf.read_ub2()?;
+        let csfrm = buf.read_u8()?;
         metadata.db_type =
             DbType::from_ora_type_and_csfrm(ora_type_num, csfrm);
-        metadata.max_size = resp.read_ub4()?;
+        metadata.max_size = buf.read_ub4()?;
         if ora_type_num == constants::ORA_TYPE_NUM_RAW {
             metadata.max_size = buffer_size;
         }
         if client.supports_ttc_field_version(constants::TTC_FIELD_VERSION_12_2)
         {
-            let _oaccolid = resp.read_ub4()?;
+            let _oaccolid = buf.read_ub4()?;
         }
-        metadata.nullable = resp.read_u8()? != 0;
-        let _v7_name_length = resp.read_u8()?;
-        metadata.name = resp.read_utf8_with_double_length()?.to_string();
-        let obj_schema = resp.read_utf8_with_double_length()?.into_owned();
-        let obj_name = resp.read_utf8_with_double_length()?.into_owned();
+        metadata.nullable = buf.read_u8()? != 0;
+        let _v7_name_length = buf.read_u8()?;
+        metadata.name = buf.read_utf8_with_double_length()?.to_string();
+        let obj_schema = buf.read_utf8_with_double_length()?.into_owned();
+        let obj_name = buf.read_utf8_with_double_length()?.into_owned();
         if metadata.db_type == crate::DB_TYPE_OBJECT {
             metadata.set_object_type_identity(DbObjectTypeIdentity {
                 schema: obj_schema,
@@ -176,39 +176,39 @@ impl Metadata {
                 name: obj_name,
             });
         }
-        let _column_position = resp.read_ub2()?;
-        let _uds_flags = resp.read_ub4()?;
+        let _column_position = buf.read_ub2()?;
+        let _uds_flags = buf.read_ub4()?;
         if client.supports_ttc_field_version(constants::TTC_FIELD_VERSION_23_1)
         {
-            let schema = resp.read_utf8_with_double_length()?.to_string();
-            let name = resp.read_utf8_with_double_length()?.to_string();
+            let schema = buf.read_utf8_with_double_length()?.to_string();
+            let name = buf.read_utf8_with_double_length()?.to_string();
             if !schema.is_empty() && !name.is_empty() {
                 metadata.domain = Some((schema, name));
             }
         }
         if client.supports_ttc_field_version(
             constants::TTC_FIELD_VERSION_23_1_EXT_3,
-        ) && resp.read_ub4()? > 0
+        ) && buf.read_ub4()? > 0
         {
-            resp.read_u8()?;
-            let num_annotations = resp.read_ub4()?;
-            resp.read_u8()?;
+            buf.read_u8()?;
+            let num_annotations = buf.read_ub4()?;
+            buf.read_u8()?;
             for _ in 0..num_annotations {
-                let name = resp.read_utf8_with_double_length()?.to_string();
-                let value = resp.read_utf8_with_double_length()?.to_string();
+                let name = buf.read_utf8_with_double_length()?.to_string();
+                let value = buf.read_utf8_with_double_length()?.to_string();
                 metadata.annotations.push((name, value));
-                let _flags = resp.read_ub4()?;
+                let _flags = buf.read_ub4()?;
             }
-            let _flags = resp.read_ub4()?;
+            let _flags = buf.read_ub4()?;
         }
         if client.supports_ttc_field_version(constants::TTC_FIELD_VERSION_23_4)
         {
-            metadata.vector_dimensions = resp.read_ub4()?;
-            metadata.vector_storage_format = match resp.read_u8()? {
+            metadata.vector_dimensions = buf.read_ub4()?;
+            metadata.vector_storage_format = match buf.read_u8()? {
                 0 => None,
                 v => Some(VectorStorageFormat::try_from(v)?),
             };
-            metadata.vector_flags = resp.read_u8()?;
+            metadata.vector_flags = buf.read_u8()?;
         }
         metadata.null_by_describe = match ora_type_num {
             constants::ORA_TYPE_NUM_LONG

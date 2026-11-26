@@ -37,6 +37,7 @@ use crate::error::Error;
 use crate::messages::Message;
 use crate::ora_type::OracleIntervalDS;
 use crate::read_buffer::FromBuf;
+use crate::read_buffer::ReadBuffer;
 use crate::response::Response;
 use crate::write_buffer::ToBuf;
 use crate::write_buffer::WriteBuffer;
@@ -843,22 +844,23 @@ impl Message for DataTypesMessage {
         &mut self,
         _client: &Client,
         resp: &mut Response,
+        buf: &mut ReadBuffer,
         ttc_message_type: u8,
     ) -> Result<(), Error> {
         if ttc_message_type != constants::TTC_MSG_TYPE_DATA_TYPES {
-            return Err(resp.unknown_ttc_message_type(ttc_message_type));
+            return Err(resp.unknown_ttc_message_type(buf, ttc_message_type));
         }
         self.db_timezone_offset = OracleIntervalDS::from_buf(
-            resp.read_bytes(constants::ORA_TYPE_SIZE_INTERVAL_DS)?,
+            buf.read_bytes(constants::ORA_TYPE_SIZE_INTERVAL_DS)?,
         );
         loop {
-            let data_type = resp.read_u16be()?;
+            let data_type = buf.read_u16be()?;
             if data_type == 0 {
                 break;
             }
-            let conv_data_type = resp.read_u16be()?;
+            let conv_data_type = buf.read_u16be()?;
             if conv_data_type != 0 {
-                resp.advance(4)?;
+                buf.read_bytes(4)?;
             }
         }
         Ok(())

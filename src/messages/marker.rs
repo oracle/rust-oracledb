@@ -32,6 +32,7 @@ use crate::client::Client;
 use crate::constants;
 use crate::error::Error;
 use crate::messages::Message;
+use crate::read_buffer::ReadBuffer;
 use crate::response::Response;
 use crate::write_buffer::WriteBuffer;
 
@@ -49,10 +50,11 @@ impl Message for MarkerMessage {
     fn deserialize(
         &mut self,
         _client: &Client,
-        resp: &mut Response,
+        _resp: &mut Response,
+        buf: &mut ReadBuffer,
     ) -> Result<(), Error> {
-        resp.advance(2)?;
-        self.marker_type = resp.read_u8()?;
+        buf.read_bytes(2)?;
+        self.marker_type = buf.read_u8()?;
         Ok(())
     }
 

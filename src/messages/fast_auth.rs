@@ -37,6 +37,7 @@ use crate::messages::Message;
 use crate::messages::auth::AuthMessage;
 use crate::messages::data_types::DataTypesMessage;
 use crate::messages::protocol::ProtocolMessage;
+use crate::read_buffer::ReadBuffer;
 use crate::response::Response;
 use crate::write_buffer::WriteBuffer;
 
@@ -72,18 +73,20 @@ impl Message for FastAuthMessage {
         &mut self,
         client: &Client,
         resp: &mut Response,
+        buf: &mut ReadBuffer,
         message_type: u8,
     ) -> Result<(), Error> {
         match message_type {
             constants::TTC_MSG_TYPE_PROTOCOL => self
                 .protocol_message
-                .deserialize_ttc_message(client, resp, message_type),
+                .deserialize_ttc_message(client, resp, buf, message_type),
             constants::TTC_MSG_TYPE_DATA_TYPES => self
                 .data_types_message
-                .deserialize_ttc_message(client, resp, message_type),
+                .deserialize_ttc_message(client, resp, buf, message_type),
             _ => self.auth_message.deserialize_ttc_message(
                 client,
                 resp,
+                buf,
                 message_type,
             ),
         }

@@ -35,6 +35,7 @@ use crate::client::Client;
 use crate::constants;
 use crate::error::Error;
 use crate::messages::Message;
+use crate::read_buffer::ReadBuffer;
 use crate::response::Response;
 use crate::write_buffer::WriteBuffer;
 
@@ -55,9 +56,9 @@ impl ProtocolMessage {
         }
     }
 
-    fn skip_array(&mut self, resp: &mut Response) -> Result<(), Error> {
+    fn skip_array(&mut self, buf: &mut ReadBuffer) -> Result<(), Error> {
         loop {
-            let byte = resp.read_u8()?;
+            let byte = buf.read_u8()?;
             if byte == 0 {
                 break;
             }
@@ -71,29 +72,30 @@ impl Message for ProtocolMessage {
         &mut self,
         _client: &Client,
         resp: &mut Response,
+        buf: &mut ReadBuffer,
         message_type: u8,
     ) -> Result<(), Error> {
         if message_type != constants::TTC_MSG_TYPE_PROTOCOL {
-            return Err(resp.unknown_ttc_message_type(message_type));
+            return Err(resp.unknown_ttc_message_type(buf, message_type));
         }
-        self.skip_array(resp)?; // protocol message version
-        self.skip_array(resp)?; // server banner
-        self.charset_id = resp.read_u16le()?;
-        resp.advance(1)?; // skip server flags
-        let num_elem = resp.read_u16le()?;
+        self.skip_array(buf)?; // protocol message version
+        self.skip_array(buf)?; // server banner
+        self.charset_id = buf.read_u16le()?;
+        let _server_flags = buf.read_u8()?;
+        let num_elem = buf.read_u16le()?;
         if num_elem > 0 {
             let graph_len: usize = (num_elem * 5).into();
-            resp.advance(graph_len)?; // character set graph
+            let _charset_graph = buf.read_bytes(graph_len)?;
         }
-        let fdo_len = resp.read_u16be()? as usize;
-        resp.advance(5)?; // skip first part of FDO
-        let offset1 = resp.read_u8()? as usize;
-        let offset2 = resp.read_u8()? as usize;
-        resp.advance(offset1 + offset2 + 2)?;
-        self.ncharset_id = resp.read_u16be()?;
-        resp.advance(fdo_len - offset1 - offset2 - 11)?;
-        self.server_compile_caps = resp.read_bytes_with_length()?.into();
-        self.server_runtime_caps = resp.read_bytes_with_length()?.into();
+        let fdo_len = buf.read_u16be()? as usize;
+        buf.read_bytes(5)?; // skip first part of FDO
+        let offset1 = buf.read_u8()? as usize;
+        let offset2 = buf.read_u8()? as usize;
+        buf.read_bytes(offset1 + offset2 + 2)?;
+        self.ncharset_id = buf.read_u16be()?;
+        buf.read_bytes(fdo_len - offset1 - offset2 - 11)?;
+        self.server_compile_caps = buf.read_bytes_with_length()?.into();
+        self.server_runtime_caps = buf.read_bytes_with_length()?.into();
         Ok(())
     }
 

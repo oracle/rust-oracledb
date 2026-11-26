@@ -164,9 +164,9 @@ pub(crate) struct Transport {
     socket_num: String,
     max_packet_size: usize,
     read_buf: Vec<u8>,
+    available_bytes: usize,
+    used_bytes: usize,
     write_buf: Vec<u8>,
-    residual_bytes: usize,
-    last_packet_bytes: usize,
     full_packet_size: bool,
     print_packets: bool,
     op_num: usize,
@@ -248,22 +248,28 @@ impl Transport {
     /// Extracts a packet from the data that has been received from the
     /// database. If insufficient bytes have been read, None is returned which
     /// signals that the caller should wait for some more bytes to be received.
-    fn extract_packet(&mut self) -> Option<Packet> {
-        if self.residual_bytes <= 4 {
+    fn extract_packet(&mut self) -> Option<usize> {
+        // insufficient bytes to read the packet size
+        if self.available_bytes <= 4 {
             return None;
         }
-        self.last_packet_bytes = self.get_packet_size();
-        if self.residual_bytes < self.last_packet_bytes {
+
+        // determine packet size and see if enough bytes are available to read
+        // a full packet
+        let packet_size = if self.full_packet_size {
+            let buf = &self.read_buf[0..4];
+            u32::from_be_bytes(buf.try_into().unwrap()) as usize
+        } else {
+            let buf = &self.read_buf[0..2];
+            u16::from_be_bytes(buf.try_into().unwrap()) as usize
+        };
+        if self.available_bytes < packet_size {
             return None;
         }
-        self.residual_bytes -= self.last_packet_bytes;
-        let packet_buf = &self.read_buf[0..self.last_packet_bytes];
-        if self.print_packets {
-            self.op_num += 1;
-            let header = self.get_op_header("Receiving packet");
-            print_packet(&header, packet_buf);
-        }
-        Some(Packet::new(packet_buf))
+
+        // all of the bytes are available so return the packet size
+        self.used_bytes = packet_size;
+        Some(packet_size)
     }
 
     /// Returns the op header used when displaying packet data.
@@ -277,27 +283,22 @@ impl Transport {
         )
     }
 
-    /// Returns the size of the packet by examining the packet header. The
-    /// first few packets use a 16-bit packet size but once negotiation is
-    /// complete a 32-bit packet size is used.
-    fn get_packet_size(&self) -> usize {
-        if self.full_packet_size {
-            let buf = &self.read_buf[0..4];
-            u32::from_be_bytes(buf.try_into().unwrap()) as usize
-        } else {
-            let buf = &self.read_buf[0..2];
-            u16::from_be_bytes(buf.try_into().unwrap()) as usize
-        }
-    }
-
     /// Attempts to read a packet from the stream, if it is connected. The
     /// number of bytes read is returned.
-    fn read_packet(&mut self) -> Result<usize, Error> {
-        let buf = &mut self.read_buf[self.residual_bytes..];
-        self.low_level_transport
+    fn read_packet(&mut self) -> Result<(), Error> {
+        let buf = &mut self.read_buf[self.available_bytes..];
+        let num_bytes = self
+            .low_level_transport
             .as_mut()
             .ok_or_else(Error::not_connected)
-            .and_then(|t| t.read(buf))
+            .and_then(|t| t.read(buf))?;
+        if num_bytes == 0 {
+            self.low_level_transport = None;
+            Err(Error::dead_connection())
+        } else {
+            self.available_bytes += num_bytes;
+            Ok(())
+        }
     }
 
     /// Writes a packet to the stream, if the stream is currently connected.
@@ -382,9 +383,9 @@ impl Transport {
             socket_num: String::new(),
             max_packet_size: 0,
             read_buf: Vec::new(),
+            available_bytes: 0,
+            used_bytes: 0,
             write_buf: Vec::new(),
-            residual_bytes: 0,
-            last_packet_bytes: 0,
             full_packet_size: false,
             print_packets: env::var_os("RSO_DEBUG_PACKETS").is_some(),
             op_num: 0,
@@ -393,25 +394,31 @@ impl Transport {
 
     /// Reads data from the database and returns a single packet, or an error
     /// indicating that the connection is no longer valid.
-    pub(crate) fn receive_packet(&mut self) -> Result<Packet, Error> {
-        if self.residual_bytes > 0 && self.last_packet_bytes > 0 {
-            let start_pos = self.last_packet_bytes;
-            let end_pos = self.last_packet_bytes + self.residual_bytes;
-            self.read_buf.copy_within(start_pos..end_pos, 0);
-            self.last_packet_bytes = 0;
+    pub(crate) fn receive_packet(&mut self) -> Result<Packet<'_>, Error> {
+        if self.available_bytes > 0 && self.used_bytes > 0 {
+            if self.available_bytes > self.used_bytes {
+                self.read_buf
+                    .copy_within(self.used_bytes..self.available_bytes, 0);
+
+                self.available_bytes -= self.used_bytes;
+                self.used_bytes = 0;
+            } else {
+                self.available_bytes = 0;
+            }
+            self.used_bytes = 0;
         }
         loop {
-            if let Some(packet) = self.extract_packet() {
-                return Ok(packet);
+            if let Some(packet_size) = self.extract_packet() {
+                let packet_buf = &self.read_buf[0..packet_size];
+                if self.print_packets {
+                    self.op_num += 1;
+                    let header = self.get_op_header("Receiving packet");
+                    print_packet(&header, packet_buf);
+                }
+                return Ok(Packet::new(packet_buf));
             }
-            let num_bytes = self.read_packet()?;
-            if num_bytes == 0 {
-                self.low_level_transport = None;
-                break;
-            }
-            self.residual_bytes += num_bytes;
+            self.read_packet()?;
         }
-        Err(Error::dead_connection())
     }
 
     pub(crate) fn send_packets(
@@ -421,10 +428,7 @@ impl Transport {
         data_flags: u16,
         mut data: &[u8],
     ) -> Result<(), Error> {
-        let mut header_size = 8;
-        if packet_type == constants::PACKET_TYPE_DATA {
-            header_size += 2;
-        }
+        let header_size = Packet::header_size(packet_type);
         let max_data_size = self.max_packet_size - header_size;
         loop {
             let packet_data_size = min(max_data_size, data.len());

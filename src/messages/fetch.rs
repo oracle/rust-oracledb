@@ -32,6 +32,7 @@ use crate::client::Client;
 use crate::constants;
 use crate::error::Error;
 use crate::messages::Message;
+use crate::read_buffer::ReadBuffer;
 use crate::response::Response;
 use crate::row::DbRow;
 use crate::statement::CachedStatement;
@@ -57,8 +58,9 @@ impl Message for FetchMessage<'_> {
         &mut self,
         client: &Client,
         resp: &mut Response,
+        buf: &mut ReadBuffer,
     ) -> Result<(), Error> {
-        resp.deserialize_row_data(client, self.statement, true)
+        resp.deserialize_row_data(buf, client, self.statement, true)
     }
 
     fn post_deserialize(

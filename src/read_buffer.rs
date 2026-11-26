@@ -32,7 +32,6 @@ use std::borrow::Cow;
 
 use crate::constants;
 use crate::error::Error;
-use crate::packet::Packet;
 
 pub(crate) struct ReadBuffer {
     buf: Vec<u8>,
@@ -76,19 +75,26 @@ impl ReadBuffer {
         self.buf.is_empty()
     }
 
+    /// Adds bytes to the read buffer.
+    pub(crate) fn add_bytes(&mut self, bytes: &[u8]) {
+        self.buf.extend_from_slice(bytes);
+    }
+
+    /// Clears the buffer of all data stored in it.
+    pub(crate) fn clear(&mut self) {
+        self.buf.clear();
+        self.pos = 0;
+    }
+
     /// Creates and returns a new ReadBuffer struct given a slice. The slice is
     /// copied so that the original source need not be retained.
     pub(crate) fn from_bytes(bytes: &[u8]) -> ReadBuffer {
         ReadBuffer { buf: bytes.to_vec(), pos: 0 }
     }
 
-    /// Creates and returns a new ReadBuffer struct given a series of packets.
-    pub(crate) fn from_packets(packets: &[Packet]) -> ReadBuffer {
-        let mut buf = Vec::<u8>::new();
-        for packet in packets {
-            buf.extend_from_slice(&packet.buf);
-        }
-        ReadBuffer { buf, pos: 0 }
+    /// Creates a new ReadBuffer from the specified owned bytes.
+    pub(crate) fn from_owned_bytes(buf: Vec<u8>) -> Self {
+        Self { buf, pos: 0 }
     }
 
     /// Gets the current position in the buffer.
@@ -317,6 +323,11 @@ impl ReadBuffer {
     /// Sets the specified position in the buffer.
     pub(crate) fn set_pos(&mut self, pos: usize) {
         self.pos = pos;
+    }
+
+    /// Takes the buffer so that it can be recycled for another response.
+    pub(crate) fn take_buf(&mut self) -> Vec<u8> {
+        std::mem::take(&mut self.buf)
     }
 }
 

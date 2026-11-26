@@ -42,6 +42,11 @@ impl WriteBuffer {
         self.buf.clear();
     }
 
+    /// Creates a new ReadBuffer from the specified owned bytes.
+    pub fn from_owned_bytes(buf: Vec<u8>) -> Self {
+        Self { buf }
+    }
+
     /// Returns a reference to the buffer contents.
     pub fn get_buf(&self) -> &[u8] {
         &self.buf[..]
@@ -64,6 +69,11 @@ impl WriteBuffer {
         let orig_len = self.buf.len();
         self.buf.resize(orig_len + num_bytes, 0);
         orig_len
+    }
+
+    /// Takes the buffer so that it can be recycled for another request.
+    pub fn take_buf(&mut self) -> Vec<u8> {
+        std::mem::take(&mut self.buf)
     }
 
     /// Writes the contents of the slice to the buffer.

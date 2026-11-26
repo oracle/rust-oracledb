@@ -41,7 +41,6 @@ use crate::lob::{Lob, PendingLobData};
 use crate::metadata::Metadata;
 use crate::read_buffer::FromBuf;
 use crate::read_buffer::ReadBuffer;
-use crate::response::Response;
 use crate::row::{ColumnData, DbRow, Row};
 
 const TTC_OBJ_ATOMIC_NULL: u8 = 253;
@@ -125,20 +124,20 @@ impl DbObject {
 
 impl PendingDbObject {
     /// Reads the TTC envelope and retains the packed image.
-    pub(crate) fn from_response(
-        resp: &mut Response,
+    pub(crate) fn from_buf(
+        buf: &mut ReadBuffer,
     ) -> Result<Option<Self>, Error> {
-        let _type_oid = resp.read_bytes_with_double_length()?;
-        let _instance_oid = resp.read_bytes_with_double_length()?;
-        let _snapshot = resp.read_bytes_with_double_length()?;
-        let _version = resp.read_ub2()?;
-        let size = resp.read_ub4()?;
-        let _flags = resp.read_ub2()?;
+        let _type_oid = buf.read_bytes_with_double_length()?;
+        let _instance_oid = buf.read_bytes_with_double_length()?;
+        let _snapshot = buf.read_bytes_with_double_length()?;
+        let _version = buf.read_ub2()?;
+        let size = buf.read_ub4()?;
+        let _flags = buf.read_ub2()?;
         if size == 0 {
             Ok(None)
         } else {
             Ok(Some(Self {
-                bytes: resp.read_bytes_with_length()?.into_owned(),
+                bytes: buf.read_bytes_with_length()?.into_owned(),
             }))
         }
     }

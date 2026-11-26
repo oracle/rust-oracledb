@@ -33,7 +33,6 @@ use std::fmt;
 use crate::constants;
 use crate::error::Error;
 use crate::read_buffer::ReadBuffer;
-use crate::response::Response;
 
 #[derive(Clone)]
 pub struct Rowid {
@@ -44,13 +43,13 @@ pub struct Rowid {
 }
 
 impl Rowid {
-    /// Deserializes a rowid from a database response.
-    pub(crate) fn deserialize(resp: &mut Response) -> Result<Self, Error> {
-        let rba = resp.read_ub4()?;
-        let partition_id = resp.read_ub2()?;
-        resp.advance(1)?;
-        let block_num = resp.read_ub4()?;
-        let slot_num = resp.read_ub2()?;
+    /// Deserializes a rowid from a database response buffer.
+    pub(crate) fn deserialize(buf: &mut ReadBuffer) -> Result<Self, Error> {
+        let rba = buf.read_ub4()?;
+        let partition_id = buf.read_ub2()?;
+        buf.read_u8()?;
+        let block_num = buf.read_ub4()?;
+        let slot_num = buf.read_ub2()?;
         Ok(Self { rba, partition_id, block_num, slot_num })
     }
 

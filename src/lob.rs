@@ -31,7 +31,7 @@ use crate::constants;
 use crate::db_type::DbType;
 use crate::error::Error;
 use crate::messages::{LobOp, LobOpMessage};
-use crate::response::Response;
+use crate::read_buffer::ReadBuffer;
 use crate::utils;
 use std::borrow::Cow;
 use std::fmt;
@@ -75,11 +75,11 @@ impl PendingLobData {
     }
 
     /// Deserializes LOB data from a database response.
-    pub(crate) fn from_resp(
-        resp: &mut Response,
+    pub(crate) fn from_buf(
+        buf: &mut ReadBuffer,
         db_type: &'static DbType,
     ) -> Result<Option<Self>, Error> {
-        let non_null_indicator = resp.read_ub4()?;
+        let non_null_indicator = buf.read_ub4()?;
         if non_null_indicator == 0 {
             Ok(None)
         } else {
@@ -87,12 +87,12 @@ impl PendingLobData {
                 (None, None)
             } else {
                 (
-                    Some(resp.read_ub8()?.try_into().unwrap()),
-                    Some(resp.read_ub4()?.try_into().unwrap()),
+                    Some(buf.read_ub8()?.try_into().unwrap()),
+                    Some(buf.read_ub4()?.try_into().unwrap()),
                 )
             };
             // LOB locators are returned as a length-encoded byte sequence.
-            let locator = resp.read_bytes_with_length()?.into_owned();
+            let locator = buf.read_bytes_with_length()?.into_owned();
             Ok(Some(Self { chunk_size, db_type, locator, size }))
         }
     }

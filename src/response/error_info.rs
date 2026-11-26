@@ -31,6 +31,7 @@
 use crate::client::Client;
 use crate::constants;
 use crate::error::Error;
+use crate::read_buffer::ReadBuffer;
 use crate::response::Response;
 use crate::rowid::Rowid;
 
@@ -45,53 +46,54 @@ impl ErrorInfo {
     /// Deserializes the error information from the database response.
     pub fn deserialize(
         resp: &mut Response,
+        buf: &mut ReadBuffer,
         client: &Client,
     ) -> Result<ErrorInfo, Error> {
-        resp.deserialize_status()?;
-        let _current_row_num = resp.read_ub4()?;
-        let _error_num_short = resp.read_ub2()?;
-        let _array_elem_error_1 = resp.read_ub2()?;
-        let _array_elem_error_2 = resp.read_ub2()?;
-        let cursor_id = resp.read_ub2()?;
-        let error_pos = resp.read_ub2()?;
-        let _old_sql_type = resp.read_u8()?;
-        let _fatal = resp.read_u8()?;
-        let _flags_1 = resp.read_u8()?;
-        let _user_cursor_options = resp.read_u8()?;
-        let _upi_parameter = resp.read_u8()?;
-        let flags = resp.read_u8()?;
-        let _rowid = Rowid::deserialize(resp)?;
-        let _os_error = resp.read_ub4()?;
-        let _statement_num = resp.read_u8()?;
-        let _call_num = resp.read_u8()?;
-        let _padding = resp.read_ub2()?;
-        let _success_iters = resp.read_ub4()?;
-        if resp.read_ub4()? > 0 {
-            let _logical_rowid = resp.read_bytes_with_length()?;
+        resp.deserialize_status(buf)?;
+        let _current_row_num = buf.read_ub4()?;
+        let _error_num_short = buf.read_ub2()?;
+        let _array_elem_error_1 = buf.read_ub2()?;
+        let _array_elem_error_2 = buf.read_ub2()?;
+        let cursor_id = buf.read_ub2()?;
+        let error_pos = buf.read_ub2()?;
+        let _old_sql_type = buf.read_u8()?;
+        let _fatal = buf.read_u8()?;
+        let _flags_1 = buf.read_u8()?;
+        let _user_cursor_options = buf.read_u8()?;
+        let _upi_parameter = buf.read_u8()?;
+        let flags = buf.read_u8()?;
+        let _rowid = Rowid::deserialize(buf)?;
+        let _os_error = buf.read_ub4()?;
+        let _statement_num = buf.read_u8()?;
+        let _call_num = buf.read_u8()?;
+        let _padding = buf.read_ub2()?;
+        let _success_iters = buf.read_ub4()?;
+        if buf.read_ub4()? > 0 {
+            let _logical_rowid = buf.read_bytes_with_length()?;
         }
-        if resp.read_ub2()? > 0 {
+        if buf.read_ub2()? > 0 {
             // batch errors
             todo!();
         }
-        if resp.read_ub4()? > 0 {
+        if buf.read_ub4()? > 0 {
             // batch error offsets
             todo!();
         }
-        if resp.read_ub2()? > 0 {
+        if buf.read_ub2()? > 0 {
             // batch error messages
             todo!();
         }
-        let error_num = resp.read_ub4()?;
-        let rowcount = resp.read_ub8()?;
+        let error_num = buf.read_ub4()?;
+        let rowcount = buf.read_ub8()?;
         if client.supports_ttc_field_version(constants::TTC_FIELD_VERSION_20_1)
         {
-            let _sql_type = resp.read_ub4()?;
-            let _server_checksum = resp.read_ub4()?;
+            let _sql_type = buf.read_ub4()?;
+            let _server_checksum = buf.read_ub4()?;
         }
         let db_error = if error_num == 0 {
             None
         } else {
-            let message = resp.read_utf8_with_length()?;
+            let message = buf.read_utf8_with_length()?;
             Some(DbError {
                 code: error_num as usize,
                 offset: error_pos as usize,

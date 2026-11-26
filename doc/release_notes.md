@@ -2,6 +2,10 @@
 
 ## rust-oracledb 26.0.0-beta.7 (TBD)
 
+1.  Improved performance by reducing the number of copies made and by keeping
+    track of successfully decoded TTC messages
+    ([issue 73](https://github.com/oracle/rust-oracledb/issues/73) and
+    [issue 89](https://github.com/oracle/rust-oracledb/issues/89)).
 1.  Added [PoolConfig::set_proxy_user()](crate::PoolConfig::set_proxy_user())
     and improved documentation for
     [Config::set_user()](crate::Config::set_user()) as recommended
